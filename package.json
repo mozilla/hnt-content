@@ -1,0 +1,21 @@
+{
+  "name": "hnt-content",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Article crawling system for Firefox New Tab",
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "clean": "rm -rf .turbo node_modules packages/**/.turbo packages/**/dist packages/**/node_modules services/**/.turbo services/**/dist services/**/node_modules",
+    "preinstall": "npx only-allow pnpm"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}
