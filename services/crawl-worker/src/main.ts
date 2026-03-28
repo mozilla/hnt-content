@@ -1,12 +1,12 @@
-import express from 'express';
+import { app } from './app.js';
 
-const app = express();
 const port = parseInt(process.env.PORT ?? '8080', 10);
 
-app.get('/healthz', (_req, res) => {
-  res.status(200).send('ok');
+const server = app.listen(port, () => {
+  console.log(`crawl-worker listening on port ${port}`);
 });
 
-app.listen(port, () => {
-  console.log(`crawl-worker listening on port ${port}`);
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down');
+  server.close();
 });

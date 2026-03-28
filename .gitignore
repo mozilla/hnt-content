@@ -6,12 +6,12 @@ node_modules
 # testing
 coverage
 
-# misc
-.DS_Store
-*.pem
+# build output
+dist
+*.tsbuildinfo
 
-# debug
-npm-debug.log*
+# turbo
+.turbo
 
 # local env files
 .env
@@ -20,11 +20,13 @@ npm-debug.log*
 .env.test.local
 .env.production.local
 
-# turbo
-.turbo
+# debug
+npm-debug.log*
+pnpm-debug.log*
 
-# build output
-dist
+# misc
+.DS_Store
+*.pem
 logs
 
 # IDE
@@ -33,3 +35,4 @@ logs
 
 # we only want pnpm-lock.yaml
 package-lock.json
+yarn.lock

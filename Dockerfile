@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Adapted from content-monorepo and
 # https://turbo.build/repo/docs/guides/tools/docker
 
@@ -8,9 +9,9 @@ ARG SCOPE
 ARG PORT=8080
 
 RUN apk add --no-cache curl libc6-compat
-RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
+RUN corepack enable
 ENV PNPM_HOME=/usr/local/bin
-RUN pnpm add -g turbo@2.5.0
+RUN pnpm add -g turbo@2.8.20
 
 # ---- prune ----
 FROM base AS setup
@@ -18,7 +19,7 @@ ARG SCOPE
 
 WORKDIR /app
 COPY . .
-RUN turbo prune --scope=$SCOPE --docker
+RUN turbo prune $SCOPE --docker
 
 # ---- build ----
 FROM base AS builder
@@ -26,31 +27,34 @@ ARG SCOPE
 
 WORKDIR /app
 
+# Install dependencies (json-only layer for Docker caching)
 COPY .gitignore .gitignore
 COPY --from=setup /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=setup /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=setup /app/out/json/ ./
-RUN pnpm install --filter=${SCOPE}... --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
+# Build
 COPY --from=setup /app/out/full/ ./
 COPY turbo.json turbo.json
 COPY tsconfig.json tsconfig.json
 RUN pnpm run build --filter=${SCOPE}...
 
-# Prune to production dependencies
-RUN pnpm --filter=$SCOPE --prod deploy --legacy pruned
+# Deploy: produce self-contained directory with prod deps only
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm --filter=${SCOPE} --prod deploy /prod
 
 # ---- runner ----
 FROM node:24-alpine AS runner
 ARG PORT=8080
 
-RUN apk add --no-cache curl
-WORKDIR /app
-COPY --from=builder /app/pruned/ ./
+RUN apk add --no-cache curl && \
+    addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nodejs
 
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nodejs && \
-    chown -R nodejs:nodejs /app
+WORKDIR /app
+COPY --from=builder --chown=nodejs:nodejs /prod/ ./
 USER nodejs
 
 ENV NODE_ENV=production

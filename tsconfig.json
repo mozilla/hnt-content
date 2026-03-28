@@ -10,12 +10,9 @@
     "isolatedModules": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
     "preserveWatchOutput": true,
     "skipLibCheck": true,
     "strict": true,
-    "strictNullChecks": true,
     "target": "ES2024"
   },
   "exclude": ["node_modules"]

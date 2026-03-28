@@ -3,15 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsup",
-    "test": "jest",
-    "lint": "eslint src/ --ext .ts"
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings=ExperimentalWarning' jest --passWithNoTests",
+    "lint": "eslint src/"
   },
   "devDependencies": {
+    "eslint": "^10.0.0",
     "eslint-config-custom": "workspace:*",
     "tsup": "^8.0.0",
     "typescript": "^5.8.0",
