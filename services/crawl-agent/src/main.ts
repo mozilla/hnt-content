@@ -5,12 +5,12 @@ const server = app.listen(config.port, () => {
   console.log(`crawl-agent listening on port ${config.port}`);
 });
 
-let sleepTimer: ReturnType<typeof setTimeout> | undefined;
+const ac = new AbortController();
 
 function shutdown() {
   console.log('Shutting down');
   stopRunning();
-  if (sleepTimer) clearTimeout(sleepTimer);
+  ac.abort();
   server.close();
 }
 
@@ -24,7 +24,11 @@ async function tick() {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
-    sleepTimer = setTimeout(resolve, ms);
+    const timer = setTimeout(resolve, ms);
+    ac.signal.addEventListener('abort', () => {
+      clearTimeout(timer);
+      resolve();
+    });
   });
 }
 

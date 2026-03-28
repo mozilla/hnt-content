@@ -32,7 +32,7 @@ COPY .gitignore .gitignore
 COPY --from=setup /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=setup /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=setup /app/out/json/ ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
 # Build
@@ -42,7 +42,7 @@ COPY tsconfig.json tsconfig.json
 RUN pnpm run build --filter=${SCOPE}...
 
 # Deploy: produce self-contained directory with prod deps only
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm --filter=${SCOPE} --prod deploy /prod
 
 # ---- runner ----
