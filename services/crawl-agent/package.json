@@ -7,7 +7,7 @@
     "build": "rm -rf dist && tsc",
     "start": "node dist/main.js",
     "dev": "tsx src/main.ts",
-    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings=ExperimentalWarning' jest --passWithNoTests",
+    "test": "vitest run",
     "lint": "eslint src/"
   },
   "dependencies": {
@@ -19,9 +19,7 @@
     "eslint-config-custom": "workspace:*",
     "typescript": "^5.8.0",
     "tsx": "^4.0.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.0",
-    "@types/jest": "^29.5.0",
+    "vitest": "^4.1.2",
     "@types/supertest": "^6.0.0",
     "supertest": "^7.0.0",
     "@types/express": "^5.0.0",

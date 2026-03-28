@@ -55,7 +55,7 @@ The Dockerfile uses [Turborepo Docker pruning](https://turbo.build/repo/docs/gui
 - **Package Manager:** pnpm 10 with workspace injection
 - **Build Orchestration:** Turborepo
 - **Shared Packages:** tsup (ESM)
-- **Testing:** Jest with ts-jest
+- **Testing:** Vitest
 - **Linting:** ESLint 10 (flat config) + Prettier
 - **Deployment:** GKE via ArgoCD (mozcloud Helm chart)
 

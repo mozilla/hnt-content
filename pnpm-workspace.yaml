@@ -1,5 +1,8 @@
 packages:
-  - 'services/*'
-  - 'packages/*'
+  - services/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - esbuild
 
 injectWorkspacePackages: true
