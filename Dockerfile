@@ -3,7 +3,7 @@
 # https://turbo.build/repo/docs/guides/tools/docker
 
 # ---- base ----
-FROM node:24-alpine AS base
+FROM node:24.14-alpine AS base
 
 ARG SCOPE
 ARG PORT=8080
@@ -47,7 +47,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm --filter=${SCOPE} --prod deploy /prod
 
 # ---- runner ----
-FROM node:24-alpine AS runner
+FROM node:24.14-alpine AS runner
 ARG PORT=8080
 
 RUN apk add --no-cache curl && \
