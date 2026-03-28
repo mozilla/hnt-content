@@ -1,37 +1,57 @@
-# CLAUDE.md
-
-## Running tests
+# Testing
 
 ```sh
-# All tests (via Turbo)
-pnpm test
-
-# Single package
-pnpm --filter crawl-agent test
-
-# Single test file (run from package dir)
-cd services/crawl-agent
-npx vitest run src/app.spec.ts
-
-# Single test case (match by name)
-npx vitest run src/app.spec.ts -t "returns 200"
+pnpm test                                        # all tests (via Turbo)
+pnpm --filter crawl-agent test                   # single package
+pnpm --filter crawl-agent exec vitest run src/app.spec.ts          # single file
+pnpm --filter crawl-agent exec vitest run src/app.spec.ts -t "returns 200"  # single test
 ```
 
-## Debugging
+## Debugging tests
 
-Source maps are **not enabled** by default. To debug with breakpoints:
+**console.log output is hidden by default.** Always add `--reporter=verbose`:
 
 ```sh
-# From the service directory, run a test under the Node inspector:
-cd services/crawl-agent
-node --inspect-brk node_modules/vitest/vitest.mjs run --pool forks --poolOptions.forks.singleFork src/app.spec.ts
+pnpm --filter crawl-agent exec vitest run src/app.spec.ts --reporter=verbose
 ```
 
-To debug the running service:
+Node inspector breakpoints:
 
 ```sh
-cd services/crawl-agent
-node --inspect-brk dist/main.js
+NODE_OPTIONS='--inspect-brk' pnpm --filter crawl-agent exec vitest run src/app.spec.ts
 ```
 
-For CLI-only debugging (no IDE attach), use `console.log` or run with `NODE_DEBUG=*` for Node internals.
+## Debugging a running service
+
+```sh
+NODE_OPTIONS='--inspect-brk' pnpm --filter crawl-agent start
+```
+
+## Type checking
+
+Use `tsc --noEmit`, not `vitest typecheck` (not configured in this repo):
+
+```sh
+pnpm --filter crawl-agent exec tsc --noEmit
+```
+
+# Git conventions
+
+**Branches:** `HNT-<number>-<kebab-case-description>` (e.g. `HNT-2097-scaffold-repo`)
+
+**Commits and PR titles** follow [Conventional Commits](https://www.conventionalcommits.org/) with the Jira ticket as scope:
+
+```
+<type>(HNT-<number>): <imperative verb> <description>
+```
+
+- **type**: `feat` | `fix` | `chore` | `refactor` | `test` | `docs` | `ci`
+- **scope**: always the Jira ticket, e.g. `HNT-2097`
+- **subject**: lowercase, imperative mood, no period
+
+Examples:
+```
+feat(HNT-2097): add crawl-agent healthcheck endpoint
+fix(HNT-3001): handle null article body from Zyte
+chore(HNT-2097): migrate from Jest to Vitest
+```
