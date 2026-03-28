@@ -9,7 +9,8 @@ ARG SCOPE
 ARG PORT=8080
 
 RUN apk add --no-cache curl libc6-compat
-RUN corepack enable
+COPY package.json .
+RUN corepack enable && corepack install
 ENV PNPM_HOME=/usr/local/bin
 RUN pnpm add -g turbo@2.8.20
 
