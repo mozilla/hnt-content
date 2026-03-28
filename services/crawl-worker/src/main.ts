@@ -1,9 +1,8 @@
 import { app } from './app.js';
+import config from './config.js';
 
-const port = parseInt(process.env.PORT ?? '8080', 10);
-
-const server = app.listen(port, () => {
-  console.log(`crawl-worker listening on port ${port}`);
+const server = app.listen(config.port, () => {
+  console.log(`crawl-worker listening on port ${config.port}`);
 });
 
 process.on('SIGTERM', () => {

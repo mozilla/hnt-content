@@ -1,9 +1,8 @@
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
+import config from './config.js';
 
-const port = parseInt(process.env.PORT ?? '8080', 10);
-
-const server = app.listen(port, () => {
-  console.log(`crawl-agent listening on port ${port}`);
+const server = app.listen(config.port, () => {
+  console.log(`crawl-agent listening on port ${config.port}`);
 });
 
 let sleepTimer: ReturnType<typeof setTimeout> | undefined;
@@ -31,12 +30,15 @@ function sleep(ms: number): Promise<void> {
 
 async function run() {
   while (isRunning()) {
+    const start = Date.now();
     try {
       await tick();
     } catch (err) {
       console.error('tick failed:', err);
     }
-    await sleep(60_000);
+    const elapsed = Date.now() - start;
+    const remainingMs = Math.max(0, config.tickIntervalMs - elapsed);
+    await sleep(remainingMs);
   }
 }
 
