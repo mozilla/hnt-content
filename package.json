@@ -18,8 +18,9 @@
   "packageManager": "pnpm@10.28.0",
   "devDependencies": {
     "eslint": "^10.0.0",
-    "eslint-config-custom": "workspace:*",
+    "eslint-config-prettier": "^10.0.0",
     "prettier": "^3.0.0",
+    "typescript-eslint": "^8.0.0",
     "turbo": "^2.5.0",
     "vitest": "^4.1.2"
   }
