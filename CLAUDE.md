@@ -55,3 +55,5 @@ feat(HNT-2097): add crawl-agent healthcheck endpoint
 fix(HNT-3001): handle null article body from Zyte
 chore(HNT-2097): migrate from Jest to Vitest
 ```
+
+**PR descriptions** must follow the template in @.github/PULL_REQUEST_TEMPLATE.md.
