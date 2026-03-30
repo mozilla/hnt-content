@@ -23,8 +23,12 @@ export function setLastTickAt(t: number) {
 }
 
 app.get('/healthz', (_req, res) => {
+  if (lastTickAt === 0) {
+    res.status(500).send('no tick yet');
+    return;
+  }
   const staleMs = Date.now() - lastTickAt;
-  const staleMinutes = staleMs / 60_000; // convert milliseconds to minutes
+  const staleMinutes = staleMs / 60_000;
   if (staleMinutes > config.staleTickThresholdMinutes) {
     res.status(500).send(`last tick ${staleMinutes.toFixed(1)}m ago`);
     return;

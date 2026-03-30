@@ -40,4 +40,7 @@ async function run() {
   }
 }
 
-run();
+run().catch((err) => {
+  console.error('run loop crashed:', err);
+  process.exit(1);
+});

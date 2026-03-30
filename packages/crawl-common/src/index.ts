@@ -9,8 +9,14 @@ export function requireInt(
   max = Infinity,
 ): number {
   const raw = process.env[name] ?? fallback;
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < min || value > max) {
+  const trimmed = raw.trim();
+  if (!/^-?\d+$/.test(trimmed)) {
+    throw new Error(
+      `${name} must be an integer between ${min} and ${max}, got "${raw}"`,
+    );
+  }
+  const value = Number(trimmed);
+  if (value < min || value > max) {
     throw new Error(
       `${name} must be an integer between ${min} and ${max}, got "${raw}"`,
     );

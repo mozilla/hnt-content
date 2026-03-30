@@ -37,4 +37,29 @@ describe('requireInt', () => {
       /must be an integer/,
     );
   });
+
+  it('throws on empty string', () => {
+    process.env[ENV_KEY] = '';
+    expect(() => requireInt(ENV_KEY, '42')).toThrow(/must be/);
+  });
+
+  it('throws on whitespace-only string', () => {
+    process.env[ENV_KEY] = '   ';
+    expect(() => requireInt(ENV_KEY, '42')).toThrow(/must be/);
+  });
+
+  it('throws on hex notation', () => {
+    process.env[ENV_KEY] = '0x10';
+    expect(() => requireInt(ENV_KEY, '42')).toThrow(/must be/);
+  });
+
+  it('throws on scientific notation', () => {
+    process.env[ENV_KEY] = '1e3';
+    expect(() => requireInt(ENV_KEY, '42')).toThrow(/must be/);
+  });
+
+  it('throws on Infinity', () => {
+    process.env[ENV_KEY] = 'Infinity';
+    expect(() => requireInt(ENV_KEY, '42')).toThrow(/must be/);
+  });
 });

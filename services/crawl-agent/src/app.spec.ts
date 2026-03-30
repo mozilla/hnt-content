@@ -21,6 +21,6 @@ describe('crawl-agent healthcheck', () => {
     setLastTickAt(0);
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(500);
-    expect(res.text).toMatch(/last tick/);
+    expect(res.text).toBe('no tick yet');
   });
 });
