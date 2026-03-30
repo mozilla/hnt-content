@@ -13,6 +13,7 @@ RUN apk add --no-cache curl libc6-compat
 COPY package.json .
 RUN corepack enable && corepack install
 ENV PNPM_HOME=/usr/local/bin
+ENV PNPM_STORE_DIR=/pnpm/store
 RUN pnpm add -g turbo@2.8.20
 
 # ---- prune ----
@@ -29,7 +30,7 @@ COPY .gitignore .gitignore
 COPY --from=setup /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=setup /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=setup /app/out/json/ ./
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
 # Build all services
@@ -39,7 +40,7 @@ COPY tsconfig.json tsconfig.json
 RUN pnpm run build
 
 # Deploy each service to a self-contained directory with prod deps only
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm --filter=crawl-agent --prod deploy /prod/crawl-agent && \
     pnpm --filter=crawl-worker --prod deploy /prod/crawl-worker
 
