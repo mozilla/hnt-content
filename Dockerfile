@@ -49,9 +49,11 @@ FROM node:24.14-alpine AS runner
 
 RUN apk add --no-cache curl libc6-compat
 
+RUN addgroup -g 10001 -S app && adduser -u 10001 -S -G app -h /app app
+
 WORKDIR /app
-COPY --from=builder --chown=node:node /prod/ ./
-USER node
+COPY --from=builder --chown=app:app /prod/ ./
+USER app
 
 ENV NODE_ENV=production
 ENV PORT=8080
