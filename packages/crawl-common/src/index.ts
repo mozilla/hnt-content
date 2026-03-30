@@ -16,7 +16,7 @@ export function requireInt(
     );
   }
   const value = Number(trimmed);
-  if (value < min || value > max) {
+  if (!Number.isSafeInteger(value) || value < min || value > max) {
     throw new Error(
       `${name} must be an integer between ${min} and ${max}, got "${raw}"`,
     );

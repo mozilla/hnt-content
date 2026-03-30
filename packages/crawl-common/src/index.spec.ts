@@ -62,4 +62,9 @@ describe('requireInt', () => {
     process.env[ENV_KEY] = 'Infinity';
     expect(() => requireInt(ENV_KEY, '42')).toThrow(/must be/);
   });
+
+  it('throws on value beyond Number.MAX_SAFE_INTEGER', () => {
+    process.env[ENV_KEY] = '9'.repeat(400);
+    expect(() => requireInt(ENV_KEY, '42')).toThrow(/must be/);
+  });
 });
