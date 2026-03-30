@@ -11,9 +11,14 @@ describe('crawl-agent healthcheck', () => {
   });
 
   it('GET /healthz returns 500 when tick is stale', async () => {
-    setLastTickAt(
-      Date.now() - (config.staleTickThresholdMinutes + 1) * 60_000,
-    );
+    setLastTickAt(Date.now() - (config.staleTickThresholdMinutes + 1) * 60_000);
+    const res = await request(app).get('/healthz');
+    expect(res.status).toBe(500);
+    expect(res.text).toMatch(/last tick/);
+  });
+
+  it('GET /healthz returns 500 before first tick', async () => {
+    setLastTickAt(0);
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(500);
     expect(res.text).toMatch(/last tick/);

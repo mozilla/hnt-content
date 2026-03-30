@@ -8,8 +8,6 @@
 # ---- base ----
 FROM node:24.14-alpine AS base
 
-ARG PORT=8080
-
 RUN apk add --no-cache curl libc6-compat
 COPY package.json .
 RUN corepack enable && corepack install

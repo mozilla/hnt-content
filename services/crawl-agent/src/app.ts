@@ -3,7 +3,7 @@ import config from './config.js';
 
 export const app: Express = express();
 
-let lastTickAt = Date.now();
+let lastTickAt = 0;
 let running = true;
 
 export function isRunning() {

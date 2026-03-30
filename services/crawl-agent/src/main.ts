@@ -1,3 +1,4 @@
+import { setTimeout as delay } from 'node:timers/promises';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
 
@@ -7,7 +8,10 @@ const server = app.listen(config.port, () => {
 
 const ac = new AbortController();
 
+let shuttingDown = false;
 function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
   console.log('Shutting down');
   stopRunning();
   ac.abort();
@@ -22,20 +26,6 @@ async function tick() {
   setLastTickAt(Date.now());
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    ac.signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        resolve();
-      },
-      { once: true },
-    );
-  });
-}
-
 async function run() {
   while (isRunning()) {
     const start = Date.now();
@@ -46,7 +36,7 @@ async function run() {
     }
     const elapsed = Date.now() - start;
     const remainingMs = Math.max(0, config.tickIntervalMs - elapsed);
-    await sleep(remainingMs);
+    await delay(remainingMs, undefined, { signal: ac.signal }).catch(() => {});
   }
 }
 

@@ -51,11 +51,12 @@ hnt-content/
 
 ## Deployment
 
-Build a service image using the `SCOPE` build arg:
+The Dockerfile builds a single image containing all services. Each Helm workload overrides the command to select which service to run:
 
 ```sh
-docker build --build-arg SCOPE=crawl-worker -t crawl-worker .
-docker build --build-arg SCOPE=crawl-agent -t crawl-agent .
+docker build -t hnt-content .
+docker run -e PORT=8080 hnt-content node crawl-agent/dist/main.js
+docker run -e PORT=8080 hnt-content node crawl-worker/dist/main.js
 ```
 
 The Dockerfile uses [Turborepo Docker pruning](https://turbo.build/repo/docs/guides/tools/docker) and `pnpm deploy --prod` to produce a minimal image with only production dependencies. Services deploy to GKE via ArgoCD (mozcloud Helm chart).
