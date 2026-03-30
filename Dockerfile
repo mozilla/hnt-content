@@ -61,4 +61,4 @@ ENV NODE_ENV=production
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
-CMD ["node", "crawl-worker/dist/main.js"]
+CMD ["sh", "-c", "echo 'ERROR: specify a service command, e.g. node crawl-agent/dist/main.js' && exit 1"]

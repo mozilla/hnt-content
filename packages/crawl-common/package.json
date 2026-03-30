@@ -12,10 +12,11 @@
   },
   "scripts": {
     "build": "tsup",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "lint": "eslint src/"
   },
   "devDependencies": {
+    "@types/node": "^24.12.0",
     "eslint": "^10.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.8.0",
