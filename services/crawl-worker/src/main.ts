@@ -10,7 +10,13 @@ function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('Shutting down');
-  server.close();
+  server.close(() => process.exit(0));
+  setTimeout(() => {
+    console.error('Forced exit after timeout');
+    process.exit(1);
+  }, 10_000).unref();
+  process.removeListener('SIGTERM', shutdown);
+  process.removeListener('SIGINT', shutdown);
 }
 
 process.on('SIGTERM', shutdown);

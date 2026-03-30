@@ -21,14 +21,19 @@ describe('crawl-agent healthcheck', () => {
     expect(res.text).toMatch(/last tick/);
   });
 
-  it('GET /healthz returns 200 when tick is exactly at threshold', async () => {
-    setLastTickAt(Date.now() - config.staleTickThresholdMinutes * 60_000);
+  it('GET /healthz returns 200 when tick is just within threshold', async () => {
+    // Use 1s buffer to avoid timing races between setLastTickAt and the request
+    setLastTickAt(
+      Date.now() - config.staleTickThresholdMinutes * 60_000 + 1_000,
+    );
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(200);
   });
 
-  it('GET /healthz returns 500 when tick is just past threshold', async () => {
-    setLastTickAt(Date.now() - config.staleTickThresholdMinutes * 60_000 - 1);
+  it('GET /healthz returns 500 when tick exceeds threshold', async () => {
+    setLastTickAt(
+      Date.now() - config.staleTickThresholdMinutes * 60_000 - 1_000,
+    );
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(500);
   });
