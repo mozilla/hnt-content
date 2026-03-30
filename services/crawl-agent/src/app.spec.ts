@@ -3,6 +3,10 @@ import { app, setLastTickAt } from './app.js';
 import config from './config.js';
 
 describe('crawl-agent healthcheck', () => {
+  beforeEach(() => {
+    setLastTickAt(0);
+  });
+
   it('GET /healthz returns 200 when tick is recent', async () => {
     setLastTickAt(Date.now());
     const res = await request(app).get('/healthz');
@@ -17,8 +21,19 @@ describe('crawl-agent healthcheck', () => {
     expect(res.text).toMatch(/last tick/);
   });
 
+  it('GET /healthz returns 200 when tick is exactly at threshold', async () => {
+    setLastTickAt(Date.now() - config.staleTickThresholdMinutes * 60_000);
+    const res = await request(app).get('/healthz');
+    expect(res.status).toBe(200);
+  });
+
+  it('GET /healthz returns 500 when tick is just past threshold', async () => {
+    setLastTickAt(Date.now() - config.staleTickThresholdMinutes * 60_000 - 1);
+    const res = await request(app).get('/healthz');
+    expect(res.status).toBe(500);
+  });
+
   it('GET /healthz returns 500 before first tick', async () => {
-    setLastTickAt(0);
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(500);
     expect(res.text).toBe('no tick yet');

@@ -8,6 +8,7 @@
 # ---- base ----
 FROM node:24.14-alpine AS base
 
+WORKDIR /app
 RUN apk add --no-cache curl libc6-compat
 COPY package.json .
 RUN corepack enable && corepack install
@@ -17,14 +18,11 @@ RUN pnpm add -g turbo@2.8.20
 # ---- prune ----
 FROM base AS setup
 
-WORKDIR /app
 COPY . .
 RUN turbo prune crawl-agent crawl-worker --docker
 
 # ---- build ----
 FROM base AS builder
-
-WORKDIR /app
 
 # Install dependencies (json-only layer for Docker caching)
 COPY .gitignore .gitignore
@@ -47,18 +45,15 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 # ---- runner ----
 FROM node:24.14-alpine AS runner
-ARG PORT=8080
 
-RUN apk add --no-cache curl && \
-    addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nodejs
+RUN apk add --no-cache curl libc6-compat
 
 WORKDIR /app
-COPY --from=builder --chown=nodejs:nodejs /prod/ ./
-USER nodejs
+COPY --from=builder --chown=node:node /prod/ ./
+USER node
 
 ENV NODE_ENV=production
-ENV PORT=${PORT}
-EXPOSE ${PORT}
+ENV PORT=8080
+EXPOSE 8080
 
 CMD ["sh", "-c", "echo 'ERROR: specify a service command, e.g. node crawl-agent/dist/main.js' && exit 1"]
