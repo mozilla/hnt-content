@@ -1,11 +1,13 @@
 # syntax=docker/dockerfile:1
+# Builds a single image containing all hnt-content services.
+# Each Helm workload overrides the command to select which service to run.
+#
 # Adapted from content-monorepo and
 # https://turbo.build/repo/docs/guides/tools/docker
 
 # ---- base ----
 FROM node:24.14-alpine AS base
 
-ARG SCOPE
 ARG PORT=8080
 
 RUN apk add --no-cache curl libc6-compat
@@ -16,15 +18,13 @@ RUN pnpm add -g turbo@2.8.20
 
 # ---- prune ----
 FROM base AS setup
-ARG SCOPE
 
 WORKDIR /app
 COPY . .
-RUN turbo prune $SCOPE --docker
+RUN turbo prune crawl-agent crawl-worker --docker
 
 # ---- build ----
 FROM base AS builder
-ARG SCOPE
 
 WORKDIR /app
 
@@ -36,15 +36,16 @@ COPY --from=setup /app/out/json/ ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
-# Build
+# Build all services
 COPY --from=setup /app/out/full/ ./
 COPY turbo.json turbo.json
 COPY tsconfig.json tsconfig.json
-RUN pnpm run build --filter=${SCOPE}...
+RUN pnpm run build
 
-# Deploy: produce self-contained directory with prod deps only
+# Deploy each service to a self-contained directory with prod deps only
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm --filter=${SCOPE} --prod deploy /prod
+    pnpm --filter=crawl-agent --prod deploy /prod/crawl-agent && \
+    pnpm --filter=crawl-worker --prod deploy /prod/crawl-worker
 
 # ---- runner ----
 FROM node:24.14-alpine AS runner
@@ -62,4 +63,4 @@ ENV NODE_ENV=production
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "crawl-worker/dist/main.js"]
