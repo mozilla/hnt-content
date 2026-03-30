@@ -5,7 +5,10 @@ const server = app.listen(config.port, () => {
   console.log(`crawl-worker listening on port ${config.port}`);
 });
 
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down');
+function shutdown() {
+  console.log('Shutting down');
   server.close();
-});
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

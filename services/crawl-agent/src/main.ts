@@ -25,10 +25,14 @@ async function tick() {
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, ms);
-    ac.signal.addEventListener('abort', () => {
-      clearTimeout(timer);
-      resolve();
-    });
+    ac.signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
   });
 }
 
