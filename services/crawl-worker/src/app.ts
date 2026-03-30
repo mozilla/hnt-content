@@ -18,7 +18,7 @@ app.use(
     res: express.Response,
     _next: express.NextFunction,
   ) => {
-    console.error('Unhandled error:', err.message);
+    console.error('Unhandled error:', err.stack || err);
     res.status(500).type('text/plain').send('internal server error');
   },
 );

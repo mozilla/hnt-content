@@ -42,7 +42,12 @@ async function run() {
     }
     const elapsed = Date.now() - start;
     const remainingMs = Math.max(0, config.tickIntervalMs - elapsed);
-    await delay(remainingMs, undefined, { signal: ac.signal }).catch(() => {});
+    try {
+      await delay(remainingMs, undefined, { signal: ac.signal });
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') break;
+      throw err;
+    }
   }
 }
 
