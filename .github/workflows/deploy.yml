@@ -8,6 +8,10 @@ on:
 # Drop all default GITHUB_TOKEN permissions; each job declares its own.
 permissions: {}
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -17,14 +21,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Create version.json
-        run: |
-          printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' \
-            "$GITHUB_SHA" \
-            "$GITHUB_REF_NAME" \
-            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
-            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > version.json
+        with:
+          persist-credentials: false
 
       - name: Build Docker image
         run: |
@@ -32,16 +30,11 @@ jobs:
             -t us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:latest \
             -t us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${{ github.sha }}
 
-      - name: Push latest image to GAR
+      - name: Push images to GAR
         uses: mozilla-it/deploy-actions/docker-push@4784cb70739a4f32ce010921f60fb1ebbc791a38 # v6.2.2
         with:
           project_id: moz-fx-hnt-prod
-          image_tags: us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:latest
-          workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
-
-      - name: Push SHA-tagged image to GAR
-        uses: mozilla-it/deploy-actions/docker-push@4784cb70739a4f32ce010921f60fb1ebbc791a38 # v6.2.2
-        with:
-          project_id: moz-fx-hnt-prod
-          image_tags: us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${{ github.sha }}
+          image_tags: |
+            us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:latest
+            us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${{ github.sha }}
           workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
