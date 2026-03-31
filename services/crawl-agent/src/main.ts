@@ -29,6 +29,7 @@ process.on('SIGINT', shutdown);
 
 // Placeholder tick loop; will be replaced with real scheduling logic.
 async function tick() {
+  console.log('tick', new Date().toISOString());
   setLastTickAt(Date.now());
 }
 
