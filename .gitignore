@@ -1,0 +1,38 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# testing
+coverage
+
+# build output
+dist
+*.tsbuildinfo
+
+# turbo
+.turbo
+
+# local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# debug
+npm-debug.log*
+pnpm-debug.log*
+
+# misc
+.DS_Store
+*.pem
+logs
+
+# IDE
+.idea
+.vscode
+
+# we only want pnpm-lock.yaml
+package-lock.json
+yarn.lock
