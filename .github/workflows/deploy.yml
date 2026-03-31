@@ -34,7 +34,7 @@ jobs:
         uses: mozilla-it/deploy-actions/docker-push@4784cb70739a4f32ce010921f60fb1ebbc791a38 # v6.2.2
         with:
           project_id: moz-fx-hnt-prod
-          image_tags: |
+          image_tags: |-
             us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:latest
             us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${{ github.sha }}
           workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
