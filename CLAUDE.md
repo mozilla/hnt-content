@@ -1,3 +1,19 @@
+# Code guidelines
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and [README.md](README.md) before making changes to the codebase.
+
+Keep doc blocks and comments as short as possible without sacrificing grammar or readability. Wrap lines at 80 characters (Prettier does not reformat comments, so this must be enforced manually). If a comment has only 1-2 words on the last line, reword it to eliminate the orphan. Only update doc blocks and comments on code you are changing.
+
+## Doc blocks
+
+All non-trivial functions must have a doc block. Add or update them when creating or editing functions. Only trivial one-liners are exempt.
+
+Start with an imperative verb ("Fetch the ...", "Return whether ..."). Keep doc blocks length proportional to the function's complexity; 1-2 lines should be enough for most functions. Do not restate the function declaration (name and arguments), but think about how to make the doc block add value.
+
+## Comments
+
+Comments should add value: explain complex logic, workarounds, or business reasons for decisions.
+
 # Testing
 
 ```sh

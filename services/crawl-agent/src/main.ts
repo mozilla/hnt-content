@@ -6,9 +6,16 @@ const server = app.listen(config.port, () => {
   console.log(`crawl-agent listening on port ${config.port}`);
 });
 
+// Cancels the inter-tick delay in run() during shutdown.
 const ac = new AbortController();
+const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 let shuttingDown = false;
+/**
+ * Initiate graceful shutdown: stop the tick loop, close the server, and
+ * force-exit after a timeout. K8s sends SIGTERM before pod termination;
+ * a clean shutdown prevents duplicate Pub/Sub message processing.
+ */
 function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
@@ -17,9 +24,9 @@ function shutdown() {
   ac.abort();
   server.close(() => process.exit(0));
   setTimeout(() => {
-    console.error('Forced exit after timeout');
+    console.error(`Forced exit after ${SHUTDOWN_TIMEOUT_MS}ms timeout`);
     process.exit(1);
-  }, 10_000).unref();
+  }, SHUTDOWN_TIMEOUT_MS).unref();
   process.removeListener('SIGTERM', shutdown);
   process.removeListener('SIGINT', shutdown);
 }
@@ -27,12 +34,21 @@ function shutdown() {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-// Placeholder tick loop; will be replaced with real scheduling logic.
+/**
+ * Execute a single crawl cycle. Currently only logs the time.
+ * Eventually, each tick will check publisher pages and live
+ * articles against Redis timestamps, then publish due items
+ * to the crawl Pub/Sub queues for worker processing.
+ */
 async function tick() {
   console.log('tick', new Date().toISOString());
   setLastTickAt(Date.now());
 }
 
+/**
+ * Run the tick loop at the configured interval until the
+ * process is signalled to stop.
+ */
 async function run() {
   while (isRunning()) {
     const start = Date.now();
