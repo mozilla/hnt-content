@@ -33,6 +33,9 @@ logs
 .idea
 .vscode
 
+# local Claude Code instructions
+CLAUDE.local.md
+
 # we only want pnpm-lock.yaml
 package-lock.json
 yarn.lock
