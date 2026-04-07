@@ -72,4 +72,4 @@ fix(HNT-3001): handle null article body from Zyte
 chore(HNT-2097): migrate from Jest to Vitest
 ```
 
-**PR descriptions** must follow the template in @.github/PULL_REQUEST_TEMPLATE.md. Keep the **## Changes** section short: only call out the most important design or implementation decisions, described succinctly. Omit the **# QA** section when no manual testing steps are needed.
+**PR descriptions** must follow the template in @.github/PULL_REQUEST_TEMPLATE.md. Keep the **## Changes** section short: only call out the most important design or implementation decisions, described succinctly. Omit the **# QA** section when no manual testing steps are needed. Write each paragraph as a single long line; do not hard-wrap prose in PR descriptions (heredocs can inject `\r\n`, which GitHub renders as hard line breaks).
