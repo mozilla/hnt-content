@@ -7,10 +7,12 @@ app.disable('x-powered-by');
 let lastTickAt = 0;
 let running = true;
 
+/** Return whether the crawl loop should continue ticking. */
 export function isRunning() {
   return running;
 }
 
+/** Signal the crawl loop to stop after the current tick. */
 export function stopRunning() {
   running = false;
 }
@@ -23,6 +25,8 @@ export function setLastTickAt(t: number) {
   lastTickAt = t;
 }
 
+// K8s liveness probe: a healthy response requires a recent tick, so a
+// deadlocked or wedged event loop is detected and the pod is restarted.
 app.get('/healthz', (_req, res) => {
   if (lastTickAt === 0) {
     res.status(500).type('text/plain').send('no tick yet');
