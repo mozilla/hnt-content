@@ -10,29 +10,29 @@ from legacy tables. Run manually in BigQuery Console.
 
 ## How to run
 
-Each script has a `target_dataset` variable at the top:
+Run each script three times: once per environment. Change the dataset
+name in the `INSERT INTO` line to match:
 
-| Environment | `target_dataset` | Project |
-|-------------|------------------|---------|
+| Environment | Dataset | Project |
+|-------------|---------|---------|
 | prod | `crawl` | `moz-fx-hnt-prod` |
 | dev | `crawl_dev` | `moz-fx-hnt-nonprod` |
 | stage | `crawl_stage` | `moz-fx-hnt-nonprod` |
 
-Non-prod datasets automatically get a 30-day date filter.
-
 1. Open BigQuery Console and select the target project.
 2. Run `001_backfill_articles.sql`.
 3. Run `002_backfill_article_discoveries.sql`.
-4. Verify row counts (see below).
+4. Repeat for each environment.
+5. Verify row counts (see below).
 
 ## Verification
 
 ```sql
--- articles: expect ~16.9M rows (prod) as of 2026-04-06
+-- articles: expect ~16.9M rows as of 2026-04-06
 SELECT COUNT(*) FROM `crawl.articles`
 WHERE extracted_at >= '2024-01-01';
 
--- article_discoveries: expect ~3.2M rows (prod) as of 2026-04-06
+-- article_discoveries: expect ~3.2M rows as of 2026-04-06
 SELECT COUNT(*) FROM `crawl.article_discoveries`
 WHERE crawled_at >= '2025-08-01';
 ```
@@ -47,4 +47,4 @@ WHERE crawled_at >= '2025-08-01';
 | `zyte_authors` | Treated as single author string (commas are credentials, not separators) |
 | `surface` to `surface_id` | `CONCAT('NEW_TAB_', UPPER(surface))` |
 | `rss_feed_items` filter | `source = 'PAGE'` only (PAGE crawling started 2025-08-11) |
-| Environments | Prod gets full data; dev/stage get last 30 days |
+| Environments | All three get full data (~$1.72 total scan cost) |
