@@ -3,8 +3,8 @@ export {
   extractArticle,
   extractArticleList,
   RETRYABLE_STATUS_CODES,
-  ZyteError,
-} from './zyte/index.js';
+} from './client.js';
+export { ZyteError } from './errors.js';
 export type {
   ZyteClientOptions,
   ExtractionOptions,
@@ -13,4 +13,4 @@ export type {
   ZyteAuthor,
   ZyteImage,
   ZyteBreadcrumb,
-} from './zyte/index.js';
+} from './types.js';
