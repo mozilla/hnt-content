@@ -4,8 +4,13 @@
 <!-- What changed and why? Describe the business/product reason. -->
 
 
-## Changes
-<!-- Describe high-level changes. -->
+## Implementation decisions
+<!-- Help reviewers understand the reasoning behind non-obvious choices.
+     Remove this section if there are no noteworthy decisions. -->
+
+| Decision | Approach | Why |
+|----------|----------|-----|
+|          |          |     |
 
 
 # Deployment steps
