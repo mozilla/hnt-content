@@ -1,14 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-vi.mock('undici', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('undici')>();
-  return {
-    ...actual,
-    request: vi.fn(),
-  };
-});
-
-import { request } from 'undici';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   initZyteClient,
   extractArticle,
@@ -17,7 +7,7 @@ import {
 } from './client.js';
 import { ZyteError } from './errors.js';
 
-const requestMock = vi.mocked(request);
+const fetchMock = vi.fn<typeof fetch>();
 
 /** Realistic Zyte article extraction response. */
 const ARTICLE_RESPONSE = {
@@ -56,33 +46,34 @@ const ARTICLE_LIST_RESPONSE = {
   },
 };
 
-/** Create a mock undici response with a JSON body. */
-function mockResponse(body: unknown, statusCode = 200) {
-  return {
-    statusCode,
+/** Create a mock fetch Response with a JSON body. */
+function mockResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
     headers: { 'content-type': 'application/json' },
-    body: {
-      json: () => Promise.resolve(body),
-      text: () => Promise.resolve(JSON.stringify(body)),
-    },
-  };
+  });
 }
 
-/** Return the parsed JSON body from the most recent request call. */
+/** Return the parsed JSON body from the most recent fetch call. */
 function lastRequestBody(): Record<string, unknown> {
-  const opts = requestMock.mock.calls.at(-1)![1]!;
+  const opts = fetchMock.mock.calls.at(-1)![1]!;
   return JSON.parse(opts.body as string);
 }
 
-/** Return the headers from the most recent request call. */
+/** Return the headers from the most recent fetch call. */
 function lastRequestHeaders(): Record<string, string> {
-  const opts = requestMock.mock.calls.at(-1)![1]!;
+  const opts = fetchMock.mock.calls.at(-1)![1]!;
   return opts.headers as Record<string, string>;
 }
 
 beforeEach(() => {
-  requestMock.mockReset();
-  initZyteClient({ apiKey: 'test-key' });
+  fetchMock.mockReset();
+  vi.stubGlobal('fetch', fetchMock);
+  initZyteClient({ apiKey: 'test-key', maxRetries: 0 });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('initZyteClient', () => {
@@ -95,7 +86,7 @@ describe('initZyteClient', () => {
 
 describe('extractArticle', () => {
   it('sends correct request body for article extraction', async () => {
-    requestMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
     await extractArticle('https://example.com/article');
 
@@ -106,7 +97,7 @@ describe('extractArticle', () => {
   });
 
   it('returns article data with envelope fields', async () => {
-    requestMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
     const result = await extractArticle('https://example.com/article');
 
@@ -121,7 +112,7 @@ describe('extractArticle', () => {
       ...ARTICLE_RESPONSE,
       url: 'https://example.com/redirected-article',
     };
-    requestMock.mockResolvedValueOnce(mockResponse(redirected) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(redirected));
 
     const result = await extractArticle('https://example.com/old-url');
 
@@ -129,7 +120,7 @@ describe('extractArticle', () => {
   });
 
   it('sends Basic auth header with API key', async () => {
-    requestMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
     await extractArticle('https://example.com/article');
 
@@ -143,18 +134,17 @@ describe('extractArticle', () => {
     initZyteClient({
       apiKey: 'k',
       apiUrl: 'https://custom.zyte.com/extract',
+      maxRetries: 0,
     });
-    requestMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
     await extractArticle('https://example.com/article');
 
-    expect(requestMock.mock.calls[0][0]).toBe(
-      'https://custom.zyte.com/extract',
-    );
+    expect(fetchMock.mock.calls[0][0]).toBe('https://custom.zyte.com/extract');
   });
 
   it('includes extractFrom with httpResponseBody', async () => {
-    requestMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
     await extractArticle('https://example.com/a', {
       extractFrom: 'httpResponseBody',
@@ -168,7 +158,7 @@ describe('extractArticle', () => {
   });
 
   it('includes extractFrom with browserHtml', async () => {
-    requestMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
     await extractArticle('https://example.com/a', {
       extractFrom: 'browserHtml',
@@ -182,7 +172,7 @@ describe('extractArticle', () => {
   });
 
   it('includes all options when combined', async () => {
-    requestMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
     await extractArticle('https://example.com/a', {
       extractFrom: 'httpResponseBody',
@@ -206,7 +196,7 @@ describe('extractArticle', () => {
       { name: 'User-Agent', value: 'MozBot/1.0' },
       { name: 'Zyte-Override-Headers', value: 'User-Agent' },
     ];
-    requestMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
     await extractArticle('https://example.com/a', {
       customHttpRequestHeaders: headers,
@@ -216,7 +206,7 @@ describe('extractArticle', () => {
   });
 
   it('includes tags', async () => {
-    requestMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
     await extractArticle('https://example.com/a', {
       tags: ['hnt', 'crawl'],
@@ -231,7 +221,7 @@ describe('extractArticle', () => {
       title: 'Authentication Key Not Found',
       status: 401,
     };
-    requestMock.mockResolvedValueOnce(mockResponse(errorBody, 401) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse(errorBody, 401));
 
     const err = await extractArticle('https://example.com/a').catch((e) => e);
 
@@ -242,12 +232,12 @@ describe('extractArticle', () => {
   });
 
   it('throws ZyteError when article is null', async () => {
-    requestMock.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       mockResponse({
         url: 'https://example.com/a',
         statusCode: 200,
         article: null,
-      }) as any,
+      }),
     );
 
     const err = await extractArticle('https://example.com/a').catch((e) => e);
@@ -257,11 +247,11 @@ describe('extractArticle', () => {
   });
 
   it('throws ZyteError when response lacks article data', async () => {
-    requestMock.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       mockResponse({
         url: 'https://example.com/a',
         statusCode: 200,
-      }) as any,
+      }),
     );
 
     const err = await extractArticle('https://example.com/a').catch((e) => e);
@@ -271,8 +261,8 @@ describe('extractArticle', () => {
     expect(err.message).toContain('no article data');
   });
 
-  it('propagates network errors from request', async () => {
-    requestMock.mockRejectedValueOnce(new TypeError('fetch failed'));
+  it('propagates network errors from fetch', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
 
     await expect(extractArticle('https://example.com/a')).rejects.toThrow(
       'fetch failed',
@@ -280,14 +270,9 @@ describe('extractArticle', () => {
   });
 
   it('throws ZyteError when error response body is not JSON', async () => {
-    requestMock.mockResolvedValueOnce({
-      statusCode: 500,
-      headers: {},
-      body: {
-        json: () => Promise.reject(new SyntaxError('not json')),
-        text: () => Promise.resolve('Internal Server Error'),
-      },
-    } as any);
+    fetchMock.mockResolvedValueOnce(
+      new Response('Internal Server Error', { status: 500 }),
+    );
 
     const err = await extractArticle('https://example.com/a').catch((e) => e);
 
@@ -297,14 +282,9 @@ describe('extractArticle', () => {
   });
 
   it('throws ZyteError when 200 response body is not JSON', async () => {
-    requestMock.mockResolvedValueOnce({
-      statusCode: 200,
-      headers: {},
-      body: {
-        json: () => Promise.reject(new SyntaxError('not json')),
-        text: () => Promise.resolve('<html>Gateway Timeout</html>'),
-      },
-    } as any);
+    fetchMock.mockResolvedValueOnce(
+      new Response('<html>Gateway Timeout</html>', { status: 200 }),
+    );
 
     const err = await extractArticle('https://example.com/a').catch((e) => e);
 
@@ -316,9 +296,7 @@ describe('extractArticle', () => {
 
 describe('extractArticleList', () => {
   it('sends correct request body', async () => {
-    requestMock.mockResolvedValueOnce(
-      mockResponse(ARTICLE_LIST_RESPONSE) as any,
-    );
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_LIST_RESPONSE));
 
     await extractArticleList('https://example.com/news');
 
@@ -329,9 +307,7 @@ describe('extractArticleList', () => {
   });
 
   it('returns articles with envelope fields', async () => {
-    requestMock.mockResolvedValueOnce(
-      mockResponse(ARTICLE_LIST_RESPONSE) as any,
-    );
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_LIST_RESPONSE));
 
     const result = await extractArticleList('https://example.com/news');
 
@@ -342,7 +318,7 @@ describe('extractArticleList', () => {
   });
 
   it('returns empty array when articles list is empty', async () => {
-    requestMock.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       mockResponse({
         url: 'https://example.com/news',
         statusCode: 200,
@@ -351,7 +327,7 @@ describe('extractArticleList', () => {
           url: 'https://example.com/news',
           metadata: { dateDownloaded: '2026-04-14T12:00:00Z' },
         },
-      }) as any,
+      }),
     );
 
     const result = await extractArticleList('https://example.com/news');
@@ -360,11 +336,11 @@ describe('extractArticleList', () => {
   });
 
   it('throws ZyteError when articleList is missing', async () => {
-    requestMock.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       mockResponse({
         url: 'https://example.com/news',
         statusCode: 200,
-      }) as any,
+      }),
     );
 
     const err = await extractArticleList('https://example.com/news').catch(
@@ -377,9 +353,7 @@ describe('extractArticleList', () => {
   });
 
   it('uses articleListOptions for extractFrom', async () => {
-    requestMock.mockResolvedValueOnce(
-      mockResponse(ARTICLE_LIST_RESPONSE) as any,
-    );
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_LIST_RESPONSE));
 
     await extractArticleList('https://example.com/news', {
       extractFrom: 'httpResponseBody',
@@ -393,7 +367,7 @@ describe('extractArticleList', () => {
   });
 
   it('throws ZyteError on non-ok response', async () => {
-    requestMock.mockResolvedValueOnce(mockResponse({}, 403) as any);
+    fetchMock.mockResolvedValueOnce(mockResponse({}, 403));
 
     const err = await extractArticleList('https://example.com/news').catch(
       (e) => e,
@@ -410,11 +384,10 @@ describe('RETRYABLE_STATUS_CODES', () => {
     expect(RETRYABLE_STATUS_CODES).toContain(500);
     expect(RETRYABLE_STATUS_CODES).toContain(503);
     expect(RETRYABLE_STATUS_CODES).toContain(520);
-    expect(RETRYABLE_STATUS_CODES).toContain(521);
   });
 
   it('does not include permanent error codes', () => {
-    for (const code of [400, 401, 403, 422, 451]) {
+    for (const code of [400, 401, 403, 422, 451, 521]) {
       expect(RETRYABLE_STATUS_CODES).not.toContain(code);
     }
   });

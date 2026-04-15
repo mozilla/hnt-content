@@ -1,4 +1,4 @@
-import { Agent, RetryAgent, request } from 'undici';
+import pRetry from 'p-retry';
 import type {
   ZyteClientOptions,
   ExtractionOptions,
@@ -12,12 +12,13 @@ const DEFAULT_API_URL = 'https://api.zyte.com/v1/extract';
 const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_MAX_RETRIES = 3;
 
-/** Status codes that trigger automatic retry via RetryAgent. */
-export const RETRYABLE_STATUS_CODES = [429, 500, 503, 520, 521] as const;
+/** Status codes that trigger automatic retry. */
+export const RETRYABLE_STATUS_CODES = [429, 500, 503, 520] as const;
 
-let dispatcher: RetryAgent | undefined;
 let apiKey: string | undefined;
 let apiUrl: string;
+let timeout: number;
+let maxRetries: number;
 
 /**
  * Initialize the Zyte API client. Must be called once before
@@ -27,27 +28,10 @@ export function initZyteClient(opts: ZyteClientOptions): void {
   if (!opts.apiKey) {
     throw new Error('Zyte API key is required');
   }
-
-  const requestTimeout = opts.timeout ?? DEFAULT_TIMEOUT_MS;
-  const agent = new Agent({
-    headersTimeout: requestTimeout,
-    bodyTimeout: requestTimeout,
-  });
-  const newDispatcher = new RetryAgent(agent, {
-    maxRetries: opts.maxRetries ?? DEFAULT_MAX_RETRIES,
-    minTimeout: 2_000,
-    maxTimeout: 30_000,
-    timeoutFactor: 2,
-    retryAfter: true,
-    throwOnError: false,
-    methods: ['POST'],
-    statusCodes: [...RETRYABLE_STATUS_CODES],
-  });
-
-  dispatcher?.close();
   apiKey = opts.apiKey;
   apiUrl = opts.apiUrl ?? DEFAULT_API_URL;
-  dispatcher = newDispatcher;
+  timeout = opts.timeout ?? DEFAULT_TIMEOUT_MS;
+  maxRetries = opts.maxRetries ?? DEFAULT_MAX_RETRIES;
 }
 
 /**
@@ -131,46 +115,65 @@ function buildRequestBody(
 }
 
 /**
- * Send a request to the Zyte extract API and return the
- * parsed JSON response. Uses undici.request() instead of
- * fetch() because fetch converts the body to a stream that
- * cannot be replayed on retry.
+ * Send a request to the Zyte extract API with automatic
+ * retry on transient errors via p-retry.
  */
 async function zyteRequest(
   body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  if (!dispatcher) {
+  const key = apiKey;
+  if (!key) {
     throw new Error(
       'Zyte client not initialized. Call initZyteClient() first.',
     );
   }
 
-  const { statusCode, body: responseBody } = await request(apiUrl, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Basic ${btoa(apiKey + ':')}`,
+  return pRetry(
+    async () => {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Basic ${btoa(key + ':')}`,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeout),
+      });
+
+      if (response.status >= 400) {
+        let parsed: unknown;
+        try {
+          parsed = await response.json();
+        } catch {
+          // Response body may not be valid JSON.
+        }
+        throw new ZyteError(
+          response.status,
+          `Zyte API error: ${response.status}`,
+          parsed,
+        );
+      }
+
+      try {
+        return (await response.json()) as Record<string, unknown>;
+      } catch {
+        throw new ZyteError(
+          response.status,
+          `Zyte API returned ${response.status} with unparseable body`,
+        );
+      }
     },
-    body: JSON.stringify(body),
-    dispatcher,
-  });
-
-  if (statusCode >= 400) {
-    let parsed: unknown;
-    try {
-      parsed = await responseBody.json();
-    } catch {
-      // Response body may not be valid JSON.
-    }
-    throw new ZyteError(statusCode, `Zyte API error: ${statusCode}`, parsed);
-  }
-
-  try {
-    return (await responseBody.json()) as Record<string, unknown>;
-  } catch {
-    throw new ZyteError(
-      statusCode,
-      `Zyte API returned ${statusCode} with unparseable body`,
-    );
-  }
+    {
+      retries: maxRetries,
+      minTimeout: 2_000,
+      maxTimeout: 30_000,
+      factor: 2,
+      shouldRetry({ error }) {
+        return (
+          error instanceof ZyteError &&
+          (RETRYABLE_STATUS_CODES as readonly number[]).includes(error.status)
+        );
+      },
+    },
+  );
 }

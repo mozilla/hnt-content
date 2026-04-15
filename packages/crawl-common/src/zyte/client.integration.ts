@@ -1,80 +1,62 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { MockAgent, RetryAgent } from 'undici';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { initZyteClient, extractArticle } from './client.js';
+import { ZyteError } from './errors.js';
+
+/** Minimal article response for retry verification. */
+const ARTICLE_RESPONSE = {
+  url: 'https://example.com',
+  statusCode: 200,
+  article: {
+    url: 'https://example.com',
+    headline: 'Recovered',
+    metadata: { probability: 0.95, dateDownloaded: '2026-04-14T00:00:00Z' },
+  },
+};
 
 /**
- * Verify that RetryAgent actually retries POST requests with
- * undici.request(). This is the integration test for the
- * critical fetch->request migration: fetch() converts bodies
- * to streams that break on retry; request() does not.
+ * Verify that p-retry actually retries transient errors
+ * through the client's public API. Uses real timers, so the
+ * retry test includes a ~2s delay per attempt.
  */
-describe('RetryAgent integration', () => {
-  let mockAgent: MockAgent;
+describe('Retry integration', () => {
+  const fetchMock = vi.fn<typeof fetch>();
 
-  afterEach(() => mockAgent.close());
-
-  it('retries POST on transient 500 and succeeds', async () => {
-    mockAgent = new MockAgent();
-    const pool = mockAgent.get('https://api.zyte.com');
-
-    pool
-      .intercept({ path: '/v1/extract', method: 'POST' })
-      .reply(500, { error: 'transient' });
-    pool
-      .intercept({ path: '/v1/extract', method: 'POST' })
-      .reply(200, { article: { headline: 'Recovered' } });
-
-    const dispatcher = new RetryAgent(mockAgent, {
-      maxRetries: 3,
-      minTimeout: 10,
-      maxTimeout: 50,
-      timeoutFactor: 1,
-      methods: ['POST'],
-      statusCodes: [500],
-      throwOnError: false,
-    });
-
-    const { request } = await import('undici');
-    const { statusCode, body } = await request(
-      'https://api.zyte.com/v1/extract',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ url: 'https://example.com', article: true }),
-        dispatcher,
-      },
-    );
-
-    expect(statusCode).toBe(200);
-    const data = await body.json();
-    expect((data as any).article.headline).toBe('Recovered');
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+    initZyteClient({ apiKey: 'test-key', maxRetries: 3 });
   });
 
+  afterEach(() => {
+    fetchMock.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  it('retries on transient 500 and succeeds', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'transient' }), { status: 500 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(ARTICLE_RESPONSE), { status: 200 }),
+      );
+
+    const result = await extractArticle('https://example.com');
+
+    expect(result.data.headline).toBe('Recovered');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  }, 10_000);
+
   it('does not retry permanent 401 errors', async () => {
-    mockAgent = new MockAgent();
-    const pool = mockAgent.get('https://api.zyte.com');
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ type: '/auth/key-not-found' }), {
+        status: 401,
+      }),
+    );
 
-    pool
-      .intercept({ path: '/v1/extract', method: 'POST' })
-      .reply(401, { type: '/auth/key-not-found' });
+    const err = await extractArticle('https://example.com').catch((e) => e);
 
-    const dispatcher = new RetryAgent(mockAgent, {
-      maxRetries: 3,
-      minTimeout: 10,
-      maxTimeout: 50,
-      timeoutFactor: 1,
-      methods: ['POST'],
-      statusCodes: [500],
-      throwOnError: false,
-    });
-
-    const { request } = await import('undici');
-    const { statusCode } = await request('https://api.zyte.com/v1/extract', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ url: 'https://example.com', article: true }),
-      dispatcher,
-    });
-
-    expect(statusCode).toBe(401);
+    expect(err).toBeInstanceOf(ZyteError);
+    expect(err.status).toBe(401);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
