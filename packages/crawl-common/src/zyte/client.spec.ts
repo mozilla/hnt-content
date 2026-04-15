@@ -379,15 +379,16 @@ describe('extractArticleList', () => {
 });
 
 describe('RETRYABLE_STATUS_CODES', () => {
-  it('includes all expected transient status codes', () => {
+  it('includes all expected retryable status codes', () => {
     expect(RETRYABLE_STATUS_CODES).toContain(429);
     expect(RETRYABLE_STATUS_CODES).toContain(500);
     expect(RETRYABLE_STATUS_CODES).toContain(503);
     expect(RETRYABLE_STATUS_CODES).toContain(520);
+    expect(RETRYABLE_STATUS_CODES).toContain(521);
   });
 
   it('does not include permanent error codes', () => {
-    for (const code of [400, 401, 403, 422, 451, 521]) {
+    for (const code of [400, 401, 403, 422, 451]) {
       expect(RETRYABLE_STATUS_CODES).not.toContain(code);
     }
   });

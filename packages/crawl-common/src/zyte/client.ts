@@ -13,7 +13,7 @@ const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_MAX_RETRIES = 3;
 
 /** Status codes that trigger automatic retry. */
-export const RETRYABLE_STATUS_CODES = [429, 500, 503, 520] as const;
+export const RETRYABLE_STATUS_CODES = [429, 500, 503, 520, 521] as const;
 
 let apiKey: string | undefined;
 let apiUrl: string;
