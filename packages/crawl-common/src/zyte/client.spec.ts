@@ -171,6 +171,20 @@ describe('extractArticle', () => {
     expect(body.httpResponseBody).toBeUndefined();
   });
 
+  it('includes extractFrom with browserHtmlOnly', async () => {
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
+
+    await extractArticle('https://example.com/a', {
+      extractFrom: 'browserHtmlOnly',
+    });
+
+    const body = lastRequestBody();
+    expect(body.articleOptions).toEqual({
+      extractFrom: 'browserHtmlOnly',
+    });
+    expect(body.httpResponseBody).toBeUndefined();
+  });
+
   it('includes all options when combined', async () => {
     fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
@@ -229,6 +243,7 @@ describe('extractArticle', () => {
     expect(err.status).toBe(401);
     expect(err.responseBody).toEqual(errorBody);
     expect(err.message).toContain('401');
+    expect(err.message).toContain('https://example.com/a');
   });
 
   it('throws ZyteError when article is null', async () => {

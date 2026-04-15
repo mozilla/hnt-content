@@ -46,6 +46,19 @@ describe('Retry integration', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   }, 10_000);
 
+  it('retries on network error and succeeds', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(ARTICLE_RESPONSE), { status: 200 }),
+      );
+
+    const result = await extractArticle('https://example.com');
+
+    expect(result.data.headline).toBe('Recovered');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  }, 10_000);
+
   it('does not retry permanent 401 errors', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ type: '/auth/key-not-found' }), {

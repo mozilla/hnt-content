@@ -1,3 +1,4 @@
+import isNetworkError from 'is-network-error';
 import pRetry from 'p-retry';
 import type {
   ZyteClientOptions,
@@ -16,9 +17,9 @@ const DEFAULT_MAX_RETRIES = 3;
 export const RETRYABLE_STATUS_CODES = [429, 500, 503, 520, 521] as const;
 
 let apiKey: string | undefined;
-let apiUrl: string;
-let timeout: number;
-let maxRetries: number;
+let apiUrl = DEFAULT_API_URL;
+let timeout = DEFAULT_TIMEOUT_MS;
+let maxRetries = DEFAULT_MAX_RETRIES;
 
 /**
  * Initialize the Zyte API client. Must be called once before
@@ -44,17 +45,18 @@ export async function extractArticle(
 ): Promise<ZyteResponse<ZyteArticle>> {
   const body = buildRequestBody(url, 'article', opts);
   const data = await zyteRequest(body);
+  const statusCode = data.statusCode as number;
   const article = data.article as ZyteArticle | undefined;
   if (!article) {
     throw new ZyteError(
-      200,
-      `Zyte API returned 200 but no article data for ${url}`,
+      statusCode,
+      `Zyte API returned ${statusCode} but no article data for ${url}`,
     );
   }
   return {
     data: article,
     url: data.url as string,
-    statusCode: data.statusCode as number,
+    statusCode,
   };
 }
 
@@ -68,19 +70,20 @@ export async function extractArticleList(
 ): Promise<ZyteResponse<ZyteArticleListItem[]>> {
   const body = buildRequestBody(url, 'articleList', opts);
   const data = await zyteRequest(body);
+  const statusCode = data.statusCode as number;
   const list = data.articleList as
     | { articles?: ZyteArticleListItem[] }
     | undefined;
   if (!list) {
     throw new ZyteError(
-      200,
-      `Zyte API returned 200 but no articleList data for ${url}`,
+      statusCode,
+      `Zyte API returned ${statusCode} but no articleList data for ${url}`,
     );
   }
   return {
     data: list.articles ?? [],
     url: data.url as string,
-    statusCode: data.statusCode as number,
+    statusCode,
   };
 }
 
@@ -149,7 +152,7 @@ async function zyteRequest(
         }
         throw new ZyteError(
           response.status,
-          `Zyte API error: ${response.status}`,
+          `Zyte API error: ${response.status} for ${body.url}`,
           parsed,
         );
       }
@@ -159,7 +162,7 @@ async function zyteRequest(
       } catch {
         throw new ZyteError(
           response.status,
-          `Zyte API returned ${response.status} with unparseable body`,
+          `Zyte API returned ${response.status} with unparseable body for ${body.url}`,
         );
       }
     },
@@ -169,10 +172,12 @@ async function zyteRequest(
       maxTimeout: 30_000,
       factor: 2,
       shouldRetry({ error }) {
-        return (
-          error instanceof ZyteError &&
-          (RETRYABLE_STATUS_CODES as readonly number[]).includes(error.status)
-        );
+        if (error instanceof ZyteError) {
+          return (RETRYABLE_STATUS_CODES as readonly number[]).includes(
+            error.status,
+          );
+        }
+        return isNetworkError(error);
       },
     },
   );
