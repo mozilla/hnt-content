@@ -123,47 +123,22 @@ describe('extractArticle', () => {
       );
     });
 
-    it('includes extractFrom with httpResponseBody', async () => {
-      fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
+    it.each([
+      ['httpResponseBody', true],
+      ['browserHtml', undefined],
+      ['browserHtmlOnly', undefined],
+    ] as const)(
+      'includes extractFrom with %s',
+      async (extractFrom, expectedHttpResponseBody) => {
+        fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
-      await extractArticle('https://example.com/a', {
-        extractFrom: 'httpResponseBody',
-      });
+        await extractArticle('https://example.com/a', { extractFrom });
 
-      const body = lastRequestBody();
-      expect(body.articleOptions).toEqual({
-        extractFrom: 'httpResponseBody',
-      });
-      expect(body.httpResponseBody).toBe(true);
-    });
-
-    it('includes extractFrom with browserHtml', async () => {
-      fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
-
-      await extractArticle('https://example.com/a', {
-        extractFrom: 'browserHtml',
-      });
-
-      const body = lastRequestBody();
-      expect(body.articleOptions).toEqual({
-        extractFrom: 'browserHtml',
-      });
-      expect(body.httpResponseBody).toBeUndefined();
-    });
-
-    it('includes extractFrom with browserHtmlOnly', async () => {
-      fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
-
-      await extractArticle('https://example.com/a', {
-        extractFrom: 'browserHtmlOnly',
-      });
-
-      const body = lastRequestBody();
-      expect(body.articleOptions).toEqual({
-        extractFrom: 'browserHtmlOnly',
-      });
-      expect(body.httpResponseBody).toBeUndefined();
-    });
+        const body = lastRequestBody();
+        expect(body.articleOptions).toEqual({ extractFrom });
+        expect(body.httpResponseBody).toBe(expectedHttpResponseBody);
+      },
+    );
 
     it('includes all options when combined', async () => {
       fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
