@@ -197,9 +197,7 @@ describe('extractArticle', () => {
       };
       fetchMock.mockResolvedValueOnce(mockResponse(errorBody, 401));
 
-      const err = await extractArticle('https://example.com/a').catch(
-        (e) => e,
-      );
+      const err = await extractArticle('https://example.com/a').catch((e) => e);
 
       expect(err).toBeInstanceOf(ZyteError);
       expect(err.status).toBe(401);
@@ -216,9 +214,7 @@ describe('extractArticle', () => {
         }),
       );
 
-      const err = await extractArticle('https://example.com/a').catch(
-        (e) => e,
-      );
+      const err = await extractArticle('https://example.com/a').catch((e) => e);
 
       expect(err).toBeInstanceOf(ZyteError);
       expect(err.status).toBe(200);
@@ -238,9 +234,7 @@ describe('extractArticle', () => {
         new Response('Internal Server Error', { status: 500 }),
       );
 
-      const err = await extractArticle('https://example.com/a').catch(
-        (e) => e,
-      );
+      const err = await extractArticle('https://example.com/a').catch((e) => e);
 
       expect(err).toBeInstanceOf(ZyteError);
       expect(err.status).toBe(500);
@@ -252,9 +246,7 @@ describe('extractArticle', () => {
         new Response('<html>Gateway Timeout</html>', { status: 200 }),
       );
 
-      const err = await extractArticle('https://example.com/a').catch(
-        (e) => e,
-      );
+      const err = await extractArticle('https://example.com/a').catch((e) => e);
 
       expect(err).toBeInstanceOf(ZyteError);
       expect(err.status).toBe(200);
@@ -369,9 +361,7 @@ describe('isRetryable', () => {
   });
 
   it('returns false for non-network TypeErrors', () => {
-    expect(isRetryable(new TypeError('Cannot read properties'))).toBe(
-      false,
-    );
+    expect(isRetryable(new TypeError('Cannot read properties'))).toBe(false);
   });
 
   it('returns false for generic errors', () => {

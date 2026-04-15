@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { initZyteClient, extractArticle, RETRY_MAX_TIMEOUT_MS } from './client.js';
+import {
+  initZyteClient,
+  extractArticle,
+  RETRY_MAX_TIMEOUT_MS,
+} from './client.js';
 import { ZyteError } from './errors.js';
 
 /** Minimal article response for retry verification. */

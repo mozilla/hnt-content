@@ -14,7 +14,9 @@ const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_MAX_RETRIES = 3;
 
 /** Status codes that trigger automatic retry. */
-export const RETRYABLE_STATUS_CODES = [429, 500, 503, 520, 521] as const;
+export const RETRYABLE_STATUS_CODES: readonly number[] = [
+  429, 500, 503, 520, 521,
+];
 
 /** Lower bound on retry delay. */
 export const RETRY_MIN_TIMEOUT_MS = 2_000;
@@ -29,9 +31,7 @@ export const RETRY_MAX_TIMEOUT_MS = 30_000;
  */
 export function isRetryable(error: unknown): boolean {
   if (error instanceof ZyteError) {
-    return (RETRYABLE_STATUS_CODES as readonly number[]).includes(
-      error.status,
-    );
+    return RETRYABLE_STATUS_CODES.includes(error.status);
   }
   return isNetworkError(error);
 }
