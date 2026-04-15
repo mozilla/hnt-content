@@ -65,6 +65,20 @@ describe('Retry integration', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('stops after maxRetries attempts', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'down' }), { status: 500 }),
+    );
+
+    const promise = extractArticle('https://example.com').catch((e) => e);
+    await vi.advanceTimersByTimeAsync(RETRY_MAX_TIMEOUT_MS * 4);
+    const err = await promise;
+
+    expect(err).toBeInstanceOf(ZyteError);
+    expect(err.status).toBe(500);
+    expect(fetchMock).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
+  });
+
   it('does not retry permanent 401 errors', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ type: '/auth/key-not-found' }), {

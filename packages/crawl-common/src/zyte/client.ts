@@ -22,6 +22,20 @@ export const RETRY_MIN_TIMEOUT_MS = 2_000;
 /** Upper bound on retry delay. */
 export const RETRY_MAX_TIMEOUT_MS = 30_000;
 
+/**
+ * Return whether a failed request should be retried. Retries
+ * network errors and Zyte API responses with transient status
+ * codes.
+ */
+export function isRetryable(error: unknown): boolean {
+  if (error instanceof ZyteError) {
+    return (RETRYABLE_STATUS_CODES as readonly number[]).includes(
+      error.status,
+    );
+  }
+  return isNetworkError(error);
+}
+
 let apiKey: string | undefined;
 let apiUrl = DEFAULT_API_URL;
 let timeout = DEFAULT_TIMEOUT_MS;
@@ -178,12 +192,7 @@ async function zyteRequest(
       maxTimeout: RETRY_MAX_TIMEOUT_MS,
       factor: 2,
       shouldRetry({ error }) {
-        if (error instanceof ZyteError) {
-          return (RETRYABLE_STATUS_CODES as readonly number[]).includes(
-            error.status,
-          );
-        }
-        return isNetworkError(error);
+        return isRetryable(error);
       },
     },
   );

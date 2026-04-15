@@ -2,6 +2,7 @@ export {
   initZyteClient,
   extractArticle,
   extractArticleList,
+  isRetryable,
   RETRYABLE_STATUS_CODES,
   RETRY_MAX_TIMEOUT_MS,
 } from './client.js';
