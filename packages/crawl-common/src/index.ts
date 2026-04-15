@@ -3,6 +3,7 @@ export {
   extractArticle,
   extractArticleList,
   RETRYABLE_STATUS_CODES,
+  RETRY_MAX_TIMEOUT_MS,
   ZyteError,
 } from './zyte/index.js';
 export type {

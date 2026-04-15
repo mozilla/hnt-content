@@ -16,6 +16,12 @@ const DEFAULT_MAX_RETRIES = 3;
 /** Status codes that trigger automatic retry. */
 export const RETRYABLE_STATUS_CODES = [429, 500, 503, 520, 521] as const;
 
+/** Lower bound on retry delay. */
+export const RETRY_MIN_TIMEOUT_MS = 2_000;
+
+/** Upper bound on retry delay. */
+export const RETRY_MAX_TIMEOUT_MS = 30_000;
+
 let apiKey: string | undefined;
 let apiUrl = DEFAULT_API_URL;
 let timeout = DEFAULT_TIMEOUT_MS;
@@ -168,8 +174,8 @@ async function zyteRequest(
     },
     {
       retries: maxRetries,
-      minTimeout: 2_000,
-      maxTimeout: 30_000,
+      minTimeout: RETRY_MIN_TIMEOUT_MS,
+      maxTimeout: RETRY_MAX_TIMEOUT_MS,
       factor: 2,
       shouldRetry({ error }) {
         if (error instanceof ZyteError) {

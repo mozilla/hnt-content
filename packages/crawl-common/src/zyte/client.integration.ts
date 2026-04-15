@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { initZyteClient, extractArticle } from './client.js';
+import { initZyteClient, extractArticle, RETRY_MAX_TIMEOUT_MS } from './client.js';
 import { ZyteError } from './errors.js';
 
 /** Minimal article response for retry verification. */
@@ -15,19 +15,21 @@ const ARTICLE_RESPONSE = {
 
 /**
  * Verify that p-retry actually retries transient errors
- * through the client's public API. Uses real timers, so the
- * retry test includes a ~2s delay per attempt.
+ * through the client's public API. Uses fake timers to
+ * avoid real retry delays.
  */
 describe('Retry integration', () => {
   const fetchMock = vi.fn<typeof fetch>();
 
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.stubGlobal('fetch', fetchMock);
     initZyteClient({ apiKey: 'test-key', maxRetries: 3 });
   });
 
   afterEach(() => {
     fetchMock.mockReset();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -40,11 +42,13 @@ describe('Retry integration', () => {
         new Response(JSON.stringify(ARTICLE_RESPONSE), { status: 200 }),
       );
 
-    const result = await extractArticle('https://example.com');
+    const promise = extractArticle('https://example.com');
+    await vi.advanceTimersByTimeAsync(RETRY_MAX_TIMEOUT_MS);
+    const result = await promise;
 
     expect(result.data.headline).toBe('Recovered');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-  }, 10_000);
+  });
 
   it('retries on network error and succeeds', async () => {
     fetchMock
@@ -53,11 +57,13 @@ describe('Retry integration', () => {
         new Response(JSON.stringify(ARTICLE_RESPONSE), { status: 200 }),
       );
 
-    const result = await extractArticle('https://example.com');
+    const promise = extractArticle('https://example.com');
+    await vi.advanceTimersByTimeAsync(RETRY_MAX_TIMEOUT_MS);
+    const result = await promise;
 
     expect(result.data.headline).toBe('Recovered');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-  }, 10_000);
+  });
 
   it('does not retry permanent 401 errors', async () => {
     fetchMock.mockResolvedValueOnce(
