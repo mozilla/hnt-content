@@ -24,6 +24,8 @@ SELECT
   zyte_headline AS headline,
   zyte_description AS description,
 
+  -- zyte_authors is a single string, not comma-separated
+  -- (commas are credentials like "PhD", not separators).
   CASE
     WHEN zyte_authors IS NOT NULL
     THEN ARRAY(SELECT AS STRUCT zyte_authors AS name)
@@ -33,6 +35,7 @@ SELECT
   zyte_mainImage AS main_image_url,
   LEFT(zyte_articleBody, 2000) AS body_truncated,
 
+  -- Zyte uses '2000-01-01' as a sentinel for unparseable dates.
   CASE
     WHEN zyte_datePublished IS NULL THEN NULL
     WHEN zyte_datePublished LIKE '2000-01-01%' THEN NULL
@@ -56,5 +59,7 @@ SELECT
 
   zyte_inLanguage AS language
 
+-- Duplicates are copied as-is; matches the at-least-once delivery
+-- model of the new pipeline. zyte_cached_at is UTC.
 FROM `moz-fx-mozsoc-ml-prod.prod_articles.zyte_cache`
 ;

@@ -39,8 +39,12 @@ SELECT
   language,
   page_subtopic AS topic,
   page_position,
+  -- surface values like 'en_us' become 'NEW_TAB_EN_US' to match
+  -- the Corpus API ScheduledSurfaceGUID format.
   CONCAT('NEW_TAB_', UPPER(surface)) AS surface_id
 
+-- Duplicates are copied as-is; matches the at-least-once delivery
+-- model of the new pipeline.
 FROM `moz-fx-mozsoc-ml-prod.prod_rss_news.rss_feed_items`
 WHERE source = 'PAGE'
 ;
