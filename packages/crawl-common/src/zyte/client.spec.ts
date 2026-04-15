@@ -140,28 +140,6 @@ describe('extractArticle', () => {
       },
     );
 
-    it('includes all options when combined', async () => {
-      fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
-
-      await extractArticle('https://example.com/a', {
-        extractFrom: 'httpResponseBody',
-        customHttpRequestHeaders: [
-          { name: 'User-Agent', value: 'MozBot/1.0' },
-        ],
-        tags: ['hnt'],
-      });
-
-      const body = lastRequestBody();
-      expect(body.articleOptions).toEqual({
-        extractFrom: 'httpResponseBody',
-      });
-      expect(body.httpResponseBody).toBe(true);
-      expect(body.customHttpRequestHeaders).toEqual([
-        { name: 'User-Agent', value: 'MozBot/1.0' },
-      ]);
-      expect(body.tags).toEqual(['hnt']);
-    });
-
     it('includes customHttpRequestHeaders', async () => {
       const headers = [
         { name: 'User-Agent', value: 'MozBot/1.0' },
@@ -228,23 +206,6 @@ describe('extractArticle', () => {
       expect(err.responseBody).toEqual(errorBody);
       expect(err.message).toContain('401');
       expect(err.message).toContain('https://example.com/a');
-    });
-
-    it('throws ZyteError when article is null', async () => {
-      fetchMock.mockResolvedValueOnce(
-        mockResponse({
-          url: 'https://example.com/a',
-          statusCode: 200,
-          article: null,
-        }),
-      );
-
-      const err = await extractArticle('https://example.com/a').catch(
-        (e) => e,
-      );
-
-      expect(err).toBeInstanceOf(ZyteError);
-      expect(err.message).toContain('no article data');
     });
 
     it('throws ZyteError when response lacks article data', async () => {
