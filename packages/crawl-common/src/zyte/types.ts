@@ -46,8 +46,8 @@ export interface ExtractionOptions {
 
 /** Author in a Zyte extraction response. */
 export interface ZyteAuthor {
+  name: string;
   nameRaw?: string;
-  name?: string;
 }
 
 /** Image in a Zyte extraction response. */
@@ -77,7 +77,7 @@ export interface ZyteArticleListItemMetadata {
   /** Confidence score from 0 to 1. */
   probability: number;
   /** URL of the page where this article list was extracted. */
-  url: string;
+  url?: string;
 }
 
 /**
