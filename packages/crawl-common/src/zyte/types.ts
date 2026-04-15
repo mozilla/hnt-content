@@ -16,17 +16,31 @@ export interface ZyteClientOptions {
 /** Per-request extraction options. */
 export interface ExtractionOptions {
   /**
-   * Extraction source. When set to 'httpResponseBody', the
-   * cheaper HTTP-only fetch is used instead of a full browser
-   * render.
+   * Source for article/articleList extraction.
+   * - 'httpResponseBody': extract from the raw HTTP response
+   *   (cheaper, no browser rendering).
+   * - 'browserHtml': extract from browser-rendered HTML
+   *   (handles JS-rendered content).
+   * - 'browserHtmlOnly': extract only from browser-rendered
+   *   HTML, not from screenshots. Can improve extraction on
+   *   pages with overlays or popups.
+   *
+   * Defaults to browser rendering when omitted.
    */
   extractFrom?: 'httpResponseBody' | 'browserHtml' | 'browserHtmlOnly';
-  /** Custom HTTP request headers sent by Zyte's fetcher. */
+  /**
+   * HTTP headers Zyte sends when fetching the target URL.
+   * Each header is a name/value pair. Overrides Zyte's
+   * defaults for the specified header names.
+   */
   customHttpRequestHeaders?: Array<{
     name: string;
     value: string;
   }>;
-  /** Tags for request categorization in Zyte dashboard. */
+  /**
+   * Tags attached to the request for filtering and
+   * categorization in the Zyte dashboard and API logs.
+   */
   tags?: string[];
 }
 

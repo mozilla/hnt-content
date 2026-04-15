@@ -121,6 +121,8 @@ function buildRequestBody(
     const optionsKey =
       type === 'article' ? 'articleOptions' : 'articleListOptions';
     body[optionsKey] = { extractFrom: opts.extractFrom };
+    // Explicitly request the raw HTTP response body so Zyte
+    // uses HTTP fetching instead of browser rendering.
     if (opts.extractFrom === 'httpResponseBody') {
       body.httpResponseBody = true;
     }
