@@ -13,4 +13,7 @@ export type {
   ZyteAuthor,
   ZyteImage,
   ZyteBreadcrumb,
+  ZyteArticleMetadata,
+  ZyteArticleListItemMetadata,
+  ZyteResponse,
 } from './zyte/index.js';
