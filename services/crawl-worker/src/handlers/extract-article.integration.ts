@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type {
-  CrawlArticleMessage,
-  ZyteArticle,
-  ZyteResponse,
-} from 'crawl-common';
+import type { CrawlArticleMessage, ZyteArticle } from 'crawl-common';
 
 vi.mock('crawl-common', async (importOriginal) => {
   const actual = await importOriginal<typeof import('crawl-common')>();
