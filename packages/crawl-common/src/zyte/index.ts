@@ -5,8 +5,8 @@ export {
   isRetryable,
   RETRYABLE_STATUS_CODES,
   RETRY_MAX_TIMEOUT_MS,
-  ZyteError,
-} from './zyte/index.js';
+} from './client.js';
+export { ZyteError } from './errors.js';
 export type {
   ZyteClientOptions,
   ExtractionOptions,
@@ -18,4 +18,4 @@ export type {
   ZyteArticleMetadata,
   ZyteArticleListItemMetadata,
   ZyteResponse,
-} from './zyte/index.js';
+} from './types.js';
