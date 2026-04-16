@@ -19,3 +19,27 @@ export type {
   ZyteArticleListItemMetadata,
   ZyteResponse,
 } from './zyte/index.js';
+export { urlHash, normalizeText } from './utils/index.js';
+export {
+  initCorpusApiClient,
+  updateApprovedCorpusItem,
+  CorpusApiError,
+} from './corpus-api/index.js';
+export type {
+  CorpusApiClientOptions,
+  UpdateApprovedCorpusItemInput,
+  UpdateApprovedCorpusItemResponse,
+} from './corpus-api/index.js';
+export {
+  CorpusItemSchema,
+  CrawlArticleMessageSchema,
+  ArticleAuthorSchema,
+  ArticleEventSchema,
+} from './types/index.js';
+export type {
+  CorpusItem,
+  CrawlArticleMessage,
+  ArticleAuthor,
+  ArticleBreadcrumb,
+  ArticleEvent,
+} from './types/index.js';
