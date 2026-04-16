@@ -21,13 +21,14 @@ export type ArticleBreadcrumb = z.infer<typeof ArticleBreadcrumbSchema>;
  * subscription.
  */
 export const ArticleEventSchema = z.object({
-  url: z.string(),
+  url: z.string().url(),
   extracted_at: z.string().datetime(),
   headline: z.string().optional(),
   description: z.string().optional(),
   authors: z.array(ArticleAuthorSchema).optional(),
   main_image_url: z.string().optional(),
   body_truncated: z.string().optional(),
+  // No .datetime(): Zyte returns varied date formats.
   published_at: z.string().optional(),
   breadcrumbs: z.array(ArticleBreadcrumbSchema).optional(),
   language: z.string().optional(),

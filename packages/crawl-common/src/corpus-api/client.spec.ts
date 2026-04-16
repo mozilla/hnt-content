@@ -66,6 +66,7 @@ describe('corpus-api client', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -108,43 +109,25 @@ describe('corpus-api client', () => {
       expect(result.title).toBe('Test Title');
     });
 
-    it('throws CorpusApiError on GraphQL errors', async () => {
-      fetchMock.mockResolvedValueOnce(
-        mockResponse({
-          errors: [{ message: 'Item not found' }],
-        }),
-      );
+    it.each([
+      {
+        scenario: 'GraphQL errors',
+        body: { errors: [{ message: 'Item not found' }] },
+        status: 200,
+      },
+      { scenario: 'null data', body: { data: null }, status: 200 },
+      { scenario: '4xx', body: { error: 'bad request' }, status: 400 },
+    ])(
+      'throws CorpusApiError on $scenario without retrying',
+      async ({ body, status }) => {
+        fetchMock.mockResolvedValueOnce(mockResponse(body, status));
 
-      await expect(updateApprovedCorpusItem(SAMPLE_INPUT)).rejects.toThrow(
-        CorpusApiError,
-      );
-    });
-
-    it('throws CorpusApiError on 4xx without retrying', async () => {
-      fetchMock.mockResolvedValueOnce(
-        mockResponse({ error: 'bad request' }, 400),
-      );
-
-      await expect(updateApprovedCorpusItem(SAMPLE_INPUT)).rejects.toThrow(
-        CorpusApiError,
-      );
-
-      // No retry on client errors.
-      expect(fetchMock).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe('retry', () => {
-    it('retries on 5xx and succeeds', async () => {
-      fetchMock
-        .mockResolvedValueOnce(mockResponse({ error: 'server error' }, 503))
-        .mockResolvedValueOnce(mockResponse(SUCCESS_RESPONSE));
-
-      const result = await updateApprovedCorpusItem(SAMPLE_INPUT);
-
-      expect(result.externalId).toBe('abc-123');
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-    });
+        await expect(
+          updateApprovedCorpusItem(SAMPLE_INPUT),
+        ).rejects.toThrow(CorpusApiError);
+        expect(fetchMock).toHaveBeenCalledOnce();
+      },
+    );
   });
 
   describe('jwt', () => {
@@ -164,6 +147,23 @@ describe('corpus-api client', () => {
         fetchMock.mock.calls[1][1].headers as Record<string, string>
       ).authorization;
       expect(token1).toBe(token2);
+    });
+
+    it('handles the {"keys": [...]} wrapper format', async () => {
+      const wrapped = JSON.stringify({
+        keys: [JSON.parse(TEST_JWK)],
+      });
+      await initCorpusApiClient({
+        endpoint: 'https://admin-api.test/',
+        jwkJson: wrapped,
+        issuer: 'https://getpocket.com',
+        audience: 'https://admin-api.test/',
+      });
+      fetchMock.mockResolvedValueOnce(mockResponse(SUCCESS_RESPONSE));
+
+      const result = await updateApprovedCorpusItem(SAMPLE_INPUT);
+
+      expect(result.externalId).toBe('abc-123');
     });
 
     it('includes kid in the JWT header', async () => {

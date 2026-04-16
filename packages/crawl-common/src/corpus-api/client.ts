@@ -14,10 +14,10 @@ const JWT_REFRESH_BUFFER = 0.95;
 const JWT_USERNAME = 'ML';
 const JWT_GROUPS = ['mozilliansorg_pocket_scheduled_surface_curator_full'];
 
-// Retry configuration. 4 attempts with exponential backoff
+// 4 retries (5 attempts total) with exponential backoff
 // designed to complete well within the 600s Pub/Sub ack
 // deadline: ~2s + ~4s + ~8s + ~16s = ~30s worst case.
-const RETRY_ATTEMPTS = 4;
+const MAX_RETRIES = 4;
 const RETRY_MIN_TIMEOUT_MS = 2_000;
 
 /** Upper bound on retry delay for Corpus API calls. */
@@ -79,8 +79,11 @@ function parseJwk(jwkJson: string): JWK {
   const parsed = JSON.parse(jwkJson) as JWK | { keys: JWK[] };
   const jwk =
     'keys' in parsed && Array.isArray(parsed.keys)
-      ? parsed.keys[0]!
+      ? parsed.keys[0]
       : (parsed as JWK);
+  if (!jwk) {
+    throw new Error('JWK keys array is empty');
+  }
   if (!jwk.kid) {
     throw new Error('JWK must include a kid field');
   }
@@ -99,6 +102,8 @@ async function getToken(): Promise<string> {
     aud: audience,
     name: 'Article Crawler',
     identities: [{ userId: JWT_USERNAME }],
+    // Stringified per Cognito convention expected by
+    // admin-api JWT validation.
     'custom:groups': JSON.stringify(JWT_GROUPS),
   })
     .setProtectedHeader({ alg: 'RS256', kid })
@@ -153,6 +158,7 @@ export async function updateApprovedCorpusItem(
           query: UPDATE_MUTATION,
           variables: { data: input },
         }),
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (response.status >= 500) {
@@ -192,10 +198,17 @@ export async function updateApprovedCorpusItem(
         );
       }
 
-      return payload.data!.updateApprovedCorpusItem;
+      if (!payload.data?.updateApprovedCorpusItem) {
+        throw new CorpusApiError(
+          `No data returned for item ${input.externalId}: ` +
+            JSON.stringify(payload),
+        );
+      }
+
+      return payload.data.updateApprovedCorpusItem;
     },
     {
-      retries: RETRY_ATTEMPTS,
+      retries: MAX_RETRIES,
       minTimeout: RETRY_MIN_TIMEOUT_MS,
       maxTimeout: RETRY_MAX_TIMEOUT_MS,
       factor: 2,

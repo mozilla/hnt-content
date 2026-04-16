@@ -96,25 +96,23 @@ async function detectAndSyncChanges(
       `for corpus item ${corpusItem.external_id}`,
   );
 
-  const input = buildUpdateInput(
-    article,
-    corpusItem,
-    extractedTitle,
-    extractedExcerpt,
-  );
+  const input = buildUpdateInput(article, corpusItem, {
+    title: titleChanged ? extractedTitle : undefined,
+    excerpt: excerptChanged ? extractedExcerpt : undefined,
+  });
   await updateApprovedCorpusItem(input);
 }
 
 /**
- * Build the GraphQL mutation input. Uses extracted values
- * for title, excerpt, and authors when available; all other
- * fields pass through from the corpus item unchanged.
+ * Build the GraphQL mutation input. Only overrides title or
+ * excerpt when the corresponding field actually changed;
+ * unchanged fields use the corpus item value to avoid
+ * overwriting curator edits with cosmetic differences.
  */
 function buildUpdateInput(
   article: ZyteArticle,
   corpusItem: CorpusItem,
-  extractedTitle: string | undefined,
-  extractedExcerpt: string | undefined,
+  changed: { title?: string; excerpt?: string },
 ): UpdateApprovedCorpusItemInput {
   // Prefer extracted authors, fall back to corpus item.
   const authors =
@@ -130,8 +128,8 @@ function buildUpdateInput(
 
   return {
     externalId: corpusItem.external_id,
-    title: extractedTitle?.trim() || corpusItem.title,
-    excerpt: extractedExcerpt?.trim() || corpusItem.excerpt,
+    title: changed.title?.trim() ?? corpusItem.title,
+    excerpt: changed.excerpt?.trim() ?? corpusItem.excerpt,
     authors,
     status: corpusItem.status,
     language: corpusItem.language,

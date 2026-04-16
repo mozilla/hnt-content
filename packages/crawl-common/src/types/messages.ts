@@ -10,6 +10,8 @@ export const CorpusItemSchema = z.object({
   excerpt: z.string(),
   authors: z.array(z.object({ name: z.string() })),
   status: z.enum(['CORPUS', 'RECOMMENDATION']),
+  // Sync with CorpusLanguage in content-monorepo
+  // packages/content-common/src/types.ts.
   language: z.enum(['EN', 'DE', 'ES', 'FR', 'IT']),
   publisher: z.string(),
   image_url: z.string(),

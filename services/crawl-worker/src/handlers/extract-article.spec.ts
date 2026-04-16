@@ -138,7 +138,7 @@ describe('handleArticleExtraction', () => {
       expect(updateCorpusMock).not.toHaveBeenCalled();
     });
 
-    it('updates when title changed', async () => {
+    it('updates when title changed and passes through corpus fields', async () => {
       extractArticleMock.mockResolvedValueOnce({
         ...ZYTE_RESPONSE,
         data: {
@@ -153,9 +153,16 @@ describe('handleArticleExtraction', () => {
       const input = updateCorpusMock.mock
         .calls[0][0] as UpdateApprovedCorpusItemInput;
       expect(input.title).toBe('New Headline');
-      // Other fields from corpus_item.
+      // Unchanged excerpt uses corpus item value.
+      expect(input.excerpt).toBe('Test description of the article.');
+      // Passthrough fields from corpus_item.
       expect(input.externalId).toBe('ext-123');
+      expect(input.status).toBe('CORPUS');
+      expect(input.language).toBe('EN');
+      expect(input.publisher).toBe('Example News');
       expect(input.imageUrl).toBe('https://s3.amazonaws.com/image.jpg');
+      expect(input.topic).toBe('TECHNOLOGY');
+      expect(input.isTimeSensitive).toBe(false);
     });
 
     it('updates when excerpt changed', async () => {
@@ -175,40 +182,34 @@ describe('handleArticleExtraction', () => {
       expect(input.excerpt).toBe('Completely different excerpt.');
     });
 
-    it('ignores case differences in comparison', async () => {
-      extractArticleMock.mockResolvedValueOnce({
-        ...ZYTE_RESPONSE,
-        data: {
-          ...ZYTE_ARTICLE,
-          headline: 'test headline',
-        },
-      });
+    it.each([
+      {
+        scenario: 'case differences',
+        corpusTitle: 'Test Headline',
+        zyteHeadline: 'test headline',
+      },
+      {
+        scenario: 'smart quote differences',
+        corpusTitle: "It's a 'test'",
+        zyteHeadline: 'It\u2019s a \u2018test\u2019',
+      },
+    ])(
+      'ignores $scenario in comparison',
+      async ({ corpusTitle, zyteHeadline }) => {
+        const msg: CrawlArticleMessage = {
+          ...BASE_MESSAGE,
+          corpus_item: { ...CORPUS_ITEM, title: corpusTitle },
+        };
+        extractArticleMock.mockResolvedValueOnce({
+          ...ZYTE_RESPONSE,
+          data: { ...ZYTE_ARTICLE, headline: zyteHeadline },
+        });
 
-      await handleArticleExtraction(liveMessage);
+        await handleArticleExtraction(msg);
 
-      expect(updateCorpusMock).not.toHaveBeenCalled();
-    });
-
-    it('ignores smart quote differences', async () => {
-      const msg: CrawlArticleMessage = {
-        ...BASE_MESSAGE,
-        corpus_item: {
-          ...CORPUS_ITEM,
-          title: "It's a 'test'",
-        },
-      };
-      extractArticleMock.mockResolvedValueOnce({
-        ...ZYTE_RESPONSE,
-        data: {
-          ...ZYTE_ARTICLE,
-          headline: 'It\u2019s a \u2018test\u2019',
-        },
-      });
-
-      await handleArticleExtraction(msg);
-
-      expect(updateCorpusMock).not.toHaveBeenCalled();
-    });
+        expect(updateCorpusMock).not.toHaveBeenCalled();
+      },
+    );
 
     it('truncates excerpt to 255 chars for comparison', async () => {
       const baseExcerpt = 'a'.repeat(255);

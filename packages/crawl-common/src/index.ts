@@ -34,6 +34,7 @@ export {
   CorpusItemSchema,
   CrawlArticleMessageSchema,
   ArticleAuthorSchema,
+  ArticleBreadcrumbSchema,
   ArticleEventSchema,
 } from './types/index.js';
 export type {
