@@ -19,7 +19,7 @@ export type {
   ZyteArticleListItemMetadata,
   ZyteResponse,
 } from './zyte/index.js';
-export { urlHash, normalizeText } from './utils/index.js';
+export { normalizeText } from './utils/index.js';
 export {
   initCorpusApiClient,
   updateApprovedCorpusItem,

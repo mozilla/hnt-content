@@ -1,10 +1,12 @@
 /**
- * Normalize text for comparison. Used to detect meaningful
- * changes between extracted and stored metadata while ignoring
- * cosmetic differences in case, whitespace, and quote style.
+ * Normalize text for comparison only (not for storage).
+ * Detects meaningful changes between Zyte-extracted and
+ * Corpus API-stored metadata while ignoring cosmetic
+ * differences in case, whitespace, and quote style.
  *
- * Steps match the Python implementation in
- * content-ml-services diff.py:normalize_text().
+ * The Corpus API stores title/excerpt as-is with no
+ * normalization. Steps ported from the existing Python
+ * crawler in content-ml-services diff.py:normalize_text().
  */
 export function normalizeText(
   text: string | null | undefined,
