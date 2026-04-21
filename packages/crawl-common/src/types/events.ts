@@ -1,37 +1,28 @@
-import { z } from 'zod';
-
 /** Author in an article event published to BigQuery. */
-export const ArticleAuthorSchema = z.object({
-  name: z.string(),
-});
-
-export type ArticleAuthor = z.infer<typeof ArticleAuthorSchema>;
+export interface ArticleAuthor {
+  name: string;
+}
 
 /** Breadcrumb in an article event published to BigQuery. */
-export const ArticleBreadcrumbSchema = z.object({
-  name: z.string().optional(),
-  url: z.string().optional(),
-});
-
-export type ArticleBreadcrumb = z.infer<typeof ArticleBreadcrumbSchema>;
+export interface ArticleBreadcrumb {
+  name?: string;
+  url?: string;
+}
 
 /**
  * Event published to the articles Pub/Sub topic and written
  * to the crawl.articles BigQuery table via a BigQuery
  * subscription.
  */
-export const ArticleEventSchema = z.object({
-  url: z.string().url(),
-  extracted_at: z.string().datetime(),
-  headline: z.string().optional(),
-  description: z.string().optional(),
-  authors: z.array(ArticleAuthorSchema).optional(),
-  main_image_url: z.string().optional(),
-  body_truncated: z.string().optional(),
-  // No .datetime(): Zyte returns varied date formats.
-  published_at: z.string().optional(),
-  breadcrumbs: z.array(ArticleBreadcrumbSchema).optional(),
-  language: z.string().optional(),
-});
-
-export type ArticleEvent = z.infer<typeof ArticleEventSchema>;
+export interface ArticleEvent {
+  url: string;
+  extracted_at: string;
+  headline?: string;
+  description?: string;
+  authors?: ArticleAuthor[];
+  main_image_url?: string;
+  body_truncated?: string;
+  published_at?: string;
+  breadcrumbs?: ArticleBreadcrumb[];
+  language?: string;
+}

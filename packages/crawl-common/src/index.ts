@@ -30,13 +30,6 @@ export type {
   UpdateApprovedCorpusItemInput,
   UpdateApprovedCorpusItemResponse,
 } from './corpus-api/index.js';
-export {
-  CorpusItemSchema,
-  CrawlArticleMessageSchema,
-  ArticleAuthorSchema,
-  ArticleBreadcrumbSchema,
-  ArticleEventSchema,
-} from './types/index.js';
 export type {
   CorpusItem,
   CrawlArticleMessage,
