@@ -25,7 +25,7 @@ export const CLIENT_OPTS = {
   audience: 'https://admin-api.test/',
 };
 
-export const SAMPLE_INPUT: UpdateApprovedCorpusItemInput = {
+export const UPDATE_APPROVED_CORPUS_ITEM_INPUT: UpdateApprovedCorpusItemInput = {
   externalId: 'abc-123',
   title: 'Test Title',
   excerpt: 'Test Excerpt',
@@ -38,7 +38,7 @@ export const SAMPLE_INPUT: UpdateApprovedCorpusItemInput = {
   isTimeSensitive: false,
 };
 
-export const SUCCESS_BODY = {
+export const UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY = {
   data: {
     updateApprovedCorpusItem: {
       externalId: 'abc-123',

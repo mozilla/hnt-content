@@ -1,122 +1,136 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CrawlArticleMessage, ZyteArticle } from 'crawl-common';
-
-vi.mock('crawl-common', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('crawl-common')>();
-  return {
-    ...actual,
-    extractArticle: vi.fn(),
-    updateApprovedCorpusItem: vi.fn(),
-  };
-});
-
-import { extractArticle, updateApprovedCorpusItem } from 'crawl-common';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  initCorpusApiClient,
+  initZyteClient,
+  type CrawlArticleMessage,
+} from 'crawl-common';
 import { handleArticleExtraction } from './extract-article.js';
+import {
+  BASE_MESSAGE,
+  CORPUS_ITEM,
+  TEST_JWK,
+  TEST_URL,
+  ZYTE_ARTICLE,
+} from './test-helpers.js';
 
-const extractArticleMock = vi.mocked(extractArticle);
-const updateCorpusMock = vi.mocked(updateApprovedCorpusItem);
+const ZYTE_URL = 'https://api.zyte.com/v1/extract';
+const CORPUS_API_URL = 'https://admin-api.test/';
 
 /**
- * Integration test: verify the full handler flow for a
- * live article with a changed title, from message input
- * through Zyte extraction to Corpus API update and
- * ArticleEvent output.
+ * Integration test: exercises the handler against real Zyte
+ * and Corpus API clients, with fetch stubbed at the network
+ * boundary. Catches regressions in client wiring (JWT signing,
+ * request construction, response parsing) that module-mocked
+ * unit tests cannot.
  */
 describe('extract-article integration', () => {
-  afterEach(() => {
-    vi.clearAllMocks();
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    initZyteClient({ apiKey: 'test-zyte-key', maxRetries: 0 });
+    await initCorpusApiClient({
+      endpoint: CORPUS_API_URL,
+      jwkJson: TEST_JWK,
+      issuer: 'https://getpocket.com',
+      audience: CORPUS_API_URL,
+    });
   });
 
-  it('live article with changed title triggers Corpus API update and returns correct event', async () => {
-    const zyteArticle: ZyteArticle = {
-      url: 'https://example.com/article',
-      headline: 'Updated Headline From Zyte',
-      description: 'Original description.',
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('triggers a Corpus API update and returns the mapped event when a live article has a changed title', async () => {
+    const updatedHeadline = 'Updated Headline From Zyte';
+    const zyteArticle = {
+      ...ZYTE_ARTICLE,
+      headline: updatedHeadline,
       authors: [{ name: 'Author A' }, { name: 'Author B' }],
-      mainImage: { url: 'https://example.com/img.jpg' },
-      articleBody: 'Article body content.',
-      datePublished: '2025-06-01T10:00:00Z',
-      breadcrumbs: [{ name: 'Tech', url: 'https://example.com/tech' }],
-      inLanguage: 'en',
-      metadata: {
-        probability: 0.98,
-        dateDownloaded: '2025-06-01T12:00:00Z',
-      },
     };
 
-    extractArticleMock.mockResolvedValue({
-      data: zyteArticle,
-      url: 'https://example.com/article',
-      statusCode: 200,
-    });
-
-    updateCorpusMock.mockResolvedValue({
-      externalId: 'ext-456',
-      url: 'https://example.com/article',
-      title: 'Updated Headline From Zyte',
-      excerpt: 'Original description.',
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === ZYTE_URL) {
+        return new Response(
+          JSON.stringify({
+            article: zyteArticle,
+            url: zyteArticle.url,
+            statusCode: 200,
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      if (url === CORPUS_API_URL) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              updateApprovedCorpusItem: {
+                externalId: CORPUS_ITEM.external_id,
+                url: zyteArticle.url,
+                title: updatedHeadline,
+                excerpt: zyteArticle.description,
+              },
+            },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
     });
 
     const message: CrawlArticleMessage = {
-      url: 'https://example.com/article',
-      source_url: 'https://example.com/news',
-      crawl_id: 'crawl-integration-001',
-      enqueued_at: '2025-06-01T11:00:00Z',
-      corpus_item: {
-        external_id: 'ext-456',
-        title: 'Old Headline',
-        excerpt: 'Original description.',
-        authors: [{ name: 'Author A' }],
-        status: 'CORPUS',
-        language: 'EN',
-        publisher: 'Example News',
-        image_url: 'https://s3.amazonaws.com/img.jpg',
-        topic: 'TECHNOLOGY',
-        is_time_sensitive: false,
-      },
+      ...BASE_MESSAGE,
+      corpus_item: CORPUS_ITEM,
     };
-
-    // Execute handler.
     const event = await handleArticleExtraction(message);
 
-    // Verify Zyte was called with httpResponseBody.
-    expect(extractArticleMock).toHaveBeenCalledWith(
-      'https://example.com/article',
-      { extractFrom: 'httpResponseBody' },
+    // Both clients hit the network.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Corpus API request carries a Bearer JWT and the
+    // expected GraphQL mutation variables.
+    const corpusCall = fetchMock.mock.calls.find(
+      ([u]) => u === CORPUS_API_URL,
     );
+    expect(corpusCall).toBeDefined();
+    const corpusInit = corpusCall![1] as RequestInit;
+    const headers = corpusInit.headers as Record<string, string>;
+    expect(headers.authorization).toMatch(/^Bearer /);
+    expect(headers['apollographql-client-name']).toBe('hnt-content');
 
-    // Verify Corpus API was called with correct input.
-    expect(updateCorpusMock).toHaveBeenCalledOnce();
-    const updateInput = updateCorpusMock.mock.calls[0][0];
+    const corpusBody = JSON.parse(corpusInit.body as string) as {
+      variables: { data: Record<string, unknown> };
+    };
+    expect(corpusBody.variables.data).toMatchObject({
+      externalId: CORPUS_ITEM.external_id,
+      title: updatedHeadline,
+      // Excerpt unchanged: extracted matches corpus_item.
+      excerpt: CORPUS_ITEM.excerpt,
+      authors: [
+        { name: 'Author A', sortOrder: 0 },
+        { name: 'Author B', sortOrder: 1 },
+      ],
+      status: CORPUS_ITEM.status,
+      language: CORPUS_ITEM.language,
+      publisher: CORPUS_ITEM.publisher,
+      imageUrl: CORPUS_ITEM.image_url,
+      topic: CORPUS_ITEM.topic,
+      isTimeSensitive: CORPUS_ITEM.is_time_sensitive,
+    });
 
-    // Title from Zyte (raw, not normalized).
-    expect(updateInput.title).toBe('Updated Headline From Zyte');
-    // Excerpt unchanged (from corpus_item fallback since
-    // extracted matches).
-    expect(updateInput.excerpt).toBe('Original description.');
-    // Authors from Zyte (preferred over corpus_item).
-    expect(updateInput.authors).toEqual([
-      { name: 'Author A', sortOrder: 0 },
-      { name: 'Author B', sortOrder: 1 },
-    ]);
-    // Passthrough fields from corpus_item.
-    expect(updateInput.externalId).toBe('ext-456');
-    expect(updateInput.status).toBe('CORPUS');
-    expect(updateInput.language).toBe('EN');
-    expect(updateInput.publisher).toBe('Example News');
-    expect(updateInput.imageUrl).toBe('https://s3.amazonaws.com/img.jpg');
-    expect(updateInput.topic).toBe('TECHNOLOGY');
-    expect(updateInput.isTimeSensitive).toBe(false);
-
-    // Verify returned ArticleEvent.
-    expect(event.url).toBe('https://example.com/article');
-    expect(event.headline).toBe('Updated Headline From Zyte');
-    expect(event.description).toBe('Original description.');
-    expect(event.authors).toEqual([{ name: 'Author A' }, { name: 'Author B' }]);
-    expect(event.main_image_url).toBe('https://example.com/img.jpg');
-    expect(event.body_truncated).toBe('Article body content.');
-    expect(event.published_at).toBe('2025-06-01T10:00:00Z');
-    expect(event.language).toBe('en');
+    // Handler returned the expected ArticleEvent.
+    expect(event).toMatchObject({
+      url: TEST_URL,
+      headline: updatedHeadline,
+      description: ZYTE_ARTICLE.description,
+      authors: [{ name: 'Author A' }, { name: 'Author B' }],
+      main_image_url: ZYTE_ARTICLE.mainImage?.url,
+      body_truncated: ZYTE_ARTICLE.articleBody,
+      published_at: ZYTE_ARTICLE.datePublished,
+      language: ZYTE_ARTICLE.inLanguage,
+    });
     expect(event.extracted_at).toBeDefined();
   });
 });

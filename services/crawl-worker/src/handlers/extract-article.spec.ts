@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   CrawlArticleMessage,
-  ZyteArticle,
-  ZyteResponse,
   UpdateApprovedCorpusItemInput,
 } from 'crawl-common';
 
@@ -17,51 +15,15 @@ vi.mock('crawl-common', async (importOriginal) => {
 
 import { extractArticle, updateApprovedCorpusItem } from 'crawl-common';
 import { handleArticleExtraction } from './extract-article.js';
+import {
+  BASE_MESSAGE,
+  CORPUS_ITEM,
+  ZYTE_ARTICLE,
+  ZYTE_RESPONSE,
+} from './test-helpers.js';
 
 const extractArticleMock = vi.mocked(extractArticle);
 const updateCorpusMock = vi.mocked(updateApprovedCorpusItem);
-
-const ZYTE_ARTICLE: ZyteArticle = {
-  url: 'https://example.com/article',
-  headline: 'Test Headline',
-  description: 'Test description of the article.',
-  authors: [{ name: 'Jane Doe' }],
-  mainImage: { url: 'https://example.com/image.jpg' },
-  articleBody: 'Full article body text here.',
-  datePublished: '2025-06-01T12:00:00Z',
-  breadcrumbs: [{ name: 'News', url: 'https://example.com/news' }],
-  inLanguage: 'en',
-  metadata: {
-    probability: 0.95,
-    dateDownloaded: '2025-06-01T12:01:00Z',
-  },
-};
-
-const ZYTE_RESPONSE: ZyteResponse<ZyteArticle> = {
-  data: ZYTE_ARTICLE,
-  url: 'https://example.com/article',
-  statusCode: 200,
-};
-
-const BASE_MESSAGE: CrawlArticleMessage = {
-  url: 'https://example.com/article',
-  source_url: 'https://example.com/news',
-  crawl_id: 'crawl-001',
-  enqueued_at: '2025-06-01T12:00:00Z',
-};
-
-const CORPUS_ITEM = {
-  external_id: 'ext-123',
-  title: 'Test Headline',
-  excerpt: 'Test description of the article.',
-  authors: [{ name: 'Jane Doe' }],
-  status: 'CORPUS' as const,
-  language: 'EN' as const,
-  publisher: 'Example News',
-  image_url: 'https://s3.amazonaws.com/image.jpg',
-  topic: 'TECHNOLOGY',
-  is_time_sensitive: false,
-};
 
 describe('handleArticleExtraction', () => {
   beforeEach(() => {

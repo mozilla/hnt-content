@@ -20,10 +20,7 @@ export interface CorpusApiClientOptions {
   clientVersion?: string;
 }
 
-/**
- * Input for the updateApprovedCorpusItem GraphQL mutation.
- * Field names use camelCase to match the GraphQL schema.
- */
+/** Input for the updateApprovedCorpusItem GraphQL mutation. */
 export interface UpdateApprovedCorpusItemInput {
   externalId: string;
   title: string;
