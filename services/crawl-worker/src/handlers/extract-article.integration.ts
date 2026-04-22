@@ -91,9 +91,7 @@ describe('extract-article integration', () => {
 
     // Corpus API request carries a Bearer JWT and the
     // expected GraphQL mutation variables.
-    const corpusCall = fetchMock.mock.calls.find(
-      ([u]) => u === CORPUS_API_URL,
-    );
+    const corpusCall = fetchMock.mock.calls.find(([u]) => u === CORPUS_API_URL);
     expect(corpusCall).toBeDefined();
     const corpusInit = corpusCall![1] as RequestInit;
     const headers = corpusInit.headers as Record<string, string>;

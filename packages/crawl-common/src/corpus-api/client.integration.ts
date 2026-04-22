@@ -45,7 +45,9 @@ describe('Corpus API integration', () => {
       // Prime the token cache with real timers so jose's
       // async Web Crypto signing completes. Retry tests
       // then use the cached token under fake timers.
-      fetchMock.mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+      fetchMock.mockResolvedValueOnce(
+        mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+      );
       await updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
       fetchMock.mockReset();
       vi.useFakeTimers();
@@ -54,9 +56,13 @@ describe('Corpus API integration', () => {
     it('retries on 5xx and succeeds', async () => {
       fetchMock
         .mockResolvedValueOnce(mockResponse({ error: 'server' }, 503))
-        .mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+        .mockResolvedValueOnce(
+          mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+        );
 
-      const promise = updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
+      const promise = updateApprovedCorpusItem(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT,
+      );
       await vi.advanceTimersByTimeAsync(RETRY_MAX_TIMEOUT_MS);
       const result = await promise;
 
@@ -67,9 +73,13 @@ describe('Corpus API integration', () => {
     it('retries on network error and succeeds', async () => {
       fetchMock
         .mockRejectedValueOnce(new TypeError('fetch failed'))
-        .mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+        .mockResolvedValueOnce(
+          mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+        );
 
-      const promise = updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
+      const promise = updateApprovedCorpusItem(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT,
+      );
       await vi.advanceTimersByTimeAsync(RETRY_MAX_TIMEOUT_MS);
       const result = await promise;
 
@@ -78,13 +88,11 @@ describe('Corpus API integration', () => {
     });
 
     it('stops after max retries', async () => {
-      fetchMock.mockResolvedValue(
-        mockResponse({ error: 'down' }, 500),
-      );
+      fetchMock.mockResolvedValue(mockResponse({ error: 'down' }, 500));
 
-      const promise = updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT).catch(
-        (e) => e,
-      );
+      const promise = updateApprovedCorpusItem(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT,
+      ).catch((e) => e);
       await vi.advanceTimersByTimeAsync(RETRY_MAX_TIMEOUT_MS * 5);
       const err = await promise;
 
@@ -103,8 +111,12 @@ describe('Corpus API integration', () => {
 
     it('issues a new token after the refresh window', async () => {
       // First call primes the token cache.
-      fetchMock.mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
-      const promise1 = updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
+      fetchMock.mockResolvedValueOnce(
+        mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+      );
+      const promise1 = updateApprovedCorpusItem(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT,
+      );
       await vi.advanceTimersByTimeAsync(0);
       await promise1;
 
@@ -114,8 +126,12 @@ describe('Corpus API integration', () => {
       await vi.advanceTimersByTimeAsync(286_000);
 
       // Second call should issue a new token.
-      fetchMock.mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
-      const promise2 = updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
+      fetchMock.mockResolvedValueOnce(
+        mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+      );
+      const promise2 = updateApprovedCorpusItem(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT,
+      );
       await vi.advanceTimersByTimeAsync(0);
       await promise2;
 
@@ -125,18 +141,26 @@ describe('Corpus API integration', () => {
 
     it('reuses token within the refresh window', async () => {
       fetchMock
-        .mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY))
-        .mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+        .mockResolvedValueOnce(
+          mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+        )
+        .mockResolvedValueOnce(
+          mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+        );
 
       // First call primes the cache.
-      const promise1 = updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
+      const promise1 = updateApprovedCorpusItem(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT,
+      );
       await vi.advanceTimersByTimeAsync(0);
       await promise1;
 
       // Advance 60s (well within 285s window).
       await vi.advanceTimersByTimeAsync(60_000);
 
-      const promise2 = updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
+      const promise2 = updateApprovedCorpusItem(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT,
+      );
       await vi.advanceTimersByTimeAsync(0);
       await promise2;
 

@@ -28,7 +28,9 @@ describe('corpus-api client', () => {
 
   describe('request', () => {
     it('sends a GraphQL mutation with JWT auth', async () => {
-      fetchMock.mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+      fetchMock.mockResolvedValueOnce(
+        mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+      );
 
       await updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
 
@@ -44,7 +46,9 @@ describe('corpus-api client', () => {
     });
 
     it('sends the mutation variables', async () => {
-      fetchMock.mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+      fetchMock.mockResolvedValueOnce(
+        mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+      );
 
       await updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
 
@@ -57,9 +61,13 @@ describe('corpus-api client', () => {
 
   describe('response', () => {
     it('returns the mutation result on success', async () => {
-      fetchMock.mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+      fetchMock.mockResolvedValueOnce(
+        mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+      );
 
-      const result = await updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
+      const result = await updateApprovedCorpusItem(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT,
+      );
 
       expect(result.externalId).toBe('abc-123');
       expect(result.title).toBe('Test Title');
@@ -89,8 +97,12 @@ describe('corpus-api client', () => {
   describe('jwt', () => {
     it('caches the JWT token across calls', async () => {
       fetchMock
-        .mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY))
-        .mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+        .mockResolvedValueOnce(
+          mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+        )
+        .mockResolvedValueOnce(
+          mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+        );
 
       await updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
       await updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
@@ -113,15 +125,21 @@ describe('corpus-api client', () => {
         ...CLIENT_OPTS,
         jwkJson: wrapped,
       });
-      fetchMock.mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+      fetchMock.mockResolvedValueOnce(
+        mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+      );
 
-      const result = await updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
+      const result = await updateApprovedCorpusItem(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT,
+      );
 
       expect(result.externalId).toBe('abc-123');
     });
 
     it('includes kid in the JWT header', async () => {
-      fetchMock.mockResolvedValueOnce(mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY));
+      fetchMock.mockResolvedValueOnce(
+        mockResponse(UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY),
+      );
 
       await updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
 

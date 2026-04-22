@@ -25,18 +25,19 @@ export const CLIENT_OPTS = {
   audience: 'https://admin-api.test/',
 };
 
-export const UPDATE_APPROVED_CORPUS_ITEM_INPUT: UpdateApprovedCorpusItemInput = {
-  externalId: 'abc-123',
-  title: 'Test Title',
-  excerpt: 'Test Excerpt',
-  authors: [{ name: 'Jane Doe', sortOrder: 0 }],
-  status: 'CORPUS',
-  language: 'EN',
-  publisher: 'Test Publisher',
-  imageUrl: 'https://s3.amazonaws.com/image.jpg',
-  topic: 'TECHNOLOGY',
-  isTimeSensitive: false,
-};
+export const UPDATE_APPROVED_CORPUS_ITEM_INPUT: UpdateApprovedCorpusItemInput =
+  {
+    externalId: 'abc-123',
+    title: 'Test Title',
+    excerpt: 'Test Excerpt',
+    authors: [{ name: 'Jane Doe', sortOrder: 0 }],
+    status: 'CORPUS',
+    language: 'EN',
+    publisher: 'Test Publisher',
+    imageUrl: 'https://s3.amazonaws.com/image.jpg',
+    topic: 'TECHNOLOGY',
+    isTimeSensitive: false,
+  };
 
 export const UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY = {
   data: {
@@ -49,10 +50,7 @@ export const UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY = {
   },
 };
 
-export function mockResponse(
-  body: unknown,
-  status = 200,
-): Response {
+export function mockResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json' },
