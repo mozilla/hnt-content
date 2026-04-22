@@ -14,6 +14,13 @@ const JWT_REFRESH_BUFFER = 0.95;
 const JWT_USERNAME = 'ML';
 const JWT_GROUPS = ['mozilliansorg_pocket_scheduled_surface_curator_full'];
 
+/**
+ * How long a cached JWT stays fresh before the next call
+ * signs a new one.
+ */
+export const TOKEN_REFRESH_WINDOW_MS =
+  JWT_TTL_SECONDS * JWT_REFRESH_BUFFER * 1000;
+
 // 4 retries (5 attempts total) with exponential backoff
 // designed to complete well within the 600s Pub/Sub ack
 // deadline: ~2s + ~4s + ~8s + ~16s = ~30s worst case.

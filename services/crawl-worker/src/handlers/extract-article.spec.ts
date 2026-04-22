@@ -44,27 +44,24 @@ describe('handleArticleExtraction', () => {
     it('returns an ArticleEvent with mapped fields', async () => {
       const event = await handleArticleExtraction(BASE_MESSAGE);
 
-      expect(event.url).toBe('https://example.com/article');
-      expect(event.headline).toBe('Test Headline');
-      expect(event.description).toBe('Test description of the article.');
-      expect(event.authors).toEqual([{ name: 'Jane Doe' }]);
-      expect(event.main_image_url).toBe('https://example.com/image.jpg');
-      expect(event.body_truncated).toBe('Full article body text here.');
-      expect(event.published_at).toBe('2025-06-01T12:00:00Z');
-      expect(event.breadcrumbs).toEqual([
-        { name: 'News', url: 'https://example.com/news' },
-      ]);
-      expect(event.language).toBe('en');
+      expect(event.url).toBe(BASE_MESSAGE.url);
+      expect(event.headline).toBe(ZYTE_ARTICLE.headline);
+      expect(event.description).toBe(ZYTE_ARTICLE.description);
+      expect(event.authors).toEqual(ZYTE_ARTICLE.authors);
+      expect(event.main_image_url).toBe(ZYTE_ARTICLE.mainImage?.url);
+      expect(event.body_truncated).toBe(ZYTE_ARTICLE.articleBody);
+      expect(event.published_at).toBe(ZYTE_ARTICLE.datePublished);
+      expect(event.breadcrumbs).toEqual(ZYTE_ARTICLE.breadcrumbs);
+      expect(event.language).toBe(ZYTE_ARTICLE.inLanguage);
       expect(event.extracted_at).toBeDefined();
     });
 
     it('calls extractArticle with httpResponseBody', async () => {
       await handleArticleExtraction(BASE_MESSAGE);
 
-      expect(extractArticleMock).toHaveBeenCalledWith(
-        'https://example.com/article',
-        { extractFrom: 'httpResponseBody' },
-      );
+      expect(extractArticleMock).toHaveBeenCalledWith(BASE_MESSAGE.url, {
+        extractFrom: 'httpResponseBody',
+      });
     });
 
     it('does not call updateApprovedCorpusItem', async () => {
@@ -116,15 +113,15 @@ describe('handleArticleExtraction', () => {
         .calls[0][0] as UpdateApprovedCorpusItemInput;
       expect(input.title).toBe('New Headline');
       // Unchanged excerpt uses corpus item value.
-      expect(input.excerpt).toBe('Test description of the article.');
+      expect(input.excerpt).toBe(CORPUS_ITEM.excerpt);
       // Passthrough fields from corpus_item.
-      expect(input.externalId).toBe('ext-123');
-      expect(input.status).toBe('CORPUS');
-      expect(input.language).toBe('EN');
-      expect(input.publisher).toBe('Example News');
-      expect(input.imageUrl).toBe('https://s3.amazonaws.com/image.jpg');
-      expect(input.topic).toBe('TECHNOLOGY');
-      expect(input.isTimeSensitive).toBe(false);
+      expect(input.externalId).toBe(CORPUS_ITEM.external_id);
+      expect(input.status).toBe(CORPUS_ITEM.status);
+      expect(input.language).toBe(CORPUS_ITEM.language);
+      expect(input.publisher).toBe(CORPUS_ITEM.publisher);
+      expect(input.imageUrl).toBe(CORPUS_ITEM.image_url);
+      expect(input.topic).toBe(CORPUS_ITEM.topic);
+      expect(input.isTimeSensitive).toBe(CORPUS_ITEM.is_time_sensitive);
     });
 
     it('updates when excerpt changed', async () => {
@@ -232,7 +229,7 @@ describe('handleArticleExtraction', () => {
       const input = updateCorpusMock.mock
         .calls[0][0] as UpdateApprovedCorpusItemInput;
       // Falls back to corpus_item title since extracted is empty.
-      expect(input.title).toBe('Test Headline');
+      expect(input.title).toBe(CORPUS_ITEM.title);
       expect(input.excerpt).toBe('Completely different excerpt.');
     });
 

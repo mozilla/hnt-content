@@ -24,10 +24,9 @@ const CORPUS_API_URL = 'https://admin-api.test/';
  * unit tests cannot.
  */
 describe('extract-article integration', () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
+  const fetchMock = vi.fn<typeof fetch>();
 
   beforeEach(async () => {
-    fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
     initZyteClient({ apiKey: 'test-zyte-key', maxRetries: 0 });
@@ -40,6 +39,7 @@ describe('extract-article integration', () => {
   });
 
   afterEach(() => {
+    fetchMock.mockReset();
     vi.unstubAllGlobals();
   });
 
@@ -93,7 +93,7 @@ describe('extract-article integration', () => {
     // expected GraphQL mutation variables.
     const corpusCall = fetchMock.mock.calls.find(([u]) => u === CORPUS_API_URL);
     expect(corpusCall).toBeDefined();
-    const corpusInit = corpusCall![1] as RequestInit;
+    const corpusInit = corpusCall![1]!;
     const headers = corpusInit.headers as Record<string, string>;
     expect(headers.authorization).toMatch(/^Bearer /);
     expect(headers['apollographql-client-name']).toBe('hnt-content');

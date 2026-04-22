@@ -4,6 +4,7 @@ import {
   updateApprovedCorpusItem,
   CorpusApiError,
   RETRY_MAX_TIMEOUT_MS,
+  TOKEN_REFRESH_WINDOW_MS,
 } from './client.js';
 import {
   CLIENT_OPTS,
@@ -66,7 +67,10 @@ describe('Corpus API integration', () => {
       await vi.advanceTimersByTimeAsync(RETRY_MAX_TIMEOUT_MS);
       const result = await promise;
 
-      expect(result.externalId).toBe('abc-123');
+      expect(result.externalId).toBe(
+        UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY.data.updateApprovedCorpusItem
+          .externalId,
+      );
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
@@ -83,7 +87,10 @@ describe('Corpus API integration', () => {
       await vi.advanceTimersByTimeAsync(RETRY_MAX_TIMEOUT_MS);
       const result = await promise;
 
-      expect(result.externalId).toBe('abc-123');
+      expect(result.externalId).toBe(
+        UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY.data.updateApprovedCorpusItem
+          .externalId,
+      );
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
@@ -122,8 +129,8 @@ describe('Corpus API integration', () => {
 
       const token1 = extractToken(fetchMock, 0);
 
-      // Advance past the refresh window (300s * 0.95 = 285s).
-      await vi.advanceTimersByTimeAsync(286_000);
+      // Advance past the refresh window.
+      await vi.advanceTimersByTimeAsync(TOKEN_REFRESH_WINDOW_MS + 1_000);
 
       // Second call should issue a new token.
       fetchMock.mockResolvedValueOnce(
@@ -155,8 +162,8 @@ describe('Corpus API integration', () => {
       await vi.advanceTimersByTimeAsync(0);
       await promise1;
 
-      // Advance 60s (well within 285s window).
-      await vi.advanceTimersByTimeAsync(60_000);
+      // Advance to the halfway point of the refresh window.
+      await vi.advanceTimersByTimeAsync(TOKEN_REFRESH_WINDOW_MS / 2);
 
       const promise2 = updateApprovedCorpusItem(
         UPDATE_APPROVED_CORPUS_ITEM_INPUT,

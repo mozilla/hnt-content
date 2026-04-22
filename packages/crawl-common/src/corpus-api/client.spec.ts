@@ -36,7 +36,7 @@ describe('corpus-api client', () => {
 
       expect(fetchMock).toHaveBeenCalledOnce();
       const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-      expect(url).toBe('https://admin-api.test/');
+      expect(url).toBe(CLIENT_OPTS.endpoint);
       expect(init.method).toBe('POST');
 
       const headers = init.headers as Record<string, string>;
@@ -53,8 +53,12 @@ describe('corpus-api client', () => {
       await updateApprovedCorpusItem(UPDATE_APPROVED_CORPUS_ITEM_INPUT);
 
       const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
-      expect(body.variables.data.externalId).toBe('abc-123');
-      expect(body.variables.data.title).toBe('Test Title');
+      expect(body.variables.data.externalId).toBe(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT.externalId,
+      );
+      expect(body.variables.data.title).toBe(
+        UPDATE_APPROVED_CORPUS_ITEM_INPUT.title,
+      );
       expect(body.query).toContain('updateApprovedCorpusItem');
     });
   });
@@ -69,8 +73,10 @@ describe('corpus-api client', () => {
         UPDATE_APPROVED_CORPUS_ITEM_INPUT,
       );
 
-      expect(result.externalId).toBe('abc-123');
-      expect(result.title).toBe('Test Title');
+      const expected =
+        UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY.data.updateApprovedCorpusItem;
+      expect(result.externalId).toBe(expected.externalId);
+      expect(result.title).toBe(expected.title);
     });
 
     it.each([
@@ -133,7 +139,10 @@ describe('corpus-api client', () => {
         UPDATE_APPROVED_CORPUS_ITEM_INPUT,
       );
 
-      expect(result.externalId).toBe('abc-123');
+      expect(result.externalId).toBe(
+        UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY.data.updateApprovedCorpusItem
+          .externalId,
+      );
     });
 
     it('includes kid in the JWT header', async () => {
