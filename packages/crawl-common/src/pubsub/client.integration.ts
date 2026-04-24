@@ -72,8 +72,12 @@ describe.skipIf(!hasDocker)('Pub/Sub client integration', () => {
   });
 
   it('publishes and consumes a typed message end-to-end', async () => {
+    // Exercises shutdownPubsub's consumer-stop path: the
+    // test does not call controller.stop() manually, so the
+    // real SDK shutdown is driven entirely via afterEach's
+    // shutdownPubsub().
     const received: TestPayload[] = [];
-    const controller = startConsumer<TestPayload>({
+    startConsumer<TestPayload>({
       subscriptionName,
       handler: async (message) => {
         received.push(message);
@@ -85,12 +89,11 @@ describe.skipIf(!hasDocker)('Pub/Sub client integration', () => {
     expect(messageId).toBeTruthy();
 
     await waitFor(() => received.length === 1, CONSUME_TIMEOUT_MS);
-    await controller.stop();
 
     expect(received).toEqual([TEST_PAYLOAD]);
   });
 
-  it('delivers multiple messages in order of publish', async () => {
+  it('delivers multiple messages without loss', async () => {
     const received: TestPayload[] = [];
     const controller = startConsumer<TestPayload>({
       subscriptionName,
