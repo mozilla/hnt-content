@@ -8,7 +8,8 @@
     },
     "test": {
       "cache": false,
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "env": ["METADATA_SERVER_DETECTION", "PUBSUB_EMULATOR_HOST"]
     },
     "lint": {
       "dependsOn": ["^build"]

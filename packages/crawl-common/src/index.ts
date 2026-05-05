@@ -30,6 +30,21 @@ export type {
   UpdateApprovedCorpusItemInput,
   UpdateApprovedCorpusItemResponse,
 } from './corpus-api/index.js';
+export {
+  initPubsubClient,
+  startConsumer,
+  publishMessage,
+  flushPublisher,
+  shutdownPubsub,
+} from './pubsub/index.js';
+export type {
+  PubsubClientOptions,
+  PublisherBatching,
+  ConsumerFlowControl,
+  ConsumerOptions,
+  ConsumerController,
+  MessageHandler,
+} from './pubsub/index.js';
 export type {
   CorpusItem,
   CrawlArticleMessage,

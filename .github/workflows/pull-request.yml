@@ -23,7 +23,23 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    env:
+      PUBSUB_EMULATOR_IMAGE: gcr.io/google.com/cloudsdktool/cloud-sdk:emulators
+      PUBSUB_PROJECT_ID: test-project
+      # GHA runners can't reach the GCE metadata IP, and
+      # google-auth-library otherwise burns ~5s per client on
+      # a no-route-to-host timeout.
+      METADATA_SERVER_DETECTION: none
     steps:
+      # Pre-pull the emulator image so it overlaps with checkout,
+      # node setup, and pnpm install. Disowned so the bg pull
+      # survives the step boundary.
+      - name: Pre-pull Pub/Sub emulator image
+        run: |
+          nohup docker pull "$PUBSUB_EMULATOR_IMAGE" \
+            > /tmp/pubsub-emulator-pull.log 2>&1 &
+          disown
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
@@ -36,6 +52,25 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # Start the emulator before `pnpm test` so the JVM warmup
+      # is absorbed into the runner's serial setup time and not
+      # billed against the test step. The second `docker pull`
+      # is idempotent: it joins an in-flight pull or returns
+      # "up to date" if already cached.
+      - name: Start Pub/Sub emulator
+        run: |
+          docker pull "$PUBSUB_EMULATOR_IMAGE"
+          docker run -d --rm --name pubsub-emulator -p 8085:8085 \
+            "$PUBSUB_EMULATOR_IMAGE" \
+            gcloud beta emulators pubsub start \
+              --host-port=0.0.0.0:8085 --project="$PUBSUB_PROJECT_ID"
+          timeout 30 bash -c '
+            until curl -sf "http://localhost:8085/v1/projects/$PUBSUB_PROJECT_ID/topics" > /dev/null; do
+              sleep 0.2
+            done
+          '
+          echo "PUBSUB_EMULATOR_HOST=localhost:8085" >> "$GITHUB_ENV"
 
       - run: pnpm test
 
