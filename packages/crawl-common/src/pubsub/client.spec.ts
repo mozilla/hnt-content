@@ -414,7 +414,7 @@ describe('startConsumer', () => {
       },
     ];
     expect(name).toBe(SUBSCRIPTION_NAME);
-    expect(opts.flowControl.maxMessages).toBe(10);
+    expect(opts.flowControl.maxMessages).toBe(100);
     expect(opts.maxExtensionTime.seconds).toBe(570);
     expect(opts.closeOptions.behavior).toBe('WAIT');
     expect(opts.closeOptions.timeout.seconds).toBe(90);
@@ -498,36 +498,10 @@ describe('startConsumer', () => {
       });
 
       const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-      sub.emit('message', createMockMessage(TEST_PAYLOAD));
-      await vi.advanceTimersByTimeAsync(0);
-
-      const stopPromise = controller.stop();
-      await vi.advanceTimersByTimeAsync(5_000);
-      await stopPromise;
-
-      expect(warnSpy).toHaveBeenCalledOnce();
-      expect(warnSpy.mock.calls[0][0]).toMatch(/pubsub:stop-timeout/);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('shares the shutdown deadline across subscription.close and in-flight wait', async () => {
-    // With a 5s budget, a close() that consumes 3s should
-    // leave only ~2s for in-flight wait. A regression that
-    // gave each phase its own 5s budget would take ~8s
-    // total; the test fails if that happens.
-    vi.useFakeTimers();
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    try {
-      await reinit({ projectId: PROJECT_ID, shutdownTimeoutSeconds: 5 });
-      const handler = vi.fn(() => new Promise<void>(() => {}));
-      const controller = startConsumer<TestPayload>({
-        subscriptionName: SUBSCRIPTION_NAME,
-        handler,
-      });
-
-      const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+      // sub.close consumes 3s of the 5s budget; the in-flight
+      // wait then has ~2s before the absolute deadline. A
+      // regression giving each phase its own budget would take
+      // ~8s and hang this test under fake timers.
       sub.close.mockImplementation(
         () => new Promise<void>((r) => setTimeout(r, 3_000)),
       );
@@ -535,7 +509,6 @@ describe('startConsumer', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       const stopPromise = controller.stop();
-      // Advance to the absolute deadline: 3s close + 2s wait.
       await vi.advanceTimersByTimeAsync(5_000);
       await stopPromise;
 

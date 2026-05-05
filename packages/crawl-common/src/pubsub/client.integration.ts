@@ -71,31 +71,14 @@ describe.skipIf(!hasDocker)('Pub/Sub client integration', () => {
     await adminClient.topic(topicName).delete();
   });
 
-  it('publishes and consumes a typed message end-to-end', async () => {
+  it('publishes and consumes typed messages end-to-end', async () => {
     // Exercises shutdownPubsub's consumer-stop path: the
     // test does not call controller.stop() manually, so the
     // real SDK shutdown is driven entirely via afterEach's
-    // shutdownPubsub().
+    // shutdownPubsub(). Three payloads with distinct crawl_ids
+    // also verify no loss across a small batch.
     const received: TestPayload[] = [];
     startConsumer<TestPayload>({
-      subscriptionName,
-      handler: async (message) => {
-        received.push(message);
-      },
-    });
-
-    const messageId = await publishMessage(topicName, TEST_PAYLOAD);
-    await flushPublisher();
-    expect(messageId).toBeTruthy();
-
-    await waitFor(() => received.length === 1, CONSUME_TIMEOUT_MS);
-
-    expect(received).toEqual([TEST_PAYLOAD]);
-  });
-
-  it('delivers multiple messages without loss', async () => {
-    const received: TestPayload[] = [];
-    const controller = startConsumer<TestPayload>({
       subscriptionName,
       handler: async (message) => {
         received.push(message);
@@ -108,7 +91,8 @@ describe.skipIf(!hasDocker)('Pub/Sub client integration', () => {
       { ...TEST_PAYLOAD, crawl_id: 'crawl-3' },
     ];
     for (const payload of payloads) {
-      await publishMessage(topicName, payload);
+      const messageId = await publishMessage(topicName, payload);
+      expect(messageId).toBeTruthy();
     }
     await flushPublisher();
 
@@ -116,11 +100,7 @@ describe.skipIf(!hasDocker)('Pub/Sub client integration', () => {
       () => received.length === payloads.length,
       CONSUME_TIMEOUT_MS,
     );
-    await controller.stop();
 
-    // Order is not strictly guaranteed by Pub/Sub without
-    // ordering keys, but with a single publisher and empty
-    // backlog the emulator delivers in publish order.
     expect(received.map((r) => r.crawl_id).sort()).toEqual(
       payloads.map((p) => p.crawl_id).sort(),
     );

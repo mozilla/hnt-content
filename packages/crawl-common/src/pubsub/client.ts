@@ -14,10 +14,14 @@ import type {
 } from './types.js';
 
 // Defaults tuned for a per-pod article worker that is
-// Zyte-bound: small in-memory queue, ack extension set 30s
-// below the 600s Pub/Sub ack deadline so downstream lock TTLs
+// Zyte-bound. maxMessages caps concurrent handler invocations,
+// so it is sized to Zyte's max useful concurrency at typical
+// Article-extraction response times (~3000 RPM at ~2s = ~100
+// concurrent); horizontal scaling is for CPU availability,
+// not Zyte throughput. Ack extension is set 30s below the
+// 600s Pub/Sub ack deadline so downstream lock TTLs
 // (ack_deadline - 30s) outlive any single lease extension.
-const DEFAULT_FLOW_MAX_MESSAGES = 10;
+const DEFAULT_FLOW_MAX_MESSAGES = 100;
 const DEFAULT_MAX_EXTENSION_SECONDS = 570;
 
 // Shutdown budget applied as a single absolute deadline
