@@ -1,4 +1,3 @@
-import { execSync } from 'node:child_process';
 import { PubSub } from '@google-cloud/pubsub';
 import {
   PubSubEmulatorContainer,
@@ -29,13 +28,9 @@ const CONSUME_TIMEOUT_MS = 10_000;
 /**
  * Integration test for the Pub/Sub client library. Boots a
  * cloud-sdk emulator in Docker and exercises publish/consume
- * end-to-end against real SDK paths. Auto-skips when Docker
- * is unavailable (e.g. local runs without Docker Desktop);
- * CI runs on ubuntu-latest, which ships with Docker.
+ * end-to-end against real SDK paths.
  */
-const hasDocker = detectDocker();
-
-describe.skipIf(!hasDocker)('Pub/Sub client integration', () => {
+describe('Pub/Sub client integration', () => {
   let container: StartedPubSubEmulatorContainer;
   let adminClient: PubSub;
 
@@ -106,16 +101,6 @@ describe.skipIf(!hasDocker)('Pub/Sub client integration', () => {
     );
   });
 });
-
-/** Return whether a reachable Docker daemon is available. */
-function detectDocker(): boolean {
-  try {
-    execSync('docker version', { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /** Poll until the predicate returns true, or reject on timeout. */
 async function waitFor(
