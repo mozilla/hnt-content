@@ -21,8 +21,8 @@ import type {
 // not Zyte throughput. Ack extension is set 30s below the
 // 600s Pub/Sub ack deadline so downstream lock TTLs
 // (ack_deadline - 30s) outlive any single lease extension.
-const DEFAULT_FLOW_MAX_MESSAGES = 100;
-const DEFAULT_MAX_EXTENSION_SECONDS = 570;
+const DEFAULT_CONSUMER_FLOW_MAX_MESSAGES = 100;
+const DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS = 570;
 
 // Shutdown budget applied as a single absolute deadline
 // across SDK close and the subsequent in-flight wait. Must
@@ -32,9 +32,9 @@ const DEFAULT_SHUTDOWN_TIMEOUT_SECONDS = 90;
 
 // Publisher batching defaults match the SDK's documented
 // defaults for small payloads (~100 messages / 100ms / 1MB).
-const DEFAULT_BATCH_MAX_MESSAGES = 100;
-const DEFAULT_BATCH_MAX_MILLISECONDS = 100;
-const DEFAULT_BATCH_MAX_BYTES = 1_000_000;
+const DEFAULT_PUBLISHER_BATCH_MAX_MESSAGES = 100;
+const DEFAULT_PUBLISHER_BATCH_MAX_MILLISECONDS = 100;
+const DEFAULT_PUBLISHER_BATCH_MAX_BYTES = 1_000_000;
 
 // Module-level state.
 let pubsub: PubSub | undefined;
@@ -44,11 +44,14 @@ let shutdownPromise: Promise<void> | undefined;
 const topicCache = new Map<string, Topic>();
 const consumerControllers = new Set<ConsumerController>();
 
-/** Reset all module state to its post-initialization defaults. */
+/**
+ * Reset module state so the next initPubsubClient() starts
+ * clean. Called from shutdownPubsub(); mostly matters for
+ * tests, since in production the pod usually exits right
+ * after shutdown.
+ */
 function resetModuleState(): void {
   pubsub = undefined;
-  publisherBatching = undefined;
-  shutdownTimeoutSeconds = DEFAULT_SHUTDOWN_TIMEOUT_SECONDS;
   shutdownPromise = undefined;
   topicCache.clear();
   consumerControllers.clear();
@@ -72,21 +75,14 @@ export function initPubsubClient(opts: PubsubClientOptions): void {
       'Pub/Sub client already initialized. Call shutdownPubsub() first.',
     );
   }
-  const sdkOpts: {
-    projectId: string;
-    apiEndpoint?: string;
-    emulatorMode?: boolean;
-  } = { projectId: opts.projectId };
-  if (opts.emulatorHost) {
-    sdkOpts.apiEndpoint = opts.emulatorHost;
-    sdkOpts.emulatorMode = true;
-  }
-  pubsub = new PubSub(sdkOpts);
+  pubsub = new PubSub({
+    projectId: opts.projectId,
+    ...(opts.apiEndpoint ? { apiEndpoint: opts.apiEndpoint } : {}),
+    ...(opts.useEmulator ? { emulatorMode: true } : {}),
+  });
   publisherBatching = opts.publisherBatching;
   shutdownTimeoutSeconds =
     opts.shutdownTimeoutSeconds ?? DEFAULT_SHUTDOWN_TIMEOUT_SECONDS;
-  topicCache.clear();
-  consumerControllers.clear();
 }
 
 /** Return the initialized PubSub client or throw. */
@@ -107,10 +103,13 @@ function getTopic(topicName: string): Topic {
     topic = client.topic(topicName, {
       batching: {
         maxMessages:
-          publisherBatching?.maxMessages ?? DEFAULT_BATCH_MAX_MESSAGES,
+          publisherBatching?.maxMessages ??
+          DEFAULT_PUBLISHER_BATCH_MAX_MESSAGES,
         maxMilliseconds:
-          publisherBatching?.maxMilliseconds ?? DEFAULT_BATCH_MAX_MILLISECONDS,
-        maxBytes: publisherBatching?.maxBytes ?? DEFAULT_BATCH_MAX_BYTES,
+          publisherBatching?.maxMilliseconds ??
+          DEFAULT_PUBLISHER_BATCH_MAX_MILLISECONDS,
+        maxBytes:
+          publisherBatching?.maxBytes ?? DEFAULT_PUBLISHER_BATCH_MAX_BYTES,
       },
     });
     topicCache.set(topicName, topic);
@@ -149,12 +148,14 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   }
   const client = requireClient();
   const maxExtensionSeconds =
-    opts.flowControl?.maxExtensionSeconds ?? DEFAULT_MAX_EXTENSION_SECONDS;
+    opts.flowControl?.maxExtensionSeconds ??
+    DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS;
   const budgetSeconds = shutdownTimeoutSeconds;
 
   const subscription = client.subscription(opts.subscriptionName, {
     flowControl: {
-      maxMessages: opts.flowControl?.maxMessages ?? DEFAULT_FLOW_MAX_MESSAGES,
+      maxMessages:
+        opts.flowControl?.maxMessages ?? DEFAULT_CONSUMER_FLOW_MAX_MESSAGES,
     },
     maxExtensionTime: Duration.from({ seconds: maxExtensionSeconds }),
     // WaitForProcessing lets in-flight handlers finish on

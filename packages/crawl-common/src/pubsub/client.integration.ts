@@ -32,7 +32,7 @@ const CONSUME_TIMEOUT_MS = 10_000;
  */
 describe('Pub/Sub client integration', () => {
   let container: StartedPubSubEmulatorContainer;
-  let emulatorHost: string;
+  let endpoint: string;
   let adminClient: PubSub;
   let topicName: string;
   let subscriptionName: string;
@@ -41,14 +41,14 @@ describe('Pub/Sub client integration', () => {
     container = await new PubSubEmulatorContainer(EMULATOR_IMAGE)
       .withProjectId(PROJECT_ID)
       .start();
-    emulatorHost = container.getEmulatorEndpoint();
+    endpoint = container.getEmulatorEndpoint();
     // Pass apiEndpoint + emulatorMode explicitly. Without
     // emulatorMode, google-auth-library still probes the GCE
     // metadata server and burns ~5s per client on the
     // no-route-to-host timeout in CI.
     adminClient = new PubSub({
       projectId: PROJECT_ID,
-      apiEndpoint: emulatorHost,
+      apiEndpoint: endpoint,
       emulatorMode: true,
     });
   }, CONTAINER_START_TIMEOUT_MS);
@@ -64,7 +64,11 @@ describe('Pub/Sub client integration', () => {
     subscriptionName = `sub-${id}`;
     await adminClient.createTopic(topicName);
     await adminClient.topic(topicName).createSubscription(subscriptionName);
-    initPubsubClient({ projectId: PROJECT_ID, emulatorHost });
+    initPubsubClient({
+      projectId: PROJECT_ID,
+      apiEndpoint: endpoint,
+      useEmulator: true,
+    });
   });
 
   afterEach(async () => {

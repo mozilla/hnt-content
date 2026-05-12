@@ -3,12 +3,26 @@ export interface PubsubClientOptions {
   /** GCP project id (e.g. 'moz-fx-hnt-prod'). */
   projectId: string;
   /**
-   * Emulator endpoint as 'host:port'. When set, the Pub/Sub
-   * SDK connects to a local emulator instead of GCP. Usually
-   * unset in production.
+   * Override the Pub/Sub API endpoint as 'host:port'. Set
+   * alongside useEmulator in tests and local development to
+   * point the SDK at a local Pub/Sub emulator. Leave unset
+   * in production.
    */
-  emulatorHost?: string;
-  /** Overrides publisher batching defaults. */
+  apiEndpoint?: string;
+  /**
+   * Connect with no credentials and skip the GCE metadata-
+   * server auth probe. Must be true when apiEndpoint points
+   * at a local emulator; otherwise the SDK burns ~5s per
+   * client on the no-route-to-host timeout looking for prod
+   * auth. Leave unset in production.
+   */
+  useEmulator?: boolean;
+  /**
+   * Overrides publisher batching defaults. Batching groups
+   * outgoing messages and flushes on the first of N messages,
+   * N ms elapsed, or N bytes — trading a bit of latency for
+   * fewer RPCs to Pub/Sub.
+   */
   publisherBatching?: PublisherBatching;
   /**
    * Pod-wide shutdown budget in seconds, used as a single

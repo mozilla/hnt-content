@@ -143,8 +143,12 @@ describe('initPubsubClient', () => {
     );
   });
 
-  it('passes apiEndpoint + emulatorMode when emulatorHost is provided', async () => {
-    await reinit({ projectId: PROJECT_ID, emulatorHost: 'localhost:8085' });
+  it('passes apiEndpoint and emulatorMode through to the SDK', async () => {
+    await reinit({
+      projectId: PROJECT_ID,
+      apiEndpoint: 'localhost:8085',
+      useEmulator: true,
+    });
     expect(holder.ctorArgs).toEqual({
       projectId: PROJECT_ID,
       apiEndpoint: 'localhost:8085',
@@ -152,7 +156,7 @@ describe('initPubsubClient', () => {
     });
   });
 
-  it('omits apiEndpoint/emulatorMode when emulatorHost is absent', async () => {
+  it('omits apiEndpoint and emulatorMode when not provided', async () => {
     await reinit({ projectId: PROJECT_ID });
     expect(holder.ctorArgs).toEqual({ projectId: PROJECT_ID });
   });
