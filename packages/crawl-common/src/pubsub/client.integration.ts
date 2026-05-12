@@ -1,5 +1,9 @@
 import { PubSub } from '@google-cloud/pubsub';
 import {
+  PubSubEmulatorContainer,
+  type StartedPubSubEmulatorContainer,
+} from '@testcontainers/gcloud';
+import {
   afterAll,
   afterEach,
   beforeAll,
@@ -17,27 +21,27 @@ import {
 } from './client.js';
 import { PROJECT_ID, TEST_PAYLOAD, type TestPayload } from './test-helpers.js';
 
+const EMULATOR_IMAGE = 'gcr.io/google.com/cloudsdktool/cloud-sdk:emulators';
+const CONTAINER_START_TIMEOUT_MS = 120_000;
 const CONSUME_TIMEOUT_MS = 10_000;
 
 /**
- * Integration test for the Pub/Sub client library. Connects to
- * the emulator at PUBSUB_EMULATOR_HOST (started by the
- * emulator-setup.ts globalSetup) and exercises publish/consume
- * end-to-end against real SDK paths.
+ * Integration test for the Pub/Sub client library. Starts a real
+ * Pub/Sub emulator via testcontainers and exercises
+ * publish/consume end-to-end against real SDK paths.
  */
 describe('Pub/Sub client integration', () => {
+  let container: StartedPubSubEmulatorContainer;
+  let emulatorHost: string;
   let adminClient: PubSub;
   let topicName: string;
   let subscriptionName: string;
 
-  beforeAll(() => {
-    const emulatorHost = process.env.PUBSUB_EMULATOR_HOST;
-    if (!emulatorHost) {
-      throw new Error(
-        'PUBSUB_EMULATOR_HOST is not set; check that emulator-setup.ts ' +
-          'is registered as a globalSetup in vitest.config.ts.',
-      );
-    }
+  beforeAll(async () => {
+    container = await new PubSubEmulatorContainer(EMULATOR_IMAGE)
+      .withProjectId(PROJECT_ID)
+      .start();
+    emulatorHost = container.getEmulatorEndpoint();
     // Pass apiEndpoint + emulatorMode explicitly. Without
     // emulatorMode, google-auth-library still probes the GCE
     // metadata server and burns ~5s per client on the
@@ -47,10 +51,11 @@ describe('Pub/Sub client integration', () => {
       apiEndpoint: emulatorHost,
       emulatorMode: true,
     });
-  });
+  }, CONTAINER_START_TIMEOUT_MS);
 
   afterAll(async () => {
     await adminClient?.close();
+    await container?.stop();
   });
 
   beforeEach(async () => {
@@ -59,10 +64,7 @@ describe('Pub/Sub client integration', () => {
     subscriptionName = `sub-${id}`;
     await adminClient.createTopic(topicName);
     await adminClient.topic(topicName).createSubscription(subscriptionName);
-    initPubsubClient({
-      projectId: PROJECT_ID,
-      emulatorHost: process.env.PUBSUB_EMULATOR_HOST,
-    });
+    initPubsubClient({ projectId: PROJECT_ID, emulatorHost });
   });
 
   afterEach(async () => {
