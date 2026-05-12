@@ -184,66 +184,11 @@ describe('publishMessage', () => {
     );
   });
 
-  it('passes default batching config to the Topic', async () => {
+  it('does not pass a batching option (SDK defaults govern)', async () => {
     await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
 
-    const [, opts] = mock.topic.mock.calls[0] as [
-      string,
-      {
-        batching: {
-          maxMessages: number;
-          maxMilliseconds: number;
-          maxBytes: number;
-        };
-      },
-    ];
-    expect(opts.batching.maxMessages).toBe(100);
-    expect(opts.batching.maxMilliseconds).toBe(100);
-    expect(opts.batching.maxBytes).toBe(1_000_000);
-  });
-
-  it('forwards overridden batching config to the Topic', async () => {
-    await reinit({
-      projectId: PROJECT_ID,
-      publisherBatching: {
-        maxMessages: 5,
-        maxMilliseconds: 50,
-        maxBytes: 2_048,
-      },
-    });
-    await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
-
-    const [, opts] = mock.topic.mock.calls[0] as [
-      string,
-      {
-        batching: {
-          maxMessages: number;
-          maxMilliseconds: number;
-          maxBytes: number;
-        };
-      },
-    ];
-    expect(opts.batching.maxMessages).toBe(5);
-    expect(opts.batching.maxMilliseconds).toBe(50);
-    expect(opts.batching.maxBytes).toBe(2_048);
-  });
-
-  it('clears publisherBatching across init -> shutdown -> init', async () => {
-    // First init with custom batching
-    await reinit({
-      projectId: PROJECT_ID,
-      publisherBatching: { maxMessages: 5 },
-    });
-    await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
-    // Now re-init without any batching override
-    await reinit({ projectId: PROJECT_ID });
-    await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
-
-    const [, opts] = mock.topic.mock.calls[0] as [
-      string,
-      { batching: { maxMessages: number } },
-    ];
-    expect(opts.batching.maxMessages).toBe(100);
+    const [, opts] = mock.topic.mock.calls[0] as [string, unknown];
+    expect(opts).toBeUndefined();
   });
 });
 
@@ -428,32 +373,14 @@ describe('startConsumer', () => {
     startConsumer<TestPayload>({
       subscriptionName: SUBSCRIPTION_NAME,
       handler: async () => {},
-      flowControl: { maxMessages: 3, maxExtensionSeconds: 120 },
+      flowControl: { maxMessages: 3 },
     });
 
     const [, opts] = mock.subscription.mock.calls[0] as [
       string,
-      {
-        flowControl: { maxMessages: number };
-        maxExtensionTime: { seconds: number };
-      },
+      { flowControl: { maxMessages: number } },
     ];
     expect(opts.flowControl.maxMessages).toBe(3);
-    expect(opts.maxExtensionTime.seconds).toBe(120);
-  });
-
-  it('applies pod-wide shutdownTimeoutSeconds to closeOptions', async () => {
-    await reinit({ projectId: PROJECT_ID, shutdownTimeoutSeconds: 15 });
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-    });
-
-    const [, opts] = mock.subscription.mock.calls[0] as [
-      string,
-      { closeOptions: { timeout: { seconds: number } } },
-    ];
-    expect(opts.closeOptions.timeout.seconds).toBe(15);
   });
 
   it('stop() closes the subscription and awaits in-flight handlers', async () => {
@@ -494,7 +421,6 @@ describe('startConsumer', () => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      await reinit({ projectId: PROJECT_ID, shutdownTimeoutSeconds: 5 });
       const handler = vi.fn(() => new Promise<void>(() => {}));
       const controller = startConsumer<TestPayload>({
         subscriptionName: SUBSCRIPTION_NAME,
@@ -502,18 +428,19 @@ describe('startConsumer', () => {
       });
 
       const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-      // sub.close consumes 3s of the 5s budget; the in-flight
-      // wait then has ~2s before the absolute deadline. A
-      // regression giving each phase its own budget would take
-      // ~8s and hang this test under fake timers.
+      // sub.close consumes 60s of the 90s budget; the in-
+      // flight wait then has ~30s before the absolute
+      // deadline. A regression giving each phase its own
+      // budget would need ~150s and hang this test under
+      // fake timers.
       sub.close.mockImplementation(
-        () => new Promise<void>((r) => setTimeout(r, 3_000)),
+        () => new Promise<void>((r) => setTimeout(r, 60_000)),
       );
       sub.emit('message', createMockMessage(TEST_PAYLOAD));
       await vi.advanceTimersByTimeAsync(0);
 
       const stopPromise = controller.stop();
-      await vi.advanceTimersByTimeAsync(5_000);
+      await vi.advanceTimersByTimeAsync(90_000);
       await stopPromise;
 
       expect(warnSpy).toHaveBeenCalledOnce();

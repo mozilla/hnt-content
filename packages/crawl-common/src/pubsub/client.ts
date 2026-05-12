@@ -9,37 +9,30 @@ import type {
   ConsumerController,
   ConsumerOptions,
   MessageHandler,
-  PublisherBatching,
   PubsubClientOptions,
 } from './types.js';
 
-// Defaults tuned for a per-pod article worker that is
-// Zyte-bound. maxMessages caps concurrent handler invocations,
-// so it is sized to Zyte's max useful concurrency at typical
-// Article-extraction response times (~3000 RPM at ~2s = ~100
-// concurrent); horizontal scaling is for CPU availability,
-// not Zyte throughput. Ack extension is set 30s below the
-// 600s Pub/Sub ack deadline so downstream lock TTLs
-// (ack_deadline - 30s) outlive any single lease extension.
+// Default per-consumer flow-control cap. Sized to Zyte's max
+// useful concurrency at typical Article-extraction response
+// times (~3000 RPM at ~2s = ~100 concurrent); horizontal
+// scaling is for CPU availability, not Zyte throughput.
 const DEFAULT_CONSUMER_FLOW_MAX_MESSAGES = 100;
-const DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS = 570;
+
+// Per-consumer ack-extension cap. Set 30s below the 600s
+// Pub/Sub ack deadline so downstream Redis lock TTLs
+// (ack_deadline - 30s) outlive any single lease extension,
+// preventing two workers from processing the same message
+// in parallel.
+const CONSUMER_MAX_EXTENSION_SECONDS = 570;
 
 // Shutdown budget applied as a single absolute deadline
 // across SDK close and the subsequent in-flight wait. Must
 // fit within a typical Kubernetes
 // terminationGracePeriodSeconds.
-const DEFAULT_SHUTDOWN_TIMEOUT_SECONDS = 90;
-
-// Publisher batching defaults match the SDK's documented
-// defaults for small payloads (~100 messages / 100ms / 1MB).
-const DEFAULT_PUBLISHER_BATCH_MAX_MESSAGES = 100;
-const DEFAULT_PUBLISHER_BATCH_MAX_MILLISECONDS = 100;
-const DEFAULT_PUBLISHER_BATCH_MAX_BYTES = 1_000_000;
+const SHUTDOWN_TIMEOUT_SECONDS = 90;
 
 // Module-level state.
 let pubsub: PubSub | undefined;
-let publisherBatching: PublisherBatching | undefined;
-let shutdownTimeoutSeconds = DEFAULT_SHUTDOWN_TIMEOUT_SECONDS;
 let shutdownPromise: Promise<void> | undefined;
 const topicCache = new Map<string, Topic>();
 const consumerControllers = new Set<ConsumerController>();
@@ -80,9 +73,6 @@ export function initPubsubClient(opts: PubsubClientOptions): void {
     ...(opts.apiEndpoint ? { apiEndpoint: opts.apiEndpoint } : {}),
     ...(opts.useEmulator ? { emulatorMode: true } : {}),
   });
-  publisherBatching = opts.publisherBatching;
-  shutdownTimeoutSeconds =
-    opts.shutdownTimeoutSeconds ?? DEFAULT_SHUTDOWN_TIMEOUT_SECONDS;
 }
 
 /** Return the initialized PubSub client or throw. */
@@ -95,23 +85,12 @@ function requireClient(): PubSub {
   return pubsub;
 }
 
-/** Lazily create and cache a Topic with configured batching. */
+/** Lazily create and cache a Topic. SDK defaults govern batching. */
 function getTopic(topicName: string): Topic {
   const client = requireClient();
   let topic = topicCache.get(topicName);
   if (!topic) {
-    topic = client.topic(topicName, {
-      batching: {
-        maxMessages:
-          publisherBatching?.maxMessages ??
-          DEFAULT_PUBLISHER_BATCH_MAX_MESSAGES,
-        maxMilliseconds:
-          publisherBatching?.maxMilliseconds ??
-          DEFAULT_PUBLISHER_BATCH_MAX_MILLISECONDS,
-        maxBytes:
-          publisherBatching?.maxBytes ?? DEFAULT_PUBLISHER_BATCH_MAX_BYTES,
-      },
-    });
+    topic = client.topic(topicName);
     topicCache.set(topicName, topic);
   }
   return topic;
@@ -147,24 +126,22 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
     );
   }
   const client = requireClient();
-  const maxExtensionSeconds =
-    opts.flowControl?.maxExtensionSeconds ??
-    DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS;
-  const budgetSeconds = shutdownTimeoutSeconds;
 
   const subscription = client.subscription(opts.subscriptionName, {
     flowControl: {
       maxMessages:
         opts.flowControl?.maxMessages ?? DEFAULT_CONSUMER_FLOW_MAX_MESSAGES,
     },
-    maxExtensionTime: Duration.from({ seconds: maxExtensionSeconds }),
+    maxExtensionTime: Duration.from({
+      seconds: CONSUMER_MAX_EXTENSION_SECONDS,
+    }),
     // WaitForProcessing lets in-flight handlers finish on
     // close() rather than immediately nacking them. The
     // timeout is the shutdown budget, not the ack-extension
     // ceiling, so it fits within a pod's grace period.
     closeOptions: {
       behavior: SubscriptionCloseBehaviors.WaitForProcessing,
-      timeout: Duration.from({ seconds: budgetSeconds }),
+      timeout: Duration.from({ seconds: SHUTDOWN_TIMEOUT_SECONDS }),
     },
   });
 
@@ -191,7 +168,7 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   const controller: ConsumerController = {
     stop(): Promise<void> {
       if (!stopPromise) {
-        const deadline = Date.now() + budgetSeconds * 1000;
+        const deadline = Date.now() + SHUTDOWN_TIMEOUT_SECONDS * 1000;
         stopPromise = (async () => {
           // Close first, then detach listeners. Removing the
           // last 'message' listener triggers the SDK's

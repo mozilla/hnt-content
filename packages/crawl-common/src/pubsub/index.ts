@@ -7,7 +7,6 @@ export {
 } from './client.js';
 export type {
   PubsubClientOptions,
-  PublisherBatching,
   ConsumerFlowControl,
   ConsumerOptions,
   ConsumerController,

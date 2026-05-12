@@ -17,42 +17,12 @@ export interface PubsubClientOptions {
    * auth. Leave unset in production.
    */
   useEmulator?: boolean;
-  /**
-   * Overrides publisher batching defaults. Batching groups
-   * outgoing messages and flushes on the first of N messages,
-   * N ms elapsed, or N bytes — trading a bit of latency for
-   * fewer RPCs to Pub/Sub.
-   */
-  publisherBatching?: PublisherBatching;
-  /**
-   * Pod-wide shutdown budget in seconds, used as a single
-   * absolute deadline across consumer close and in-flight
-   * wait during stop()/shutdownPubsub(). Keep below the
-   * pod's terminationGracePeriodSeconds. Defaults to 90.
-   */
-  shutdownTimeoutSeconds?: number;
-}
-
-/** Publisher batching thresholds; any one triggers a flush. */
-export interface PublisherBatching {
-  /** Max messages per batch before flush. */
-  maxMessages?: number;
-  /** Max time in ms a batch may linger before flush. */
-  maxMilliseconds?: number;
-  /** Max payload bytes per batch before flush. */
-  maxBytes?: number;
 }
 
 /** Per-consumer flow-control thresholds. */
 export interface ConsumerFlowControl {
   /** Max concurrent messages held by this consumer. */
   maxMessages?: number;
-  /**
-   * Max total time the ack deadline may be extended for a
-   * single message before the SDK gives up and lets it
-   * redeliver.
-   */
-  maxExtensionSeconds?: number;
 }
 
 /**
