@@ -383,110 +383,30 @@ describe('startConsumer', () => {
     expect(opts.flowControl.maxMessages).toBe(3);
   });
 
-  it('stop() closes the subscription and awaits in-flight handlers', async () => {
-    let resolveHandler!: () => void;
-    const handler = vi.fn(
-      () =>
-        new Promise<void>((r) => {
-          resolveHandler = r;
-        }),
-    );
+  it('stop() calls subscription.close()', async () => {
     const controller = startConsumer<TestPayload>({
       subscriptionName: SUBSCRIPTION_NAME,
-      handler,
+      handler: async () => {},
     });
-
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-    const message = createMockMessage(TEST_PAYLOAD);
-    sub.emit('message', message);
-    expect(message.ack).not.toHaveBeenCalled();
 
-    const stopPromise = controller.stop();
-    await flushMicrotasks();
+    await controller.stop();
+
     expect(sub.close).toHaveBeenCalledOnce();
-
-    let stopped = false;
-    void stopPromise.then(() => {
-      stopped = true;
-    });
-    await flushMicrotasks();
-    expect(stopped).toBe(false);
-
-    resolveHandler();
-    await stopPromise;
-    expect(message.ack).toHaveBeenCalledOnce();
   });
 
-  it('stop() times out and warns when a handler never resolves', async () => {
-    vi.useFakeTimers();
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    try {
-      const handler = vi.fn(() => new Promise<void>(() => {}));
-      const controller = startConsumer<TestPayload>({
-        subscriptionName: SUBSCRIPTION_NAME,
-        handler,
-      });
-
-      const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-      // sub.close consumes 60s of the 90s budget; the in-
-      // flight wait then has ~30s before the absolute
-      // deadline. A regression giving each phase its own
-      // budget would need ~150s and hang this test under
-      // fake timers.
-      sub.close.mockImplementation(
-        () => new Promise<void>((r) => setTimeout(r, 60_000)),
-      );
-      sub.emit('message', createMockMessage(TEST_PAYLOAD));
-      await vi.advanceTimersByTimeAsync(0);
-
-      const stopPromise = controller.stop();
-      await vi.advanceTimersByTimeAsync(90_000);
-      await stopPromise;
-
-      expect(warnSpy).toHaveBeenCalledOnce();
-      expect(warnSpy.mock.calls[0][0]).toMatch(/pubsub:stop-timeout/);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('stop() still drains in-flight handlers when subscription.close rejects', async () => {
+  it('stop() does not reject when subscription.close() throws', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    let resolveHandler!: () => void;
-    const handler = vi.fn(
-      () =>
-        new Promise<void>((r) => {
-          resolveHandler = r;
-        }),
-    );
     const controller = startConsumer<TestPayload>({
       subscriptionName: SUBSCRIPTION_NAME,
-      handler,
+      handler: async () => {},
     });
-
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     sub.close.mockImplementation(async () => {
       throw new Error('gRPC close failed');
     });
-    const message = createMockMessage(TEST_PAYLOAD);
-    sub.emit('message', message);
-    await flushMicrotasks();
 
-    const stopPromise = controller.stop();
-    await flushMicrotasks();
-
-    // stop() must still be awaiting the in-flight handler,
-    // not resolved and swallowing the close error.
-    let stopped = false;
-    void stopPromise.then(() => {
-      stopped = true;
-    });
-    await flushMicrotasks();
-    expect(stopped).toBe(false);
-
-    resolveHandler();
-    await stopPromise;
-    expect(message.ack).toHaveBeenCalledOnce();
+    await expect(controller.stop()).resolves.toBeUndefined();
     expect(
       errorSpy.mock.calls.some((c) => /pubsub:close-error/.test(c[0])),
     ).toBe(true);
@@ -563,37 +483,6 @@ describe('shutdownPubsub', () => {
     releaseClose();
     await shutdownP;
     expect(mock.close).toHaveBeenCalledOnce();
-  });
-
-  it('lets an in-flight handler publishMessage during consumer drain', async () => {
-    let resolveHandler!: () => void;
-    const handler = vi.fn(async () => {
-      await new Promise<void>((r) => {
-        resolveHandler = r;
-      });
-      await publishMessage('result-topic', { ok: true });
-    });
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler,
-    });
-
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-    sub.emit('message', createMockMessage(TEST_PAYLOAD));
-    await flushMicrotasks();
-
-    const shutdownP = shutdownPubsub();
-    await flushMicrotasks();
-    // Shutdown is waiting on consumer.stop which is waiting
-    // on the handler. Release the handler so it can publish.
-    resolveHandler();
-    await shutdownP;
-
-    // The handler's downstream publish must have succeeded
-    // rather than hitting "not initialized".
-    const resultTopic = mock.topics.get('result-topic');
-    expect(resultTopic).toBeDefined();
-    expect(resultTopic!.publishMessage).toHaveBeenCalledOnce();
   });
 
   it('rejects initPubsubClient while shutdown is in flight', async () => {

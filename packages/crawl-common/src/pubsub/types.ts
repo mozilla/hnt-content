@@ -51,15 +51,16 @@ export interface ConsumerOptions<T> {
 /** Controller returned by startConsumer for lifecycle management. */
 export interface ConsumerController {
   /**
-   * Stop receiving new messages and wait for in-flight
-   * handlers to finish, bounded by the pod-wide shutdown
-   * budget. Returns once the SDK close resolves and either
-   * every handler has settled or the budget elapsed;
-   * handlers still running after the budget log a warning
-   * and are left to complete on their own. Never rejects:
-   * subscription close errors are logged with prefix
-   * `pubsub:close-error` and the in-flight drain still
-   * runs. Idempotent.
+   * Stop receiving new messages. The promise resolves once
+   * the SDK's close call resolves. In the happy path, every
+   * in-flight handler has settled because WaitForProcessing
+   * waits for each ack or nack. If close() throws or its
+   * timeout elapses, any still-running handlers are
+   * abandoned, and Pub/Sub will redeliver their messages
+   * once the ack deadline expires. This method always
+   * resolves; any error from the underlying close is logged
+   * with the prefix `pubsub:close-error` rather than
+   * propagated.
    */
   stop(): Promise<void>;
 }

@@ -115,9 +115,13 @@ export async function flushPublisher(): Promise<void> {
 }
 
 /**
- * Start consuming messages from a subscription. The handler
- * receives the JSON-parsed payload; resolving acks, rejecting
- * nacks so the message is redelivered.
+ * Start consuming messages from a subscription. Pub/Sub
+ * delivery is pull-based, so the SDK initiates the
+ * connection and no inbound HTTPS endpoint or ingress is
+ * needed. The handler receives the JSON-parsed payload.
+ * The library acks the message when the handler resolves,
+ * and nacks it when the handler rejects so Pub/Sub
+ * redelivers.
  */
 export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   if (shutdownPromise) {
@@ -137,15 +141,14 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
     }),
     // WaitForProcessing lets in-flight handlers finish on
     // close() rather than immediately nacking them. The
-    // timeout is the shutdown budget, not the ack-extension
-    // ceiling, so it fits within a pod's grace period.
+    // timeout is an upper bound; close() resolves earlier
+    // once every in-flight message has been ack'd or nack'd.
     closeOptions: {
       behavior: SubscriptionCloseBehaviors.WaitForProcessing,
       timeout: Duration.from({ seconds: SHUTDOWN_TIMEOUT_SECONDS }),
     },
   });
 
-  const inFlight = new Set<Promise<void>>();
   const handleError =
     opts.onError ??
     ((err: Error) => {
@@ -156,9 +159,7 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
     });
 
   const onMessage = (message: Message) => {
-    const task = processMessage(opts.subscriptionName, opts.handler, message);
-    inFlight.add(task);
-    void task.finally(() => inFlight.delete(task));
+    void processMessage(opts.subscriptionName, opts.handler, message);
   };
 
   subscription.on('message', onMessage);
@@ -168,15 +169,16 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   const controller: ConsumerController = {
     stop(): Promise<void> {
       if (!stopPromise) {
-        const deadline = Date.now() + SHUTDOWN_TIMEOUT_SECONDS * 1000;
         stopPromise = (async () => {
-          // Close first, then detach listeners. Removing the
-          // last 'message' listener triggers the SDK's
-          // internal auto-close, which races the configured
-          // WaitForProcessing drain. Catch close errors so a
-          // transient gRPC failure does not skip the
-          // in-flight drain and leave handlers running into
-          // the client's close().
+          // Call close() before removing the 'message'
+          // listener so our WaitForProcessing drain runs.
+          // If we removed the listener first, the SDK would
+          // see no one is listening and shut down without
+          // waiting for in-flight handlers. Catch errors
+          // from close() so stop() never rejects; any
+          // handlers still running when the SDK gives up
+          // will have their messages redelivered after the
+          // ack deadline expires.
           try {
             await subscription.close();
           } catch (err) {
@@ -188,8 +190,6 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
             subscription.removeListener('message', onMessage);
             subscription.removeListener('error', handleError);
           }
-          const remainingMs = Math.max(0, deadline - Date.now());
-          await waitForInFlight(inFlight, opts.subscriptionName, remainingMs);
         })().finally(() => {
           consumerControllers.delete(controller);
         });
@@ -199,42 +199,6 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   };
   consumerControllers.add(controller);
   return controller;
-}
-
-/**
- * Wait for in-flight handlers for up to timeoutMs. Warns and
- * returns if the deadline fires before they settle, so
- * shutdown stays bounded even with a hung handler.
- */
-async function waitForInFlight(
-  inFlight: Set<Promise<void>>,
-  subscriptionName: string,
-  timeoutMs: number,
-): Promise<void> {
-  if (inFlight.size === 0) return;
-  if (timeoutMs <= 0) {
-    console.warn(
-      `pubsub:stop-timeout subscription=${subscriptionName} ` +
-        `inFlight=${inFlight.size}`,
-    );
-    return;
-  }
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<'timeout'>((resolve) => {
-    timer = setTimeout(() => resolve('timeout'), timeoutMs);
-  });
-  const settled = Promise.allSettled(inFlight).then(() => 'done' as const);
-  try {
-    const result = await Promise.race([settled, timeout]);
-    if (result === 'timeout') {
-      console.warn(
-        `pubsub:stop-timeout subscription=${subscriptionName} ` +
-          `inFlight=${inFlight.size}`,
-      );
-    }
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
 }
 
 /**
