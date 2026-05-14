@@ -29,23 +29,13 @@ import type {
   PubsubClientOptions,
 } from './types.js';
 
-// Default per-consumer flow-control cap. Sized to Zyte's max
-// useful concurrency at typical Article-extraction response
-// times (~3000 RPM at ~2s = ~100 concurrent); horizontal
-// scaling is for CPU availability, not Zyte throughput.
-const DEFAULT_CONSUMER_FLOW_MAX_MESSAGES = 100;
+// Default 570s = Pub/Sub's max ack deadline of 600s minus a
+// 30s buffer.
+const DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS = 570;
 
-// Per-consumer ack-extension cap. Set 30s below the 600s
-// Pub/Sub ack deadline so downstream Redis lock TTLs
-// (ack_deadline - 30s) outlive any single lease extension,
-// preventing two workers from processing the same message
-// in parallel.
-const CONSUMER_MAX_EXTENSION_SECONDS = 570;
-
-// Shutdown budget applied as a single absolute deadline
-// across SDK close and the subsequent in-flight wait. Must
-// fit within a typical Kubernetes
-// terminationGracePeriodSeconds.
+// Upper bound on how long subscription.close() waits for
+// in-flight handlers to ack or nack. Must fit within the pod's
+// Kubernetes terminationGracePeriodSeconds.
 const SHUTDOWN_TIMEOUT_SECONDS = 90;
 
 // Module-level state.
@@ -149,12 +139,9 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   const client = requireClient();
 
   const subscription = client.subscription(opts.subscriptionName, {
-    flowControl: {
-      maxMessages:
-        opts.flowControl?.maxMessages ?? DEFAULT_CONSUMER_FLOW_MAX_MESSAGES,
-    },
     maxExtensionTime: Duration.from({
-      seconds: CONSUMER_MAX_EXTENSION_SECONDS,
+      seconds:
+        opts.maxExtensionSeconds ?? DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS,
     }),
     // WaitForProcessing lets in-flight handlers finish on
     // close() rather than immediately nacking them. The

@@ -7,7 +7,6 @@ export {
 } from './client.js';
 export type {
   PubsubClientOptions,
-  ConsumerFlowControl,
   ConsumerOptions,
   ConsumerController,
   MessageHandler,

@@ -39,7 +39,6 @@ export {
 } from './pubsub/index.js';
 export type {
   PubsubClientOptions,
-  ConsumerFlowControl,
   ConsumerOptions,
   ConsumerController,
   MessageHandler,

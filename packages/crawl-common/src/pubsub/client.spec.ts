@@ -283,9 +283,10 @@ describe('startConsumer', () => {
     });
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-    sub.emit('error', new Error('stream died'));
+    sub.emit('error', new Error('transient stream error'));
 
     expect(errorSpy.mock.calls[0][0]).toMatch(/pubsub:stream-error/);
+    // Subsequent message still acks; consumer survived the error.
     const message = createMockMessage(TEST_PAYLOAD);
     await emitAndSettle(sub, 'message', message);
     expect(message.ack).toHaveBeenCalledOnce();
@@ -300,13 +301,13 @@ describe('startConsumer', () => {
     });
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-    const err = new Error('stream died');
+    const err = new Error('transient stream error');
     sub.emit('error', err);
 
     expect(onError).toHaveBeenCalledWith(err);
   });
 
-  it('passes flow-control defaults and ack deadline to the subscription', () => {
+  it('passes ack deadline and close behavior to the subscription', () => {
     startConsumer<TestPayload>({
       subscriptionName: SUBSCRIPTION_NAME,
       handler: async () => {},
@@ -315,30 +316,28 @@ describe('startConsumer', () => {
     const [name, opts] = mock.subscription.mock.calls[0] as [
       string,
       {
-        flowControl: { maxMessages: number };
         maxExtensionTime: { seconds: number };
         closeOptions: { behavior: string; timeout: { seconds: number } };
       },
     ];
     expect(name).toBe(SUBSCRIPTION_NAME);
-    expect(opts.flowControl.maxMessages).toBe(100);
     expect(opts.maxExtensionTime.seconds).toBe(570);
     expect(opts.closeOptions.behavior).toBe('WAIT');
     expect(opts.closeOptions.timeout.seconds).toBe(90);
   });
 
-  it('applies caller-supplied flow-control overrides', () => {
+  it('applies caller-supplied maxExtensionSeconds', () => {
     startConsumer<TestPayload>({
       subscriptionName: SUBSCRIPTION_NAME,
       handler: async () => {},
-      flowControl: { maxMessages: 3 },
+      maxExtensionSeconds: 120,
     });
 
     const [, opts] = mock.subscription.mock.calls[0] as [
       string,
-      { flowControl: { maxMessages: number } },
+      { maxExtensionTime: { seconds: number } },
     ];
-    expect(opts.flowControl.maxMessages).toBe(3);
+    expect(opts.maxExtensionTime.seconds).toBe(120);
   });
 
   it('stop() calls subscription.close()', async () => {

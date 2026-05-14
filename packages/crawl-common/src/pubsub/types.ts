@@ -19,12 +19,6 @@ export interface PubsubClientOptions {
   useEmulator?: boolean;
 }
 
-/** Per-consumer flow-control thresholds. */
-export interface ConsumerFlowControl {
-  /** Max concurrent messages held by this consumer. */
-  maxMessages?: number;
-}
-
 /**
  * Handler invoked per received message. Resolve acks the
  * message (Pub/Sub treats it as delivered); reject nacks it,
@@ -38,7 +32,13 @@ export interface ConsumerOptions<T> {
   /** Short subscription name (not fully qualified). */
   subscriptionName: string;
   handler: MessageHandler<T>;
-  flowControl?: ConsumerFlowControl;
+  /**
+   * Cap on how long the SDK will keep extending a message's
+   * ack deadline while the handler runs. Must match the TTL of
+   * any per-message lock the handler takes, so the lock can't
+   * outlive the SDK's lease extensions. Defaults to 570s.
+   */
+  maxExtensionSeconds?: number;
   /**
    * Called on subscription-level errors (auth, network,
    * subscription deletion). Defaults to console.error so
