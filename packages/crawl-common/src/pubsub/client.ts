@@ -31,16 +31,17 @@ import type {
 
 // Default 570s = Pub/Sub's max ack deadline of 600s minus a
 // 30s buffer.
-const DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS = 570;
+export const DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS = 570;
 
 // Upper bound on how long subscription.close() waits for
 // in-flight handlers to ack or nack. Must fit within the pod's
 // Kubernetes terminationGracePeriodSeconds.
-const SHUTDOWN_TIMEOUT_SECONDS = 90;
+export const SHUTDOWN_TIMEOUT_SECONDS = 90;
 
 // Module-level state.
 let pubsub: PubSub | undefined;
 let shutdownPromise: Promise<void> | undefined;
+// Cache topics so the SDK can batch messages across calls.
 const topicCache = new Map<string, Topic>();
 const consumerControllers = new Set<ConsumerController>();
 

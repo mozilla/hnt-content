@@ -25,10 +25,13 @@ vi.mock('@google-cloud/pubsub', () => ({
   },
 }));
 
+import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
 import {
+  DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS,
   flushPublisher,
   initPubsubClient,
   publishMessage,
+  SHUTDOWN_TIMEOUT_SECONDS,
   shutdownPubsub,
   startConsumer,
 } from './client.js';
@@ -307,7 +310,7 @@ describe('startConsumer', () => {
     expect(onError).toHaveBeenCalledWith(err);
   });
 
-  it('passes ack deadline and close behavior to the subscription', () => {
+  it('wires constants for ack deadline and close behavior to the subscription', () => {
     startConsumer<TestPayload>({
       subscriptionName: SUBSCRIPTION_NAME,
       handler: async () => {},
@@ -321,9 +324,13 @@ describe('startConsumer', () => {
       },
     ];
     expect(name).toBe(SUBSCRIPTION_NAME);
-    expect(opts.maxExtensionTime.seconds).toBe(570);
-    expect(opts.closeOptions.behavior).toBe('WAIT');
-    expect(opts.closeOptions.timeout.seconds).toBe(90);
+    expect(opts.maxExtensionTime.seconds).toBe(
+      DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS,
+    );
+    expect(opts.closeOptions.behavior).toBe(
+      SubscriptionCloseBehaviors.WaitForProcessing,
+    );
+    expect(opts.closeOptions.timeout.seconds).toBe(SHUTDOWN_TIMEOUT_SECONDS);
   });
 
   it('applies caller-supplied maxExtensionSeconds', () => {
