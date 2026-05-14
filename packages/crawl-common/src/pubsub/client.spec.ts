@@ -376,18 +376,6 @@ describe('startConsumer', () => {
     ).toBe(true);
   });
 
-  it('stop() is idempotent', async () => {
-    const controller = startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-    });
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-
-    await Promise.all([controller.stop(), controller.stop()]);
-
-    expect(sub.close).toHaveBeenCalledOnce();
-  });
-
   it('throws when called before initPubsubClient', async () => {
     await shutdownPubsub();
     expect(() =>

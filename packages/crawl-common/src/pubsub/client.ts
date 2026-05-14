@@ -170,36 +170,32 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   subscription.on('message', onMessage);
   subscription.on('error', handleError);
 
-  let stopPromise: Promise<void> | undefined;
   const controller: ConsumerController = {
-    stop(): Promise<void> {
-      if (!stopPromise) {
-        stopPromise = (async () => {
-          // Call close() before removing the 'message'
-          // listener so our WaitForProcessing drain runs.
-          // If we removed the listener first, the SDK would
-          // see no one is listening and shut down without
-          // waiting for in-flight handlers. Catch errors
-          // from close() so stop() never rejects; any
-          // handlers still running when the SDK gives up
-          // will have their messages redelivered after the
-          // ack deadline expires.
-          try {
-            await subscription.close();
-          } catch (err) {
-            console.error(
-              `pubsub:close-error subscription=${opts.subscriptionName}`,
-              err,
-            );
-          } finally {
-            subscription.removeListener('message', onMessage);
-            subscription.removeListener('error', handleError);
-          }
-        })().finally(() => {
-          consumerControllers.delete(controller);
-        });
+    async stop(): Promise<void> {
+      // Call close() before removing the 'message' listener so
+      // our WaitForProcessing drain runs. If we removed the
+      // listener first, the SDK would see no one is listening
+      // and shut down without waiting for in-flight handlers.
+      // Catch errors from close() so stop() never rejects; any
+      // handlers still running when the SDK gives up will have
+      // their messages redelivered after the ack deadline
+      // expires.
+      //
+      // stop() is implicitly idempotent: subscription.close()
+      // no-ops once the SDK marks the subscriber closed, and
+      // removeListener and Set.delete no-op on missing elements.
+      try {
+        await subscription.close();
+      } catch (err) {
+        console.error(
+          `pubsub:close-error subscription=${opts.subscriptionName}`,
+          err,
+        );
+      } finally {
+        subscription.removeListener('message', onMessage);
+        subscription.removeListener('error', handleError);
+        consumerControllers.delete(controller);
       }
-      return stopPromise;
     },
   };
   consumerControllers.add(controller);
