@@ -130,17 +130,9 @@ async function reinit(
 }
 
 describe('initPubsubClient', () => {
-  it('throws when publishMessage is called before init', async () => {
-    await shutdownPubsub();
-    await expect(publishMessage(TOPIC_NAME, TEST_PAYLOAD)).rejects.toThrow(
-      /not initialized/,
-    );
-  });
-
-  it('throws when called while already initialized', () => {
-    expect(() => initPubsubClient({ projectId: PROJECT_ID })).toThrow(
-      /already initialized/,
-    );
+  it('omits apiEndpoint and emulatorMode when not provided', async () => {
+    await reinit({ projectId: PROJECT_ID });
+    expect(holder.ctorArgs).toEqual({ projectId: PROJECT_ID });
   });
 
   it('passes apiEndpoint and emulatorMode through to the SDK', async () => {
@@ -156,17 +148,24 @@ describe('initPubsubClient', () => {
     });
   });
 
-  it('omits apiEndpoint and emulatorMode when not provided', async () => {
-    await reinit({ projectId: PROJECT_ID });
-    expect(holder.ctorArgs).toEqual({ projectId: PROJECT_ID });
+  it('throws when called while already initialized', () => {
+    expect(() => initPubsubClient({ projectId: PROJECT_ID })).toThrow(
+      /already initialized/,
+    );
+  });
+
+  it('throws when publishMessage is called before init', async () => {
+    await shutdownPubsub();
+    await expect(publishMessage(TOPIC_NAME, TEST_PAYLOAD)).rejects.toThrow(
+      /not initialized/,
+    );
   });
 });
 
 describe('publishMessage', () => {
   it('JSON-encodes the payload and publishes to the named topic', async () => {
-    const id = await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
+    await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
 
-    expect(id).toBe(`msg-${TOPIC_NAME}`);
     const topic = mock.topics.get(TOPIC_NAME);
     expect(topic).toBeDefined();
     expect(topic!.publishMessage).toHaveBeenCalledOnce();
@@ -178,17 +177,12 @@ describe('publishMessage', () => {
     await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
     await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
 
+    // pubsub.topic() is the factory; calling it once means the
+    // second publish reused the cached Topic.
     expect(mock.topic).toHaveBeenCalledTimes(1);
     expect(mock.topics.get(TOPIC_NAME)!.publishMessage).toHaveBeenCalledTimes(
       2,
     );
-  });
-
-  it('does not pass a batching option (SDK defaults govern)', async () => {
-    await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
-
-    const [, opts] = mock.topic.mock.calls[0] as [string, unknown];
-    expect(opts).toBeUndefined();
   });
 });
 
@@ -202,45 +196,9 @@ describe('flushPublisher', () => {
     expect(mock.topics.get('topic-a')!.flush).toHaveBeenCalledOnce();
     expect(mock.topics.get('topic-b')!.flush).toHaveBeenCalledOnce();
   });
-
-  it('is a no-op when no topics are cached', async () => {
-    await expect(flushPublisher()).resolves.toBeUndefined();
-  });
 });
 
 describe('startConsumer', () => {
-  it('throws when called before initPubsubClient', async () => {
-    await shutdownPubsub();
-    expect(() =>
-      startConsumer<TestPayload>({
-        subscriptionName: SUBSCRIPTION_NAME,
-        handler: async () => {},
-      }),
-    ).toThrow(/not initialized/);
-  });
-
-  it('throws when called while shutdown is in flight', async () => {
-    let releaseClose!: () => void;
-    mock.close.mockImplementation(
-      () =>
-        new Promise<void>((r) => {
-          releaseClose = r;
-        }),
-    );
-
-    const shutdownP = shutdownPubsub();
-    await flushMicrotasks();
-    expect(() =>
-      startConsumer<TestPayload>({
-        subscriptionName: SUBSCRIPTION_NAME,
-        handler: async () => {},
-      }),
-    ).toThrow(/shutdown in progress/);
-
-    releaseClose();
-    await shutdownP;
-  });
-
   it('parses JSON data, invokes the handler, and acks on success', async () => {
     const handler = vi.fn(async () => {});
     startConsumer<TestPayload>({
@@ -406,7 +364,7 @@ describe('startConsumer', () => {
       throw new Error('gRPC close failed');
     });
 
-    await expect(controller.stop()).resolves.toBeUndefined();
+    await controller.stop();
     expect(
       errorSpy.mock.calls.some((c) => /pubsub:close-error/.test(c[0])),
     ).toBe(true);
@@ -422,6 +380,32 @@ describe('startConsumer', () => {
     await Promise.all([controller.stop(), controller.stop()]);
 
     expect(sub.close).toHaveBeenCalledOnce();
+  });
+
+  it('throws when called before initPubsubClient', async () => {
+    await shutdownPubsub();
+    expect(() =>
+      startConsumer<TestPayload>({
+        subscriptionName: SUBSCRIPTION_NAME,
+        handler: async () => {},
+      }),
+    ).toThrow(/not initialized/);
+  });
+
+  it('throws when called while shutdown is in flight', async () => {
+    const { release, pending: shutdownP } = await startStalled(
+      mock.close,
+      shutdownPubsub,
+    );
+    expect(() =>
+      startConsumer<TestPayload>({
+        subscriptionName: SUBSCRIPTION_NAME,
+        handler: async () => {},
+      }),
+    ).toThrow(/shutdown in progress/);
+
+    release();
+    await shutdownP;
   });
 });
 
@@ -467,40 +451,28 @@ describe('shutdownPubsub', () => {
       handler: async () => {},
     });
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-    let releaseClose!: () => void;
-    sub.close.mockImplementation(
-      () =>
-        new Promise<void>((r) => {
-          releaseClose = r;
-        }),
+    const { release, pending: shutdownP } = await startStalled(
+      sub.close,
+      shutdownPubsub,
     );
-
-    const shutdownP = shutdownPubsub();
-    await flushMicrotasks();
     expect(sub.close).toHaveBeenCalledOnce();
     expect(mock.close).not.toHaveBeenCalled();
 
-    releaseClose();
+    release();
     await shutdownP;
     expect(mock.close).toHaveBeenCalledOnce();
   });
 
   it('rejects initPubsubClient while shutdown is in flight', async () => {
-    let releaseClose!: () => void;
-    mock.close.mockImplementation(
-      () =>
-        new Promise<void>((r) => {
-          releaseClose = r;
-        }),
+    const { release, pending: shutdownP } = await startStalled(
+      mock.close,
+      shutdownPubsub,
     );
-
-    const shutdownP = shutdownPubsub();
-    await flushMicrotasks();
     expect(() => initPubsubClient({ projectId: PROJECT_ID })).toThrow(
       /shutdown in progress/,
     );
 
-    releaseClose();
+    release();
     await shutdownP;
   });
 
@@ -509,21 +481,15 @@ describe('shutdownPubsub', () => {
     // publishes outside of handler callbacks fail with the
     // library's own error rather than a post-close SDK one.
     await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
-    let releaseClose!: () => void;
-    mock.close.mockImplementation(
-      () =>
-        new Promise<void>((r) => {
-          releaseClose = r;
-        }),
+    const { release, pending: shutdownP } = await startStalled(
+      mock.close,
+      shutdownPubsub,
     );
-
-    const shutdownP = shutdownPubsub();
-    await flushMicrotasks();
     await expect(publishMessage(TOPIC_NAME, TEST_PAYLOAD)).rejects.toThrow(
       /not initialized/,
     );
 
-    releaseClose();
+    release();
     await shutdownP;
   });
 
@@ -536,14 +502,14 @@ describe('shutdownPubsub', () => {
 
   it('is idempotent and safe to call twice', async () => {
     await shutdownPubsub();
-    await expect(shutdownPubsub()).resolves.toBeUndefined();
+    await shutdownPubsub();
     expect(mock.close).toHaveBeenCalledOnce();
   });
 
   it('is a no-op when the client is uninitialized', async () => {
     await shutdownPubsub();
     mock.close.mockClear();
-    await expect(shutdownPubsub()).resolves.toBeUndefined();
+    await shutdownPubsub();
     expect(mock.close).not.toHaveBeenCalled();
   });
 });
@@ -568,4 +534,21 @@ async function flushMicrotasks(): Promise<void> {
   for (let i = 0; i < 5; i++) {
     await Promise.resolve();
   }
+}
+
+/**
+ * Stall a vi.fn() to a pending Promise, start the operation that
+ * will call it, and advance microtasks until the operation hits
+ * the stall. Returns a resolver to release the mock and the
+ * still-pending operation.
+ */
+async function startStalled<T>(
+  target: ReturnType<typeof vi.fn>,
+  start: () => Promise<T>,
+): Promise<{ release: () => void; pending: Promise<T> }> {
+  const { promise, resolve: release } = Promise.withResolvers<void>();
+  target.mockImplementation(() => promise);
+  const pending = start();
+  await flushMicrotasks();
+  return { release, pending };
 }

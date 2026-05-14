@@ -1,3 +1,20 @@
+/**
+ * Pub/Sub client for the crawler. Wraps `@google-cloud/pubsub`
+ * as a module-level singleton: one client per process, shared
+ * across consumers and publishers.
+ *
+ * Lifecycle:
+ * - `initPubsubClient` once at startup (after env is loaded).
+ * - `startConsumer` per subscription; the handler receives a
+ *   JSON-parsed payload, resolves to ack, throws to nack.
+ * - `publishMessage` to publish; payload is JSON-encoded and
+ *   sent through a cached `Topic` (SDK handles batching).
+ * - `shutdownPubsub` once on SIGTERM; stops consumers (with
+ *   in-flight drain), flushes publishers, and closes the client.
+ *
+ * Tests and local dev point at a Pub/Sub emulator by passing
+ * `apiEndpoint` and `useEmulator: true` to `initPubsubClient`.
+ */
 import {
   Duration,
   PubSub,
@@ -85,7 +102,7 @@ function requireClient(): PubSub {
   return pubsub;
 }
 
-/** Lazily create and cache a Topic. SDK defaults govern batching. */
+/** Lazily create and cache a Topic. */
 function getTopic(topicName: string): Topic {
   const client = requireClient();
   let topic = topicCache.get(topicName);
@@ -202,11 +219,10 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
 }
 
 /**
- * Parse, dispatch, and ack/nack a single message. Parse and
- * handler failures share the nack path but log with distinct
- * prefixes (pubsub:parse-error / pubsub:handler-error) so
- * operators can tell a poison payload from a transient
- * handler failure.
+ * Parse, dispatch, and ack/nack a single message. Both
+ * parse and handler failures nack; distinct log prefixes
+ * (pubsub:parse-error / pubsub:handler-error) let us tell
+ * a poison payload from a transient handler failure.
  */
 async function processMessage<T>(
   subscriptionName: string,
