@@ -3,6 +3,17 @@
  * as a module-level singleton: one client per process, shared
  * across consumers and publishers.
  *
+ * Terminology:
+ * - Client: the single `PubSub` SDK instance per process; owns
+ *   the underlying gRPC connection. This module wraps it.
+ * - Topic: a named destination publishers write to; fans every
+ *   message out to attached subscriptions.
+ * - Subscription: a named queue attached to a topic; holds each
+ *   message until a consumer acks it, independently per sub.
+ * - Publisher: any code that calls `publishMessage(topic, ...)`.
+ * - Consumer: any code that calls `startConsumer({ ... })` and
+ *   processes messages in the supplied handler.
+ *
  * Lifecycle:
  * - `initPubsubClient` once at startup (after env is loaded).
  * - `startConsumer` per subscription; the handler receives a
@@ -29,8 +40,7 @@ import type {
   PubsubClientOptions,
 } from './types.js';
 
-// Default 570s = Pub/Sub's max ack deadline of 600s minus a
-// 30s buffer.
+// Default = Pub/Sub's 600s max ack deadline minus a 30s buffer.
 export const DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS = 570;
 
 // Upper bound on how long subscription.close() waits for

@@ -76,32 +76,39 @@ export function createMockPubSub(): MockPubSub {
   };
 }
 
-/** Build a mock Pub/Sub Message with only the fields the consumer touches. */
-export function createMockMessage(
-  payload: unknown,
-  id = 'test-message-id',
-): {
+export interface MockMessage {
   data: Buffer;
   id: string;
   ack: ReturnType<typeof vi.fn>;
   nack: ReturnType<typeof vi.fn>;
-} {
-  return {
-    data: Buffer.from(JSON.stringify(payload)),
-    id,
-    ack: vi.fn(),
-    nack: vi.fn(),
-  };
+  /** Resolves with 'ack' or 'nack' once the consumer settles the message. */
+  settled: Promise<'ack' | 'nack'>;
 }
 
-/** Emit a Pub/Sub event and wait one microtask for handlers to settle. */
-export async function emitAndSettle(
-  emitter: { emit: (event: string, arg: unknown) => boolean },
-  event: string,
-  arg: unknown,
-): Promise<void> {
-  emitter.emit(event, arg);
-  await Promise.resolve();
+/** Build a mock Pub/Sub Message that JSON-encodes the payload. */
+export function createMockMessage(
+  payload: unknown,
+  id = 'test-message-id',
+): MockMessage {
+  return createMockMessageRaw(Buffer.from(JSON.stringify(payload)), id);
+}
+
+/** Build a mock Pub/Sub Message with raw data; useful for malformed payloads. */
+export function createMockMessageRaw(
+  data: Buffer,
+  id = 'test-message-id',
+): MockMessage {
+  let resolve!: (kind: 'ack' | 'nack') => void;
+  const settled = new Promise<'ack' | 'nack'>((r) => {
+    resolve = r;
+  });
+  return {
+    data,
+    id,
+    ack: vi.fn(() => resolve('ack')),
+    nack: vi.fn(() => resolve('nack')),
+    settled,
+  };
 }
 
 /**
@@ -117,6 +124,8 @@ export async function startStalled<T>(
   const { promise, resolve: release } = Promise.withResolvers<void>();
   target.mockImplementation(() => promise);
   const pending = start();
+  // Yield so the operation advances past its first await;
+  // otherwise callers can't observe state set after it.
   await Promise.resolve();
   return { release, pending };
 }

@@ -51,16 +51,11 @@ export interface ConsumerOptions<T> {
 /** Controller returned by startConsumer for lifecycle management. */
 export interface ConsumerController {
   /**
-   * Stop receiving new messages. Intended to be called by
-   * shutdownPubsub, not directly. The promise resolves once
-   * the SDK's close call resolves. In the happy path, every
-   * in-flight handler has settled because WaitForProcessing
-   * waits for each ack or nack. If close() throws or its
-   * timeout elapses, any still-running handlers are
-   * abandoned, and Pub/Sub will redeliver their messages once
-   * the ack deadline expires. This method always resolves;
-   * any error from the underlying close is logged with the
-   * prefix `pubsub:close-error` rather than propagated.
+   * Called during shutdown to let in-flight handlers settle
+   * before the subscription closes. Any handler that doesn't
+   * finish in time has its message redelivered by Pub/Sub.
+   * Always resolves; close errors are logged with the prefix
+   * `pubsub:close-error` rather than propagated.
    */
   stop(): Promise<void>;
 }

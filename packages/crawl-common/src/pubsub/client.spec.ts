@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMockMessage,
+  createMockMessageRaw,
   createMockPubSub,
-  emitAndSettle,
   type MockPubSub,
   PROJECT_ID,
   startStalled,
@@ -144,7 +144,8 @@ describe('startConsumer', () => {
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
-    await emitAndSettle(sub, 'message', message);
+    sub.emit('message', message);
+    await message.settled;
 
     expect(handler).toHaveBeenCalledWith(TEST_PAYLOAD);
     expect(message.ack).toHaveBeenCalledOnce();
@@ -163,7 +164,8 @@ describe('startConsumer', () => {
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
-    await emitAndSettle(sub, 'message', message);
+    sub.emit('message', message);
+    await message.settled;
 
     expect(message.nack).toHaveBeenCalledOnce();
     expect(message.ack).not.toHaveBeenCalled();
@@ -182,7 +184,8 @@ describe('startConsumer', () => {
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
-    await emitAndSettle(sub, 'message', message);
+    sub.emit('message', message);
+    await message.settled;
 
     expect(message.nack).toHaveBeenCalledOnce();
     expect(message.ack).not.toHaveBeenCalled();
@@ -198,13 +201,9 @@ describe('startConsumer', () => {
     });
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
-    const bad = {
-      data: Buffer.from('not json'),
-      id: 'bad-1',
-      ack: vi.fn(),
-      nack: vi.fn(),
-    };
-    await emitAndSettle(sub, 'message', bad);
+    const bad = createMockMessageRaw(Buffer.from('not json'), 'bad-1');
+    sub.emit('message', bad);
+    await bad.settled;
 
     expect(handler).not.toHaveBeenCalled();
     expect(bad.nack).toHaveBeenCalledOnce();
@@ -224,7 +223,8 @@ describe('startConsumer', () => {
     expect(errorSpy.mock.calls[0][0]).toMatch(/pubsub:stream-error/);
     // Subsequent message still acks; consumer survived the error.
     const message = createMockMessage(TEST_PAYLOAD);
-    await emitAndSettle(sub, 'message', message);
+    sub.emit('message', message);
+    await message.settled;
     expect(message.ack).toHaveBeenCalledOnce();
   });
 
