@@ -1,7 +1,11 @@
-import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  createMockMessage,
+  createMockPubSub,
+  emitAndSettle,
+  type MockPubSub,
   PROJECT_ID,
+  startStalled,
   SUBSCRIPTION_NAME,
   TEST_PAYLOAD,
   TOPIC_NAME,
@@ -35,78 +39,6 @@ import {
   shutdownPubsub,
   startConsumer,
 } from './client.js';
-
-interface MockTopic {
-  publishMessage: ReturnType<typeof vi.fn>;
-  flush: ReturnType<typeof vi.fn>;
-}
-
-type MockSubscription = EventEmitter & {
-  close: ReturnType<typeof vi.fn>;
-};
-
-interface MockPubSub {
-  topic: ReturnType<typeof vi.fn>;
-  subscription: ReturnType<typeof vi.fn>;
-  close: ReturnType<typeof vi.fn>;
-  topics: Map<string, MockTopic>;
-  subscriptions: Map<string, MockSubscription>;
-}
-
-/** Build a fresh mock PubSub that caches topic and subscription instances by name. */
-function createMockPubSub(): MockPubSub {
-  const topics = new Map<string, MockTopic>();
-  const subscriptions = new Map<string, MockSubscription>();
-
-  const topic = vi.fn((name: string) => {
-    let t = topics.get(name);
-    if (!t) {
-      t = {
-        publishMessage: vi.fn(async () => `msg-${name}`),
-        flush: vi.fn(async () => {}),
-      };
-      topics.set(name, t);
-    }
-    return t;
-  });
-
-  const subscription = vi.fn((name: string) => {
-    let s = subscriptions.get(name);
-    if (!s) {
-      const emitter = new EventEmitter() as MockSubscription;
-      emitter.close = vi.fn(async () => {});
-      s = emitter;
-      subscriptions.set(name, s);
-    }
-    return s;
-  });
-
-  return {
-    topic,
-    subscription,
-    close: vi.fn(async () => {}),
-    topics,
-    subscriptions,
-  };
-}
-
-/** Build a mock Pub/Sub Message with only the fields the consumer touches. */
-function createMockMessage(
-  payload: unknown,
-  id = 'test-message-id',
-): {
-  data: Buffer;
-  id: string;
-  ack: ReturnType<typeof vi.fn>;
-  nack: ReturnType<typeof vi.fn>;
-} {
-  return {
-    data: Buffer.from(JSON.stringify(payload)),
-    id,
-    ack: vi.fn(),
-    nack: vi.fn(),
-  };
-}
 
 let mock: MockPubSub;
 
@@ -508,41 +440,3 @@ describe('shutdownPubsub', () => {
   });
 });
 
-/** Emit a Pub/Sub event and wait for all handlers to settle. */
-async function emitAndSettle(
-  emitter: { emit: (event: string, arg: unknown) => boolean },
-  event: string,
-  arg: unknown,
-): Promise<void> {
-  emitter.emit(event, arg);
-  await flushMicrotasks();
-}
-
-/**
- * Yield a fixed number of times so queued microtasks drain.
- * Five covers the internal await depth of stop() / process-
- * Message with slack; bump if new awaits are added and a
- * dependent test starts observing mid-state.
- */
-async function flushMicrotasks(): Promise<void> {
-  for (let i = 0; i < 5; i++) {
-    await Promise.resolve();
-  }
-}
-
-/**
- * Stall a vi.fn() to a pending Promise, start the operation that
- * will call it, and advance microtasks until the operation hits
- * the stall. Returns a resolver to release the mock and the
- * still-pending operation.
- */
-async function startStalled<T>(
-  target: ReturnType<typeof vi.fn>,
-  start: () => Promise<T>,
-): Promise<{ release: () => void; pending: Promise<T> }> {
-  const { promise, resolve: release } = Promise.withResolvers<void>();
-  target.mockImplementation(() => promise);
-  const pending = start();
-  await flushMicrotasks();
-  return { release, pending };
-}
