@@ -21,7 +21,11 @@ import {
 } from './client.js';
 import { PROJECT_ID, TEST_PAYLOAD, type TestPayload } from './test-helpers.js';
 
-const EMULATOR_IMAGE = 'gcr.io/google.com/cloudsdktool/cloud-sdk:emulators';
+// Pinned for reproducibility. Bump when the gcloud emulators ship
+// a fix or feature we need. See
+// https://gcr.io/google.com/cloudsdktool/google-cloud-cli for tags.
+const EMULATOR_IMAGE =
+  'gcr.io/google.com/cloudsdktool/google-cloud-cli:568.0.0-emulators';
 const CONTAINER_START_TIMEOUT_MS = 120_000;
 const CONSUME_TIMEOUT_MS = 10_000;
 
