@@ -2,7 +2,7 @@ export {
   initPubsubClient,
   startConsumer,
   publishMessage,
-  flushPublisher,
+  flushTopics,
   shutdownPubsub,
 } from './client.js';
 export type {

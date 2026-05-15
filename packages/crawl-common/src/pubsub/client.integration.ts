@@ -13,7 +13,7 @@ import {
   it,
 } from 'vitest';
 import {
-  flushPublisher,
+  flushTopics,
   initPubsubClient,
   publishMessage,
   shutdownPubsub,
@@ -100,7 +100,7 @@ describe('Pub/Sub client integration', () => {
       const messageId = await publishMessage(topicName, payload);
       expect(messageId).toBeTruthy();
     }
-    await flushPublisher();
+    await flushTopics();
 
     await waitFor(
       () => received.length === payloads.length,

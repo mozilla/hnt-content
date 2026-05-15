@@ -1,16 +1,14 @@
 /**
  * Pub/Sub client for the crawler. Wraps `@google-cloud/pubsub`
- * as a module-level singleton: one client per process, shared
- * across consumers and publishers.
+ * as a module-level singleton: one client per process.
  *
  * Terminology:
  * - Client: the single `PubSub` SDK instance per process; owns
  *   the underlying gRPC connection. This module wraps it.
- * - Topic: a named destination publishers write to; fans every
- *   message out to attached subscriptions.
+ * - Topic: a named destination messages are published to; fans
+ *   every message out to attached subscriptions.
  * - Subscription: a named queue attached to a topic; holds each
  *   message until a consumer acks it, independently per sub.
- * - Publisher: any code that calls `publishMessage(topic, ...)`.
  * - Consumer: any code that calls `startConsumer({ ... })` and
  *   processes messages in the supplied handler.
  *
@@ -21,7 +19,7 @@
  * - `publishMessage` to publish; payload is JSON-encoded and
  *   sent through a cached `Topic` (SDK handles batching).
  * - `shutdownPubsub` once on SIGTERM; stops consumers (with
- *   in-flight drain), flushes publishers, and closes the client.
+ *   in-flight drain), flushes topics, and closes the client.
  *
  * Tests and local dev point at a Pub/Sub emulator by passing
  * `apiEndpoint` and `useEmulator: true` to `initPubsubClient`.
@@ -128,7 +126,7 @@ export async function publishMessage<T>(
 }
 
 /** Flush all in-memory batches for every cached topic. */
-export async function flushPublisher(): Promise<void> {
+export async function flushTopics(): Promise<void> {
   await Promise.all(Array.from(topicCache.values()).map((t) => t.flush()));
 }
 
@@ -269,7 +267,7 @@ export async function shutdownPubsub(): Promise<void> {
       // library's own "not initialized" error rather than a
       // post-close SDK failure.
       pubsub = undefined;
-      await flushPublisher();
+      await flushTopics();
     } finally {
       try {
         await client.close();

@@ -33,7 +33,7 @@ vi.mock('@google-cloud/pubsub', () => ({
 import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
 import {
   DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS,
-  flushPublisher,
+  flushTopics,
   initPubsubClient,
   publishMessage,
   SHUTDOWN_TIMEOUT_SECONDS,
@@ -122,12 +122,12 @@ describe('publishMessage', () => {
   });
 });
 
-describe('flushPublisher', () => {
+describe('flushTopics', () => {
   it('flushes every cached Topic', async () => {
     await publishMessage('topic-a', TEST_PAYLOAD);
     await publishMessage('topic-b', TEST_PAYLOAD);
 
-    await flushPublisher();
+    await flushTopics();
 
     expect(mock.topics.get('topic-a')!.flush).toHaveBeenCalledOnce();
     expect(mock.topics.get('topic-b')!.flush).toHaveBeenCalledOnce();
@@ -337,7 +337,7 @@ describe('startConsumer', () => {
 });
 
 describe('shutdownPubsub', () => {
-  it('flushes publishers and closes the underlying client', async () => {
+  it('flushes topics and closes the underlying client', async () => {
     await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
     const topic = mock.topics.get(TOPIC_NAME)!;
 

@@ -34,7 +34,7 @@ export {
   initPubsubClient,
   startConsumer,
   publishMessage,
-  flushPublisher,
+  flushTopics,
   shutdownPubsub,
 } from './pubsub/index.js';
 export type {
