@@ -94,33 +94,21 @@ export function createMockMessage(
   };
 }
 
-/** Emit a Pub/Sub event and wait for all handlers to settle. */
+/** Emit a Pub/Sub event and wait one microtask for handlers to settle. */
 export async function emitAndSettle(
   emitter: { emit: (event: string, arg: unknown) => boolean },
   event: string,
   arg: unknown,
 ): Promise<void> {
   emitter.emit(event, arg);
-  await flushMicrotasks();
-}
-
-/**
- * Yield a fixed number of times so queued microtasks drain.
- * Five covers the internal await depth of stop() / process-
- * Message with slack; bump if new awaits are added and a
- * dependent test starts observing mid-state.
- */
-export async function flushMicrotasks(): Promise<void> {
-  for (let i = 0; i < 5; i++) {
-    await Promise.resolve();
-  }
+  await Promise.resolve();
 }
 
 /**
  * Stall a vi.fn() to a pending Promise, start the operation that
- * will call it, and advance microtasks until the operation hits
- * the stall. Returns a resolver to release the mock and the
- * still-pending operation.
+ * will call it, and yield one microtask so callers can observe
+ * state set by the first await inside the operation. Returns a
+ * resolver to release the mock and the still-pending operation.
  */
 export async function startStalled<T>(
   target: ReturnType<typeof vi.fn>,
@@ -129,6 +117,6 @@ export async function startStalled<T>(
   const { promise, resolve: release } = Promise.withResolvers<void>();
   target.mockImplementation(() => promise);
   const pending = start();
-  await flushMicrotasks();
+  await Promise.resolve();
   return { release, pending };
 }

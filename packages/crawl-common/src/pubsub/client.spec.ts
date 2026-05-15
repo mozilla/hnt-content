@@ -17,6 +17,7 @@ const holder = vi.hoisted(() => ({
   ctorArgs: undefined as unknown,
 }));
 
+// vi.mock must run before any import of @google-cloud/pubsub.
 vi.mock('@google-cloud/pubsub', () => ({
   PubSub: vi.fn(function MockPubSub(opts: unknown) {
     holder.ctorArgs = opts;
@@ -439,4 +440,3 @@ describe('shutdownPubsub', () => {
     expect(mock.close).not.toHaveBeenCalled();
   });
 });
-
