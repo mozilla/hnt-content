@@ -347,7 +347,10 @@ describe('shutdownPubsub', () => {
     expect(mock.close).toHaveBeenCalledOnce();
   });
 
-  it('stops registered consumers before closing the client', async () => {
+  it('drains consumers fully before closing the client', async () => {
+    // Stall sub.close so we can verify mock.close is awaiting
+    // it, not fire-and-forget. Handlers must be able to ack or
+    // nack via the gRPC stream before the client tears it down.
     const controller = startConsumer<TestPayload>({
       subscriptionName: SUBSCRIPTION_NAME,
       handler: async () => {},
@@ -355,33 +358,11 @@ describe('shutdownPubsub', () => {
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const stopSpy = vi.spyOn(controller, 'stop');
 
-    await shutdownPubsub();
-
-    expect(stopSpy).toHaveBeenCalled();
-    expect(sub.close).toHaveBeenCalled();
-    expect(mock.close).toHaveBeenCalled();
-    // controller.stop() must resolve before pubsub client
-    // close so handlers can ack/nack before the stream dies.
-    expect(sub.close.mock.invocationCallOrder[0]).toBeLessThan(
-      mock.close.mock.invocationCallOrder[0],
-    );
-  });
-
-  it('awaits consumer.stop() to resolve before closing the client', async () => {
-    // Prior invocation-order assertion only proves sub.close
-    // was called before mock.close; a fire-and-forget stop
-    // would still pass. Gate sub.close so it resolves only
-    // when we release it and verify mock.close does not run
-    // in the meantime.
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-    });
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const { release, pending: shutdownP } = await startStalled(
       sub.close,
       shutdownPubsub,
     );
+    expect(stopSpy).toHaveBeenCalled();
     expect(sub.close).toHaveBeenCalledOnce();
     expect(mock.close).not.toHaveBeenCalled();
 
