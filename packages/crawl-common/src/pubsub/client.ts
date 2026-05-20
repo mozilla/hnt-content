@@ -5,12 +5,19 @@
  * Terminology:
  * - Client: the single `PubSub` SDK instance per process; owns
  *   the underlying gRPC connection. This module wraps it.
+ * - gRPC: HTTP/2-based RPC protocol the SDK uses to talk to
+ *   Pub/Sub. Lets subscriptions pull over a long-lived stream
+ *   without any inbound HTTPS endpoint or ingress.
  * - Topic: a named destination messages are published to; fans
  *   every message out to attached subscriptions.
  * - Subscription: a named queue attached to a topic; holds each
  *   message until a consumer acks it, independently per sub.
- * - Consumer: any code that calls `startConsumer({ ... })` and
- *   processes messages in the supplied handler.
+ * - Consumer: any code that calls `startConsumer({ ... })`,
+ *   e.g. the article worker or discovery worker in
+ *   `services/crawl-worker`. Separate Deployments may help with
+ *   per-workload metrics, CPU/memory scaling, and failure
+ *   isolation; a shared pod may lower operational overhead and
+ *   improve resource use.
  *
  * Lifecycle:
  * - `initPubsubClient` once at startup (after env is loaded).
@@ -38,19 +45,22 @@ import type {
   PubsubClientOptions,
 } from './types.js';
 
-// Default = Pub/Sub's 600s max ack deadline minus a 30s buffer.
-export const DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS = 570;
-
 // Upper bound on how long subscription.close() waits for
 // in-flight handlers to ack or nack. Must fit within the pod's
-// Kubernetes terminationGracePeriodSeconds.
-export const SHUTDOWN_TIMEOUT_SECONDS = 90;
+// Kubernetes terminationGracePeriodSeconds. Our Helm chart does
+// not set this, so K8s defaults to 30s. 25s leaves ~5s after
+// the drain for flushTopics and client.close before SIGKILL.
+// Helm chart: https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/Chart.yaml
+// K8s docs: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+export const SHUTDOWN_TIMEOUT_SECONDS = 25;
 
 // Module-level state.
 let pubsub: PubSub | undefined;
 let shutdownPromise: Promise<void> | undefined;
 // Cache topics so the SDK can batch messages across calls.
 const topicCache = new Map<string, Topic>();
+// Holds one controller per consumer. Today each pod registers a
+// single consumer (article or discovery worker).
 const consumerControllers = new Set<ConsumerController>();
 
 /**
@@ -69,9 +79,10 @@ function resetModuleState(): void {
 /**
  * Initialize the Pub/Sub client. Throws if already
  * initialized or if a shutdown is in progress; await
- * shutdownPubsub first to re-initialize. Unlike the sibling
- * HTTP clients, an open subscription owns a gRPC stream and
- * in-flight messages; silent replacement would leak both.
+ * shutdownPubsub first to re-initialize. Unlike sibling
+ * clients (e.g. the Zyte HTTP client), an open subscription
+ * owns a gRPC stream and in-flight messages; silent
+ * replacement would leak both.
  */
 export function initPubsubClient(opts: PubsubClientOptions): void {
   if (shutdownPromise) {
@@ -86,8 +97,8 @@ export function initPubsubClient(opts: PubsubClientOptions): void {
   }
   pubsub = new PubSub({
     projectId: opts.projectId,
-    ...(opts.apiEndpoint ? { apiEndpoint: opts.apiEndpoint } : {}),
-    ...(opts.useEmulator ? { emulatorMode: true } : {}),
+    ...(opts.apiEndpoint && { apiEndpoint: opts.apiEndpoint }),
+    ...(opts.useEmulator && { emulatorMode: true }),
   });
 }
 
@@ -103,18 +114,18 @@ function requireClient(): PubSub {
 
 /** Lazily create and cache a Topic. */
 function getTopic(topicName: string): Topic {
-  const client = requireClient();
   let topic = topicCache.get(topicName);
   if (!topic) {
-    topic = client.topic(topicName);
+    topic = requireClient().topic(topicName);
     topicCache.set(topicName, topic);
   }
   return topic;
 }
 
 /**
- * Publish a JSON-serialized payload to a topic. Returns the
- * Pub/Sub messageId once the publish is confirmed.
+ * Publish a JSON-serialized payload to a topic (e.g. `articles`
+ * or `article-discoveries`). Returns the Pub/Sub messageId once
+ * the publish is confirmed.
  */
 export async function publishMessage<T>(
   topicName: string,
@@ -131,13 +142,13 @@ export async function flushTopics(): Promise<void> {
 }
 
 /**
- * Start consuming messages from a subscription. Pub/Sub
- * delivery is pull-based, so the SDK initiates the
- * connection and no inbound HTTPS endpoint or ingress is
- * needed. The handler receives the JSON-parsed payload.
- * The library acks the message when the handler resolves,
- * and nacks it when the handler rejects so Pub/Sub
- * redelivers.
+ * Start consuming messages from a subscription (e.g.
+ * `crawl-article` for the article worker). Pub/Sub delivery is
+ * pull-based, so the SDK initiates the connection and no inbound
+ * HTTPS endpoint or ingress is needed. The handler receives the
+ * JSON-parsed payload. The library acks the message when the
+ * handler resolves, and nacks it when the handler rejects so
+ * Pub/Sub redelivers.
  */
 export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   if (shutdownPromise) {
@@ -149,8 +160,7 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
 
   const subscription = client.subscription(opts.subscriptionName, {
     maxExtensionTime: Duration.from({
-      seconds:
-        opts.maxExtensionSeconds ?? DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS,
+      seconds: opts.maxExtensionSeconds,
     }),
     // WaitForProcessing lets in-flight handlers finish on
     // close() rather than immediately nacking them. The
@@ -165,6 +175,7 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   const handleError =
     opts.onError ??
     ((err: Error) => {
+      // TODO(HNT-2589): also report to Sentry.
       console.error(
         `pubsub:stream-error subscription=${opts.subscriptionName}`,
         err,
@@ -172,6 +183,13 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
     });
 
   const onMessage = (message: Message) => {
+    // We prefix the call with `void` because the SDK's Subscription
+    // class extends Node's EventEmitter, which calls message
+    // listeners synchronously and discards their return values. We
+    // cannot make the SDK wait, so this call is fire-and-forget. It
+    // is safe because processMessage catches every error path and
+    // signals completion through ack or nack on the message rather
+    // than through this promise.
     void processMessage(opts.subscriptionName, opts.handler, message);
   };
 
@@ -195,6 +213,7 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
       try {
         await subscription.close();
       } catch (err) {
+        // TODO(HNT-2589): also report to Sentry.
         console.error(
           `pubsub:close-error subscription=${opts.subscriptionName}`,
           err,
@@ -226,6 +245,7 @@ async function processMessage<T>(
     parsed = JSON.parse(message.data.toString()) as T;
   } catch (err) {
     message.nack();
+    // TODO(HNT-2589): also report to Sentry.
     console.error(
       `pubsub:parse-error subscription=${subscriptionName} ` +
         `messageId=${message.id}`,
@@ -238,6 +258,7 @@ async function processMessage<T>(
     message.ack();
   } catch (err) {
     message.nack();
+    // TODO(HNT-2589): also report to Sentry.
     console.error(
       `pubsub:handler-error subscription=${subscriptionName} ` +
         `messageId=${message.id}`,
@@ -256,16 +277,19 @@ export async function shutdownPubsub(): Promise<void> {
   if (!pubsub) return;
   const client = pubsub;
   shutdownPromise = (async () => {
+    // The nested try/finally below ensures client.close() and
+    // resetModuleState() always run. We let errors propagate so
+    // the SIGTERM handler can report them to Sentry.
     try {
       // Stop consumers first so in-flight handlers (which
       // may still publish downstream) complete while the
       // client is live.
       const controllers = Array.from(consumerControllers);
       await Promise.allSettled(controllers.map((c) => c.stop()));
-      // Handlers have drained. Null pubsub so any concurrent
-      // publishMessage from non-handler code sees the
-      // library's own "not initialized" error rather than a
-      // post-close SDK failure.
+      // Handlers have drained. Null pubsub so cache-miss
+      // publishes fail fast with the library's "not
+      // initialized" error; cache hits still pass through to
+      // the SDK and may reject with a gRPC error.
       pubsub = undefined;
       await flushTopics();
     } finally {

@@ -3,10 +3,10 @@ export interface PubsubClientOptions {
   /** GCP project id (e.g. 'moz-fx-hnt-prod'). */
   projectId: string;
   /**
-   * Override the Pub/Sub API endpoint as 'host:port'. Set
-   * alongside useEmulator in tests and local development to
-   * point the SDK at a local Pub/Sub emulator. Leave unset
-   * in production.
+   * Override the Pub/Sub API endpoint as 'host:port' (e.g.
+   * 'localhost:8085' for the emulator). Set alongside useEmulator
+   * in tests and local development to point the SDK at a local
+   * Pub/Sub emulator. Leave unset in production.
    */
   apiEndpoint?: string;
   /**
@@ -33,17 +33,28 @@ export interface ConsumerOptions<T> {
   subscriptionName: string;
   handler: MessageHandler<T>;
   /**
-   * Cap on how long the SDK will keep extending a message's
-   * ack deadline while the handler runs. Must match the TTL of
-   * any per-message lock the handler takes, so the lock can't
-   * outlive the SDK's lease extensions. Defaults to 570s.
+   * Cap on how long the SDK will keep extending a message's ack
+   * deadline while the handler runs. Effectively the maximum
+   * time a single message can be processed before being
+   * redelivered. Independent of the subscription's
+   * ack_deadline_seconds, which only sets the initial deadline.
+   * The SDK default of 1 hour is far longer than article
+   * extraction needs (well under 2 min even on slow sites).
+   * Setting this too high means a stuck handler keeps its
+   * message for the full window before another worker can retry.
+   * Must match the TTL of any per-message lock the handler
+   * takes, so the lock can't outlive the SDK's lease extensions.
+   * Will be sourced from a shared config module so this and the
+   * Redis lock TTL stay linked; for now each caller passes the
+   * value explicitly, e.g. 180 for a 3-minute budget per message.
    */
-  maxExtensionSeconds?: number;
+  maxExtensionSeconds: number;
   /**
    * Called on subscription-level errors (auth, network,
    * subscription deletion). Defaults to console.error so
-   * silent failures stay visible in logs; override to route
-   * to metrics or a health probe.
+   * silent failures stay visible in logs; override to route to
+   * metrics or a health probe, e.g. a StatsD counter or a
+   * `/healthz` failure.
    */
   onError?: (err: Error) => void;
 }

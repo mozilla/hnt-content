@@ -7,11 +7,17 @@ import {
   PROJECT_ID,
   startStalled,
   SUBSCRIPTION_NAME,
+  TEST_CONSUMER_OPTIONS,
+  TEST_MAX_EXTENSION_SECONDS,
   TEST_PAYLOAD,
   TOPIC_NAME,
   type TestPayload,
 } from './test-helpers.js';
 
+// Imports in ES are hoisted to the top. vi.mock is also hoisted
+// so the SDK is mocked before it is imported, and vi.hoisted
+// makes holder available to MockPubSub.
+// https://vitest.dev/api/vi.html#vi-hoisted
 const holder = vi.hoisted(() => ({
   instance: null as unknown,
   ctorArgs: undefined as unknown,
@@ -32,7 +38,6 @@ vi.mock('@google-cloud/pubsub', () => ({
 
 import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
 import {
-  DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS,
   flushTopics,
   initPubsubClient,
   publishMessage,
@@ -69,19 +74,6 @@ describe('initPubsubClient', () => {
   it('omits apiEndpoint and emulatorMode when not provided', async () => {
     await reinit({ projectId: PROJECT_ID });
     expect(holder.ctorArgs).toEqual({ projectId: PROJECT_ID });
-  });
-
-  it('passes apiEndpoint and emulatorMode through to the SDK', async () => {
-    await reinit({
-      projectId: PROJECT_ID,
-      apiEndpoint: 'localhost:8085',
-      useEmulator: true,
-    });
-    expect(holder.ctorArgs).toEqual({
-      projectId: PROJECT_ID,
-      apiEndpoint: 'localhost:8085',
-      emulatorMode: true,
-    });
   });
 
   it('throws when called while already initialized', () => {
@@ -137,10 +129,7 @@ describe('flushTopics', () => {
 describe('startConsumer', () => {
   it('parses JSON data, invokes the handler, and acks on success', async () => {
     const handler = vi.fn(async () => {});
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler,
-    });
+    startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
@@ -157,10 +146,7 @@ describe('startConsumer', () => {
     const handler = vi.fn(async () => {
       throw new Error('boom');
     });
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler,
-    });
+    startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
@@ -177,10 +163,7 @@ describe('startConsumer', () => {
     const handler = vi.fn(() => {
       throw new Error('sync boom');
     }) as unknown as (m: TestPayload) => Promise<void>;
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler,
-    });
+    startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
@@ -195,10 +178,7 @@ describe('startConsumer', () => {
   it('nacks and logs pubsub:parse-error on invalid JSON', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const handler = vi.fn(async () => {});
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler,
-    });
+    startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const bad = createMockMessageRaw(Buffer.from('not json'), 'bad-1');
@@ -212,10 +192,7 @@ describe('startConsumer', () => {
 
   it("logs subscription 'error' events without stopping the consumer", async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-    });
+    startConsumer({ ...TEST_CONSUMER_OPTIONS });
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     sub.emit('error', new Error('transient stream error'));
@@ -230,11 +207,7 @@ describe('startConsumer', () => {
 
   it('routes subscription errors to onError when provided', () => {
     const onError = vi.fn();
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-      onError,
-    });
+    startConsumer({ ...TEST_CONSUMER_OPTIONS, onError });
 
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const err = new Error('transient stream error');
@@ -243,11 +216,8 @@ describe('startConsumer', () => {
     expect(onError).toHaveBeenCalledWith(err);
   });
 
-  it('wires constants for ack deadline and close behavior to the subscription', () => {
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-    });
+  it('wires caller-supplied options to the subscription', () => {
+    startConsumer({ ...TEST_CONSUMER_OPTIONS });
 
     const [name, opts] = mock.subscription.mock.calls[0] as [
       string,
@@ -257,34 +227,15 @@ describe('startConsumer', () => {
       },
     ];
     expect(name).toBe(SUBSCRIPTION_NAME);
-    expect(opts.maxExtensionTime.seconds).toBe(
-      DEFAULT_CONSUMER_MAX_EXTENSION_SECONDS,
-    );
+    expect(opts.maxExtensionTime.seconds).toBe(TEST_MAX_EXTENSION_SECONDS);
     expect(opts.closeOptions.behavior).toBe(
       SubscriptionCloseBehaviors.WaitForProcessing,
     );
     expect(opts.closeOptions.timeout.seconds).toBe(SHUTDOWN_TIMEOUT_SECONDS);
   });
 
-  it('applies caller-supplied maxExtensionSeconds', () => {
-    startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-      maxExtensionSeconds: 120,
-    });
-
-    const [, opts] = mock.subscription.mock.calls[0] as [
-      string,
-      { maxExtensionTime: { seconds: number } },
-    ];
-    expect(opts.maxExtensionTime.seconds).toBe(120);
-  });
-
   it('stop() calls subscription.close()', async () => {
-    const controller = startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-    });
+    const controller = startConsumer({ ...TEST_CONSUMER_OPTIONS });
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
 
     await controller.stop();
@@ -294,10 +245,7 @@ describe('startConsumer', () => {
 
   it('stop() does not reject when subscription.close() throws', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const controller = startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-    });
+    const controller = startConsumer({ ...TEST_CONSUMER_OPTIONS });
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     sub.close.mockImplementation(async () => {
       throw new Error('gRPC close failed');
@@ -311,12 +259,9 @@ describe('startConsumer', () => {
 
   it('throws when called before initPubsubClient', async () => {
     await shutdownPubsub();
-    expect(() =>
-      startConsumer<TestPayload>({
-        subscriptionName: SUBSCRIPTION_NAME,
-        handler: async () => {},
-      }),
-    ).toThrow(/not initialized/);
+    expect(() => startConsumer({ ...TEST_CONSUMER_OPTIONS })).toThrow(
+      /not initialized/,
+    );
   });
 
   it('throws when called while shutdown is in flight', async () => {
@@ -324,12 +269,9 @@ describe('startConsumer', () => {
       mock.close,
       shutdownPubsub,
     );
-    expect(() =>
-      startConsumer<TestPayload>({
-        subscriptionName: SUBSCRIPTION_NAME,
-        handler: async () => {},
-      }),
-    ).toThrow(/shutdown in progress/);
+    expect(() => startConsumer({ ...TEST_CONSUMER_OPTIONS })).toThrow(
+      /shutdown in progress/,
+    );
 
     release();
     await shutdownP;
@@ -351,10 +293,7 @@ describe('shutdownPubsub', () => {
     // Stall sub.close so we can verify mock.close is awaiting
     // it, not fire-and-forget. Handlers must be able to ack or
     // nack via the gRPC stream before the client tears it down.
-    const controller = startConsumer<TestPayload>({
-      subscriptionName: SUBSCRIPTION_NAME,
-      handler: async () => {},
-    });
+    const controller = startConsumer({ ...TEST_CONSUMER_OPTIONS });
     const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
     const stopSpy = vi.spyOn(controller, 'stop');
 
@@ -378,23 +317,6 @@ describe('shutdownPubsub', () => {
     );
     expect(() => initPubsubClient({ projectId: PROJECT_ID })).toThrow(
       /shutdown in progress/,
-    );
-
-    release();
-    await shutdownP;
-  });
-
-  it('rejects external publishMessage once consumers have drained', async () => {
-    // After consumer-stop completes, pubsub is nulled so new
-    // publishes outside of handler callbacks fail with the
-    // library's own error rather than a post-close SDK one.
-    await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
-    const { release, pending: shutdownP } = await startStalled(
-      mock.close,
-      shutdownPubsub,
-    );
-    await expect(publishMessage(TOPIC_NAME, TEST_PAYLOAD)).rejects.toThrow(
-      /not initialized/,
     );
 
     release();

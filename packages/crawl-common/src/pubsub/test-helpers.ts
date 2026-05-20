@@ -7,10 +7,15 @@
 
 import { EventEmitter } from 'node:events';
 import { vi } from 'vitest';
+import type { ConsumerOptions } from './types.js';
 
 export const PROJECT_ID = 'test-project';
 export const SUBSCRIPTION_NAME = 'test-subscription';
 export const TOPIC_NAME = 'test-topic';
+// Placeholder used by tests. The SDK is mocked, so the value
+// does not drive real timing. Production callers will source
+// it from a shared config module linked to the Redis lock TTL.
+export const TEST_MAX_EXTENSION_SECONDS = 180;
 
 export interface TestPayload {
   url: string;
@@ -20,6 +25,16 @@ export interface TestPayload {
 export const TEST_PAYLOAD: TestPayload = {
   url: 'https://example.com/article',
   crawl_id: 'test-crawl-id',
+};
+
+/**
+ * Default options for tests that call startConsumer. Spread it
+ * and override only the fields the test actually cares about.
+ */
+export const TEST_CONSUMER_OPTIONS: ConsumerOptions<TestPayload> = {
+  subscriptionName: SUBSCRIPTION_NAME,
+  maxExtensionSeconds: TEST_MAX_EXTENSION_SECONDS,
+  handler: async () => {},
 };
 
 export interface MockTopic {
