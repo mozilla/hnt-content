@@ -14,10 +14,7 @@
  *   message until a consumer acks it, independently per sub.
  * - Consumer: any code that calls `startConsumer({ ... })`,
  *   e.g. the article worker or discovery worker in
- *   `services/crawl-worker`. Separate Deployments may help with
- *   per-workload metrics, CPU/memory scaling, and failure
- *   isolation; a shared pod may lower operational overhead and
- *   improve resource use.
+ *   `services/crawl-worker`.
  *
  * Lifecycle:
  * - `initPubsubClient` once at startup (after env is loaded).
