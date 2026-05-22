@@ -1,13 +1,13 @@
 export {
   initPubSubClient,
-  startConsumer,
+  startSubscriber,
   publishMessage,
   flushTopics,
   shutdownPubSub,
 } from './client.js';
 export type {
   PubSubClientOptions,
-  ConsumerOptions,
-  ConsumerController,
+  SubscriberOptions,
+  SubscriberController,
   MessageHandler,
 } from './types.js';

@@ -27,8 +27,8 @@ export interface PubSubClientOptions {
  */
 export type MessageHandler<T> = (message: T) => Promise<void>;
 
-/** Options for starting a consumer. */
-export interface ConsumerOptions<T> {
+/** Options for starting a subscriber. */
+export interface SubscriberOptions<T> {
   /** Short subscription name (not fully qualified). */
   subscriptionName: string;
   handler: MessageHandler<T>;
@@ -59,8 +59,8 @@ export interface ConsumerOptions<T> {
   onError?: (err: Error) => void;
 }
 
-/** Controller returned by startConsumer for lifecycle management. */
-export interface ConsumerController {
+/** Controller returned by startSubscriber for lifecycle management. */
+export interface SubscriberController {
   /**
    * Called during shutdown to let in-flight handlers settle
    * before the subscription closes. Any handler that doesn't

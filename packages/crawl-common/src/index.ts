@@ -32,15 +32,15 @@ export type {
 } from './corpus-api/index.js';
 export {
   initPubSubClient,
-  startConsumer,
+  startSubscriber,
   publishMessage,
   flushTopics,
   shutdownPubSub,
 } from './pubsub/index.js';
 export type {
   PubSubClientOptions,
-  ConsumerOptions,
-  ConsumerController,
+  SubscriberOptions,
+  SubscriberController,
   MessageHandler,
 } from './pubsub/index.js';
 export type {

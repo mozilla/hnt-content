@@ -11,18 +11,18 @@
  * - Topic: a named destination messages are published to; fans
  *   every message out to attached subscriptions.
  * - Subscription: a named queue attached to a topic; holds each
- *   message until a consumer acks it, independently per sub.
- * - Consumer: any code that calls `startConsumer({ ... })`,
+ *   message until a subscriber acks it, independently per sub.
+ * - Subscriber: any code that calls `startSubscriber({ ... })`,
  *   e.g. the article worker or discovery worker in
  *   `services/crawl-worker`.
  *
  * Lifecycle:
  * - `initPubSubClient` once at startup (after env is loaded).
- * - `startConsumer` per subscription; the handler receives a
+ * - `startSubscriber` per subscription; the handler receives a
  *   JSON-parsed payload, resolves to ack, throws to nack.
  * - `publishMessage` to publish; payload is JSON-encoded and
  *   sent through a cached `Topic` (SDK handles batching).
- * - `shutdownPubSub` once on SIGTERM; stops consumers (with
+ * - `shutdownPubSub` once on SIGTERM; stops subscribers (with
  *   in-flight drain), flushes topics, and closes the client.
  *
  * Tests and local dev point at a Pub/Sub emulator by passing
@@ -36,8 +36,8 @@ import {
   type Topic,
 } from '@google-cloud/pubsub';
 import type {
-  ConsumerController,
-  ConsumerOptions,
+  SubscriberController,
+  SubscriberOptions,
   MessageHandler,
   PubSubClientOptions,
 } from './types.js';
@@ -56,9 +56,9 @@ let pubsub: PubSub | undefined;
 let shutdownPromise: Promise<void> | undefined;
 // Cache topics so the SDK can batch messages across calls.
 const topicCache = new Map<string, Topic>();
-// Holds one controller per consumer. Today each pod registers a
-// single consumer (article or discovery worker).
-const consumerControllers = new Set<ConsumerController>();
+// Holds one controller per subscriber. Today each pod registers a
+// single subscriber (article or discovery worker).
+const subscriberControllers = new Set<SubscriberController>();
 
 /**
  * Reset module state so the next initPubSubClient() starts
@@ -70,7 +70,7 @@ function resetModuleState(): void {
   pubsub = undefined;
   shutdownPromise = undefined;
   topicCache.clear();
-  consumerControllers.clear();
+  subscriberControllers.clear();
 }
 
 /**
@@ -147,10 +147,12 @@ export async function flushTopics(): Promise<void> {
  * handler resolves, and nacks it when the handler rejects so
  * Pub/Sub redelivers.
  */
-export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
+export function startSubscriber<T>(
+  opts: SubscriberOptions<T>,
+): SubscriberController {
   if (shutdownPromise) {
     throw new Error(
-      'Pub/Sub shutdown in progress. Cannot start a new consumer.',
+      'Pub/Sub shutdown in progress. Cannot start a new subscriber.',
     );
   }
   const client = requireClient();
@@ -193,7 +195,7 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
   subscription.on('message', onMessage);
   subscription.on('error', handleError);
 
-  const controller: ConsumerController = {
+  const controller: SubscriberController = {
     async stop(): Promise<void> {
       // Call close() before removing the 'message' listener so
       // our WaitForProcessing drain runs. If we removed the
@@ -218,11 +220,11 @@ export function startConsumer<T>(opts: ConsumerOptions<T>): ConsumerController {
       } finally {
         subscription.removeListener('message', onMessage);
         subscription.removeListener('error', handleError);
-        consumerControllers.delete(controller);
+        subscriberControllers.delete(controller);
       }
     },
   };
-  consumerControllers.add(controller);
+  subscriberControllers.add(controller);
   return controller;
 }
 
@@ -265,7 +267,7 @@ async function processMessage<T>(
 }
 
 /**
- * Gracefully stop all registered consumers, flush pending
+ * Gracefully stop all registered subscribers, flush pending
  * publishes, and close the underlying client. Idempotent;
  * safe to call when uninitialized.
  */
@@ -278,10 +280,10 @@ export async function shutdownPubSub(): Promise<void> {
     // resetModuleState() always run. We let errors propagate so
     // the SIGTERM handler can report them to Sentry.
     try {
-      // Stop consumers first so in-flight handlers (which
+      // Stop subscribers first so in-flight handlers (which
       // may still publish downstream) complete while the
       // client is live.
-      const controllers = Array.from(consumerControllers);
+      const controllers = Array.from(subscriberControllers);
       await Promise.allSettled(controllers.map((c) => c.stop()));
       // Handlers have drained. Null pubsub so cache-miss
       // publishes fail fast with the library's "not

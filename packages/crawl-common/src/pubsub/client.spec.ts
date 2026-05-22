@@ -7,7 +7,7 @@ import {
   PROJECT_ID,
   startStalled,
   SUBSCRIPTION_NAME,
-  TEST_CONSUMER_OPTIONS,
+  TEST_SUBSCRIBER_OPTIONS,
   TEST_MAX_EXTENSION_SECONDS,
   TEST_PAYLOAD,
   TOPIC_NAME,
@@ -52,7 +52,7 @@ import {
   publishMessage,
   SHUTDOWN_TIMEOUT_SECONDS,
   shutdownPubSub,
-  startConsumer,
+  startSubscriber,
 } from './client.js';
 
 beforeEach(() => {
@@ -131,10 +131,10 @@ describe('flushTopics', () => {
   });
 });
 
-describe('startConsumer', () => {
+describe('startSubscriber', () => {
   it('parses JSON data, invokes the handler, and acks on success', async () => {
     const handler = vi.fn(async () => {});
-    startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
 
     const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
@@ -151,7 +151,7 @@ describe('startConsumer', () => {
     const handler = vi.fn(async () => {
       throw new Error('boom');
     });
-    startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
 
     const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
@@ -168,7 +168,7 @@ describe('startConsumer', () => {
     const handler = vi.fn(() => {
       throw new Error('sync boom');
     }) as unknown as (m: TestPayload) => Promise<void>;
-    startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
 
     const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
@@ -183,7 +183,7 @@ describe('startConsumer', () => {
   it('nacks and logs pubsub:parse-error on invalid JSON', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const handler = vi.fn(async () => {});
-    startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
 
     const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const bad = createMockMessageRaw(Buffer.from('not json'), 'bad-1');
@@ -195,15 +195,15 @@ describe('startConsumer', () => {
     expect(errorSpy.mock.calls[0][0]).toMatch(/pubsub:parse-error/);
   });
 
-  it("logs subscription 'error' events without stopping the consumer", async () => {
+  it("logs subscription 'error' events without stopping the subscriber", async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    startConsumer({ ...TEST_CONSUMER_OPTIONS });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
 
     const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     sub.emit('error', new Error('transient stream error'));
 
     expect(errorSpy.mock.calls[0][0]).toMatch(/pubsub:stream-error/);
-    // Subsequent message still acks; consumer survived the error.
+    // Subsequent message still acks; subscriber survived the error.
     const message = createMockMessage(TEST_PAYLOAD);
     sub.emit('message', message);
     await message.settled;
@@ -212,7 +212,7 @@ describe('startConsumer', () => {
 
   it('routes subscription errors to onError when provided', () => {
     const onError = vi.fn();
-    startConsumer({ ...TEST_CONSUMER_OPTIONS, onError });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, onError });
 
     const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const err = new Error('transient stream error');
@@ -222,7 +222,7 @@ describe('startConsumer', () => {
   });
 
   it('wires caller-supplied options to the subscription', () => {
-    startConsumer({ ...TEST_CONSUMER_OPTIONS });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
 
     const [name, opts] = mockPubSub.subscription.mock.calls[0] as [
       string,
@@ -240,7 +240,7 @@ describe('startConsumer', () => {
   });
 
   it('stop() calls subscription.close()', async () => {
-    const controller = startConsumer({ ...TEST_CONSUMER_OPTIONS });
+    const controller = startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
     const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
 
     await controller.stop();
@@ -250,7 +250,7 @@ describe('startConsumer', () => {
 
   it('stop() does not reject when subscription.close() throws', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const controller = startConsumer({ ...TEST_CONSUMER_OPTIONS });
+    const controller = startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
     const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     sub.close.mockImplementation(async () => {
       throw new Error('gRPC close failed');
@@ -264,7 +264,7 @@ describe('startConsumer', () => {
 
   it('throws when called before initPubSubClient', async () => {
     await shutdownPubSub();
-    expect(() => startConsumer({ ...TEST_CONSUMER_OPTIONS })).toThrow(
+    expect(() => startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS })).toThrow(
       /not initialized/,
     );
   });
@@ -274,7 +274,7 @@ describe('startConsumer', () => {
       mockPubSub.close,
       shutdownPubSub,
     );
-    expect(() => startConsumer({ ...TEST_CONSUMER_OPTIONS })).toThrow(
+    expect(() => startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS })).toThrow(
       /shutdown in progress/,
     );
 
@@ -294,11 +294,11 @@ describe('shutdownPubSub', () => {
     expect(mockPubSub.close).toHaveBeenCalledOnce();
   });
 
-  it('drains consumers fully before closing the client', async () => {
+  it('drains subscribers fully before closing the client', async () => {
     // Stall sub.close so we can verify mockPubSub.close is awaiting
     // it, not fire-and-forget. Handlers must be able to ack or
     // nack via the gRPC stream before the client tears it down.
-    const controller = startConsumer({ ...TEST_CONSUMER_OPTIONS });
+    const controller = startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
     const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const stopSpy = vi.spyOn(controller, 'stop');
 

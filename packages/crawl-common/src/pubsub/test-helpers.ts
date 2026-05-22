@@ -7,7 +7,7 @@
 
 import { EventEmitter } from 'node:events';
 import { vi } from 'vitest';
-import type { ConsumerOptions } from './types.js';
+import type { SubscriberOptions } from './types.js';
 
 export const PROJECT_ID = 'test-project';
 export const SUBSCRIPTION_NAME = 'test-subscription';
@@ -28,10 +28,10 @@ export const TEST_PAYLOAD: TestPayload = {
 };
 
 /**
- * Default options for tests that call startConsumer. Spread it
+ * Default options for tests that call startSubscriber. Spread it
  * and override only the fields the test actually cares about.
  */
-export const TEST_CONSUMER_OPTIONS: ConsumerOptions<TestPayload> = {
+export const TEST_SUBSCRIBER_OPTIONS: SubscriberOptions<TestPayload> = {
   subscriptionName: SUBSCRIPTION_NAME,
   maxExtensionSeconds: TEST_MAX_EXTENSION_SECONDS,
   handler: async () => {},
@@ -96,7 +96,7 @@ export interface MockMessage {
   id: string;
   ack: ReturnType<typeof vi.fn>;
   nack: ReturnType<typeof vi.fn>;
-  /** Resolves with 'ack' or 'nack' once the consumer settles the message. */
+  /** Resolves with 'ack' or 'nack' once the subscriber settles the message. */
   settled: Promise<'ack' | 'nack'>;
 }
 

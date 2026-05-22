@@ -17,7 +17,7 @@ import {
   initPubSubClient,
   publishMessage,
   shutdownPubSub,
-  startConsumer,
+  startSubscriber,
 } from './client.js';
 import { PROJECT_ID, TEST_PAYLOAD, type TestPayload } from './test-helpers.js';
 
@@ -82,13 +82,13 @@ describe('Pub/Sub client integration', () => {
   });
 
   it('publishes and consumes typed messages end-to-end', async () => {
-    // Exercises shutdownPubSub's consumer-stop path: the
+    // Exercises shutdownPubSub's subscriber-stop path: the
     // test does not call controller.stop() manually, so the
     // real SDK shutdown is driven entirely via afterEach's
     // shutdownPubSub(). Three payloads with distinct crawl_ids
     // also verify no loss across a small batch.
     const received: TestPayload[] = [];
-    startConsumer<TestPayload>({
+    startSubscriber<TestPayload>({
       subscriptionName,
       handler: async (message) => {
         received.push(message);
