@@ -1,5 +1,5 @@
 /** Options for configuring the Pub/Sub client. */
-export interface PubsubClientOptions {
+export interface PubSubClientOptions {
   /** GCP project id (e.g. 'moz-fx-hnt-prod'). */
   projectId: string;
   /**

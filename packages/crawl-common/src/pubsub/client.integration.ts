@@ -14,9 +14,9 @@ import {
 } from 'vitest';
 import {
   flushTopics,
-  initPubsubClient,
+  initPubSubClient,
   publishMessage,
-  shutdownPubsub,
+  shutdownPubSub,
   startConsumer,
 } from './client.js';
 import { PROJECT_ID, TEST_PAYLOAD, type TestPayload } from './test-helpers.js';
@@ -68,7 +68,7 @@ describe('Pub/Sub client integration', () => {
     subscriptionName = `sub-${id}`;
     await adminClient.createTopic(topicName);
     await adminClient.topic(topicName).createSubscription(subscriptionName);
-    initPubsubClient({
+    initPubSubClient({
       projectId: PROJECT_ID,
       apiEndpoint: endpoint,
       useEmulator: true,
@@ -76,16 +76,16 @@ describe('Pub/Sub client integration', () => {
   });
 
   afterEach(async () => {
-    await shutdownPubsub();
+    await shutdownPubSub();
     await adminClient.subscription(subscriptionName).delete();
     await adminClient.topic(topicName).delete();
   });
 
   it('publishes and consumes typed messages end-to-end', async () => {
-    // Exercises shutdownPubsub's consumer-stop path: the
+    // Exercises shutdownPubSub's consumer-stop path: the
     // test does not call controller.stop() manually, so the
     // real SDK shutdown is driven entirely via afterEach's
-    // shutdownPubsub(). Three payloads with distinct crawl_ids
+    // shutdownPubSub(). Three payloads with distinct crawl_ids
     // also verify no loss across a small batch.
     const received: TestPayload[] = [];
     startConsumer<TestPayload>({

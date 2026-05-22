@@ -14,20 +14,29 @@ import {
   type TestPayload,
 } from './test-helpers.js';
 
-// Imports in ES are hoisted to the top. vi.mock is also hoisted
-// so the SDK is mocked before it is imported, and vi.hoisted
-// makes holder available to MockPubSub.
+// We replace @google-cloud/pubsub before client.ts imports it.
+// The vi.mock factory and the tests below both depend on these
+// bindings, so vi.hoisted lifts them to the same pre-import level
+// as the vi.mock call.
 // https://vitest.dev/api/vi.html#vi-hoisted
-const holder = vi.hoisted(() => ({
-  instance: null as unknown,
-  ctorArgs: undefined as unknown,
-}));
+
+// After vi.mock mocks the SDK below, `new PubSub(...)` returns
+// mockPubSub. beforeEach() assigns a fresh mock before each test;
+// a few tests additionally call reinit() to re-initialize with
+// different options. Typed as MockPubSub since the initial null
+// is replaced before any test reads it.
+let mockPubSub = vi.hoisted(() => null as unknown as MockPubSub);
+
+// On every `new PubSub(...)` call, the mocked constructor writes its
+// options argument here. Tests read it to assert how
+// initPubSubClient initialized the SDK.
+let mockPubSubConstructorArgs = vi.hoisted(() => undefined as unknown);
 
 // vi.mock must run before any import of @google-cloud/pubsub.
 vi.mock('@google-cloud/pubsub', () => ({
   PubSub: vi.fn(function MockPubSub(opts: unknown) {
-    holder.ctorArgs = opts;
-    return holder.instance;
+    mockPubSubConstructorArgs = opts;
+    return mockPubSub;
   }),
   Duration: { from: (d: { seconds?: number }) => d },
   SubscriptionCloseBehaviors: {
@@ -39,51 +48,47 @@ vi.mock('@google-cloud/pubsub', () => ({
 import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
 import {
   flushTopics,
-  initPubsubClient,
+  initPubSubClient,
   publishMessage,
   SHUTDOWN_TIMEOUT_SECONDS,
-  shutdownPubsub,
+  shutdownPubSub,
   startConsumer,
 } from './client.js';
 
-let mock: MockPubSub;
-
 beforeEach(() => {
-  holder.ctorArgs = undefined;
-  mock = createMockPubSub();
-  holder.instance = mock;
-  initPubsubClient({ projectId: PROJECT_ID });
+  mockPubSubConstructorArgs = undefined;
+  mockPubSub = createMockPubSub();
+  initPubSubClient({ projectId: PROJECT_ID });
 });
 
 afterEach(async () => {
-  await shutdownPubsub();
+  await shutdownPubSub();
   vi.restoreAllMocks();
 });
 
-/** Swap the holder to a fresh mock and re-init with the given opts. */
+/** Swap in a fresh mock instance and re-init with the given opts. */
 async function reinit(
-  opts: Parameters<typeof initPubsubClient>[0] = { projectId: PROJECT_ID },
+  opts: Parameters<typeof initPubSubClient>[0] = { projectId: PROJECT_ID },
 ): Promise<void> {
-  await shutdownPubsub();
-  mock = createMockPubSub();
-  holder.instance = mock;
-  initPubsubClient(opts);
+  await shutdownPubSub();
+  mockPubSub = createMockPubSub();
+  initPubSubClient(opts);
 }
 
-describe('initPubsubClient', () => {
+describe('initPubSubClient', () => {
   it('omits apiEndpoint and emulatorMode when not provided', async () => {
     await reinit({ projectId: PROJECT_ID });
-    expect(holder.ctorArgs).toEqual({ projectId: PROJECT_ID });
+    expect(mockPubSubConstructorArgs).toEqual({ projectId: PROJECT_ID });
   });
 
   it('throws when called while already initialized', () => {
-    expect(() => initPubsubClient({ projectId: PROJECT_ID })).toThrow(
+    expect(() => initPubSubClient({ projectId: PROJECT_ID })).toThrow(
       /already initialized/,
     );
   });
 
   it('throws when publishMessage is called before init', async () => {
-    await shutdownPubsub();
+    await shutdownPubSub();
     await expect(publishMessage(TOPIC_NAME, TEST_PAYLOAD)).rejects.toThrow(
       /not initialized/,
     );
@@ -94,7 +99,7 @@ describe('publishMessage', () => {
   it('JSON-encodes the payload and publishes to the named topic', async () => {
     await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
 
-    const topic = mock.topics.get(TOPIC_NAME);
+    const topic = mockPubSub.topics.get(TOPIC_NAME);
     expect(topic).toBeDefined();
     expect(topic!.publishMessage).toHaveBeenCalledOnce();
     const [arg] = topic!.publishMessage.mock.calls[0] as [{ data: Buffer }];
@@ -107,10 +112,10 @@ describe('publishMessage', () => {
 
     // pubsub.topic() is the factory; calling it once means the
     // second publish reused the cached Topic.
-    expect(mock.topic).toHaveBeenCalledTimes(1);
-    expect(mock.topics.get(TOPIC_NAME)!.publishMessage).toHaveBeenCalledTimes(
-      2,
-    );
+    expect(mockPubSub.topic).toHaveBeenCalledTimes(1);
+    expect(
+      mockPubSub.topics.get(TOPIC_NAME)!.publishMessage,
+    ).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -121,8 +126,8 @@ describe('flushTopics', () => {
 
     await flushTopics();
 
-    expect(mock.topics.get('topic-a')!.flush).toHaveBeenCalledOnce();
-    expect(mock.topics.get('topic-b')!.flush).toHaveBeenCalledOnce();
+    expect(mockPubSub.topics.get('topic-a')!.flush).toHaveBeenCalledOnce();
+    expect(mockPubSub.topics.get('topic-b')!.flush).toHaveBeenCalledOnce();
   });
 });
 
@@ -131,7 +136,7 @@ describe('startConsumer', () => {
     const handler = vi.fn(async () => {});
     startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
 
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
     sub.emit('message', message);
     await message.settled;
@@ -148,7 +153,7 @@ describe('startConsumer', () => {
     });
     startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
 
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
     sub.emit('message', message);
     await message.settled;
@@ -165,7 +170,7 @@ describe('startConsumer', () => {
     }) as unknown as (m: TestPayload) => Promise<void>;
     startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
 
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const message = createMockMessage(TEST_PAYLOAD);
     sub.emit('message', message);
     await message.settled;
@@ -180,7 +185,7 @@ describe('startConsumer', () => {
     const handler = vi.fn(async () => {});
     startConsumer({ ...TEST_CONSUMER_OPTIONS, handler });
 
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const bad = createMockMessageRaw(Buffer.from('not json'), 'bad-1');
     sub.emit('message', bad);
     await bad.settled;
@@ -194,7 +199,7 @@ describe('startConsumer', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     startConsumer({ ...TEST_CONSUMER_OPTIONS });
 
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     sub.emit('error', new Error('transient stream error'));
 
     expect(errorSpy.mock.calls[0][0]).toMatch(/pubsub:stream-error/);
@@ -209,7 +214,7 @@ describe('startConsumer', () => {
     const onError = vi.fn();
     startConsumer({ ...TEST_CONSUMER_OPTIONS, onError });
 
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const err = new Error('transient stream error');
     sub.emit('error', err);
 
@@ -219,7 +224,7 @@ describe('startConsumer', () => {
   it('wires caller-supplied options to the subscription', () => {
     startConsumer({ ...TEST_CONSUMER_OPTIONS });
 
-    const [name, opts] = mock.subscription.mock.calls[0] as [
+    const [name, opts] = mockPubSub.subscription.mock.calls[0] as [
       string,
       {
         maxExtensionTime: { seconds: number };
@@ -236,7 +241,7 @@ describe('startConsumer', () => {
 
   it('stop() calls subscription.close()', async () => {
     const controller = startConsumer({ ...TEST_CONSUMER_OPTIONS });
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
 
     await controller.stop();
 
@@ -246,7 +251,7 @@ describe('startConsumer', () => {
   it('stop() does not reject when subscription.close() throws', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const controller = startConsumer({ ...TEST_CONSUMER_OPTIONS });
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     sub.close.mockImplementation(async () => {
       throw new Error('gRPC close failed');
     });
@@ -257,8 +262,8 @@ describe('startConsumer', () => {
     ).toBe(true);
   });
 
-  it('throws when called before initPubsubClient', async () => {
-    await shutdownPubsub();
+  it('throws when called before initPubSubClient', async () => {
+    await shutdownPubSub();
     expect(() => startConsumer({ ...TEST_CONSUMER_OPTIONS })).toThrow(
       /not initialized/,
     );
@@ -266,8 +271,8 @@ describe('startConsumer', () => {
 
   it('throws when called while shutdown is in flight', async () => {
     const { release, pending: shutdownP } = await startStalled(
-      mock.close,
-      shutdownPubsub,
+      mockPubSub.close,
+      shutdownPubSub,
     );
     expect(() => startConsumer({ ...TEST_CONSUMER_OPTIONS })).toThrow(
       /shutdown in progress/,
@@ -278,44 +283,44 @@ describe('startConsumer', () => {
   });
 });
 
-describe('shutdownPubsub', () => {
+describe('shutdownPubSub', () => {
   it('flushes topics and closes the underlying client', async () => {
     await publishMessage(TOPIC_NAME, TEST_PAYLOAD);
-    const topic = mock.topics.get(TOPIC_NAME)!;
+    const topic = mockPubSub.topics.get(TOPIC_NAME)!;
 
-    await shutdownPubsub();
+    await shutdownPubSub();
 
     expect(topic.flush).toHaveBeenCalledOnce();
-    expect(mock.close).toHaveBeenCalledOnce();
+    expect(mockPubSub.close).toHaveBeenCalledOnce();
   });
 
   it('drains consumers fully before closing the client', async () => {
-    // Stall sub.close so we can verify mock.close is awaiting
+    // Stall sub.close so we can verify mockPubSub.close is awaiting
     // it, not fire-and-forget. Handlers must be able to ack or
     // nack via the gRPC stream before the client tears it down.
     const controller = startConsumer({ ...TEST_CONSUMER_OPTIONS });
-    const sub = mock.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
     const stopSpy = vi.spyOn(controller, 'stop');
 
     const { release, pending: shutdownP } = await startStalled(
       sub.close,
-      shutdownPubsub,
+      shutdownPubSub,
     );
     expect(stopSpy).toHaveBeenCalled();
     expect(sub.close).toHaveBeenCalledOnce();
-    expect(mock.close).not.toHaveBeenCalled();
+    expect(mockPubSub.close).not.toHaveBeenCalled();
 
     release();
     await shutdownP;
-    expect(mock.close).toHaveBeenCalledOnce();
+    expect(mockPubSub.close).toHaveBeenCalledOnce();
   });
 
-  it('rejects initPubsubClient while shutdown is in flight', async () => {
+  it('rejects initPubSubClient while shutdown is in flight', async () => {
     const { release, pending: shutdownP } = await startStalled(
-      mock.close,
-      shutdownPubsub,
+      mockPubSub.close,
+      shutdownPubSub,
     );
-    expect(() => initPubsubClient({ projectId: PROJECT_ID })).toThrow(
+    expect(() => initPubSubClient({ projectId: PROJECT_ID })).toThrow(
       /shutdown in progress/,
     );
 
@@ -324,22 +329,22 @@ describe('shutdownPubsub', () => {
   });
 
   it('resets state so subsequent calls require re-init', async () => {
-    await shutdownPubsub();
+    await shutdownPubSub();
     await expect(publishMessage(TOPIC_NAME, TEST_PAYLOAD)).rejects.toThrow(
       /not initialized/,
     );
   });
 
   it('is idempotent and safe to call twice', async () => {
-    await shutdownPubsub();
-    await shutdownPubsub();
-    expect(mock.close).toHaveBeenCalledOnce();
+    await shutdownPubSub();
+    await shutdownPubSub();
+    expect(mockPubSub.close).toHaveBeenCalledOnce();
   });
 
   it('is a no-op when the client is uninitialized', async () => {
-    await shutdownPubsub();
-    mock.close.mockClear();
-    await shutdownPubsub();
-    expect(mock.close).not.toHaveBeenCalled();
+    await shutdownPubSub();
+    mockPubSub.close.mockClear();
+    await shutdownPubSub();
+    expect(mockPubSub.close).not.toHaveBeenCalled();
   });
 });

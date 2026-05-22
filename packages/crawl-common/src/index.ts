@@ -31,14 +31,14 @@ export type {
   UpdateApprovedCorpusItemResponse,
 } from './corpus-api/index.js';
 export {
-  initPubsubClient,
+  initPubSubClient,
   startConsumer,
   publishMessage,
   flushTopics,
-  shutdownPubsub,
+  shutdownPubSub,
 } from './pubsub/index.js';
 export type {
-  PubsubClientOptions,
+  PubSubClientOptions,
   ConsumerOptions,
   ConsumerController,
   MessageHandler,

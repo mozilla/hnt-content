@@ -17,16 +17,16 @@
  *   `services/crawl-worker`.
  *
  * Lifecycle:
- * - `initPubsubClient` once at startup (after env is loaded).
+ * - `initPubSubClient` once at startup (after env is loaded).
  * - `startConsumer` per subscription; the handler receives a
  *   JSON-parsed payload, resolves to ack, throws to nack.
  * - `publishMessage` to publish; payload is JSON-encoded and
  *   sent through a cached `Topic` (SDK handles batching).
- * - `shutdownPubsub` once on SIGTERM; stops consumers (with
+ * - `shutdownPubSub` once on SIGTERM; stops consumers (with
  *   in-flight drain), flushes topics, and closes the client.
  *
  * Tests and local dev point at a Pub/Sub emulator by passing
- * `apiEndpoint` and `useEmulator: true` to `initPubsubClient`.
+ * `apiEndpoint` and `useEmulator: true` to `initPubSubClient`.
  */
 import {
   Duration,
@@ -39,7 +39,7 @@ import type {
   ConsumerController,
   ConsumerOptions,
   MessageHandler,
-  PubsubClientOptions,
+  PubSubClientOptions,
 } from './types.js';
 
 // Upper bound on how long subscription.close() waits for
@@ -61,8 +61,8 @@ const topicCache = new Map<string, Topic>();
 const consumerControllers = new Set<ConsumerController>();
 
 /**
- * Reset module state so the next initPubsubClient() starts
- * clean. Called from shutdownPubsub(); mostly matters for
+ * Reset module state so the next initPubSubClient() starts
+ * clean. Called from shutdownPubSub(); mostly matters for
  * tests, since in production the pod usually exits right
  * after shutdown.
  */
@@ -76,20 +76,20 @@ function resetModuleState(): void {
 /**
  * Initialize the Pub/Sub client. Throws if already
  * initialized or if a shutdown is in progress; await
- * shutdownPubsub first to re-initialize. Unlike sibling
+ * shutdownPubSub first to re-initialize. Unlike sibling
  * clients (e.g. the Zyte HTTP client), an open subscription
  * owns a gRPC stream and in-flight messages; silent
  * replacement would leak both.
  */
-export function initPubsubClient(opts: PubsubClientOptions): void {
+export function initPubSubClient(opts: PubSubClientOptions): void {
   if (shutdownPromise) {
     throw new Error(
-      'Pub/Sub shutdown in progress. Await shutdownPubsub() first.',
+      'Pub/Sub shutdown in progress. Await shutdownPubSub() first.',
     );
   }
   if (pubsub) {
     throw new Error(
-      'Pub/Sub client already initialized. Call shutdownPubsub() first.',
+      'Pub/Sub client already initialized. Call shutdownPubSub() first.',
     );
   }
   pubsub = new PubSub({
@@ -103,7 +103,7 @@ export function initPubsubClient(opts: PubsubClientOptions): void {
 function requireClient(): PubSub {
   if (!pubsub) {
     throw new Error(
-      'Pub/Sub client not initialized. Call initPubsubClient() first.',
+      'Pub/Sub client not initialized. Call initPubSubClient() first.',
     );
   }
   return pubsub;
@@ -269,7 +269,7 @@ async function processMessage<T>(
  * publishes, and close the underlying client. Idempotent;
  * safe to call when uninitialized.
  */
-export async function shutdownPubsub(): Promise<void> {
+export async function shutdownPubSub(): Promise<void> {
   if (shutdownPromise) return shutdownPromise;
   if (!pubsub) return;
   const client = pubsub;
