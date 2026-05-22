@@ -19,7 +19,12 @@ import {
   shutdownPubSub,
   startSubscriber,
 } from './client.js';
-import { PROJECT_ID, TEST_PAYLOAD, type TestPayload } from './test-helpers.js';
+import {
+  PROJECT_ID,
+  TEST_MAX_EXTENSION_SECONDS,
+  TEST_PAYLOAD,
+  type TestPayload,
+} from './test-helpers.js';
 
 // Pinned for reproducibility. Bump when the gcloud emulators ship
 // a fix or feature we need. See
@@ -90,6 +95,7 @@ describe('Pub/Sub client integration', () => {
     const received: TestPayload[] = [];
     startSubscriber<TestPayload>({
       subscriptionName,
+      maxExtensionSeconds: TEST_MAX_EXTENSION_SECONDS,
       handler: async (message) => {
         received.push(message);
       },

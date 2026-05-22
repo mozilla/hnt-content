@@ -197,13 +197,9 @@ export function startSubscriber<T>(
 
   const controller: SubscriberController = {
     async stop(): Promise<void> {
-      // Call close() before removing the 'message' listener so
-      // our WaitForProcessing drain runs. If we removed the
-      // listener first, the SDK would see no one is listening
-      // and shut down without waiting for in-flight handlers.
-      // Catch errors from close() so stop() never rejects; any
-      // handlers still running when the SDK gives up will have
-      // their messages redelivered after the ack deadline
+      // Errors from close() are caught so stop() never rejects;
+      // any handlers still running when the SDK gives up will
+      // have their messages redelivered after the ack deadline
       // expires.
       //
       // stop() is implicitly idempotent: subscription.close()

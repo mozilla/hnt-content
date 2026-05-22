@@ -56,7 +56,6 @@ import {
 } from './client.js';
 
 beforeEach(() => {
-  mockPubSubConstructorArgs = undefined;
   mockPubSub = createMockPubSub();
   initPubSubClient({ projectId: PROJECT_ID });
 });
