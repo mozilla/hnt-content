@@ -75,6 +75,7 @@ chore(HNT-2097): migrate from Jest to Vitest
 ## PR descriptions
 
 - Follow the template in @.github/PULL_REQUEST_TEMPLATE.md.
+- Drop any section (Deployment steps, QA, Implementation decisions) that isn't applicable to this PR.
 - **Implementation decisions**: help reviewers understand the reasoning behind non-obvious choices. List only the most important design or implementation decisions. Explain the "why" clearly and concisely; tie decisions to values like reliability, safety, conventions, and avoiding surprises. Remove this section if there are no noteworthy decisions.
 - **QA**: for manual verification steps beyond automated tests; omit when the test suite is sufficient.
 - Write each paragraph as a single long line; do not hard-wrap prose (heredocs can inject `\r\n`, which GitHub renders as hard line breaks).
