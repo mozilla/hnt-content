@@ -3,12 +3,6 @@ import * as Sentry from '@sentry/node';
 export type InitOptions = {
   /** Static tag identifying the service, e.g. 'crawl-agent', 'crawl-worker'. */
   service: 'crawl-agent' | 'crawl-worker';
-  /**
-   * Static tag identifying the worker role within a service that runs
-   * multiple roles from the same image. Required for crawl-worker
-   * (article vs discovery); omit for crawl-agent.
-   */
-  workerRole?: 'article' | 'discovery';
 };
 
 /**
@@ -16,7 +10,7 @@ export type InitOptions = {
  * DSN, environment, and release are read from env vars; an empty DSN
  * silently disables capture. Call once at process startup.
  */
-export function initSentry({ service, workerRole }: InitOptions): void {
+export function initSentry({ service }: InitOptions): void {
   const dsn = process.env.SENTRY_DSN;
 
   Sentry.init({
@@ -30,9 +24,7 @@ export function initSentry({ service, workerRole }: InitOptions): void {
     skipOpenTelemetrySetup: true,
   });
 
-  const scope = Sentry.getGlobalScope();
-  scope.setTag('service', service);
-  if (workerRole) scope.setTag('worker_role', workerRole);
+  Sentry.getGlobalScope().setTag('service', service);
 
   if (!dsn) {
     console.log(`Sentry disabled: SENTRY_DSN not set (service=${service})`);
