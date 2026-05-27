@@ -55,6 +55,10 @@ WORKDIR /app
 COPY --from=builder --chown=app:app /prod/ ./
 USER app
 
+# Set by CI from the merging commit SHA; surfaced to Sentry as the
+# release tag so issues can be grouped by deployed revision.
+ARG GIT_SHA=""
+ENV GIT_SHA=$GIT_SHA
 ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080

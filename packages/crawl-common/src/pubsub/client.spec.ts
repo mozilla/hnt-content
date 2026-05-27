@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMockMessage,
@@ -45,6 +46,13 @@ vi.mock('@google-cloud/pubsub', () => ({
   },
 }));
 
+// ESM namespace bindings are non-configurable, so vi.spyOn(Sentry, ...)
+// fails. Mock the module instead; pubsub/client.ts only uses
+// captureException, so that's all we replace.
+vi.mock('@sentry/node', () => ({
+  captureException: vi.fn(),
+}));
+
 import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
 import {
   flushTopics,
@@ -58,6 +66,7 @@ import {
 beforeEach(() => {
   mockPubSub = createMockPubSub();
   initPubSubClient({ projectId: PROJECT_ID });
+  vi.mocked(Sentry.captureException).mockClear();
 });
 
 afterEach(async () => {
@@ -259,6 +268,89 @@ describe('startSubscriber', () => {
     expect(
       errorSpy.mock.calls.some((c) => /pubsub:close-error/.test(c[0])),
     ).toBe(true);
+  });
+
+  it('captures stream-error in Sentry by default', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const captureSpy = vi.mocked(Sentry.captureException);
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const err = new Error('stream broke');
+    sub.emit('error', err);
+
+    expect(captureSpy).toHaveBeenCalledWith(
+      err,
+      expect.objectContaining({
+        tags: { subscription: SUBSCRIPTION_NAME, kind: 'stream-error' },
+      }),
+    );
+  });
+
+  it('skips Sentry capture when caller provides onError', () => {
+    const captureSpy = vi.mocked(Sentry.captureException);
+    const onError = vi.fn();
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, onError });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    sub.emit('error', new Error('stream broke'));
+
+    expect(captureSpy).not.toHaveBeenCalled();
+  });
+
+  it('captures close-error in Sentry when subscription.close throws', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const captureSpy = vi.mocked(Sentry.captureException);
+    const controller = startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const err = new Error('gRPC close failed');
+    sub.close.mockImplementation(async () => {
+      throw err;
+    });
+
+    await controller.stop();
+
+    expect(captureSpy).toHaveBeenCalledWith(
+      err,
+      expect.objectContaining({
+        tags: { subscription: SUBSCRIPTION_NAME, kind: 'close-error' },
+      }),
+    );
+  });
+
+  it('captures parse-error in Sentry with messageId in context', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const captureSpy = vi.mocked(Sentry.captureException);
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const bad = createMockMessageRaw(Buffer.from('not json'), 'bad-1');
+    sub.emit('message', bad);
+    await bad.settled;
+
+    expect(captureSpy).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        tags: { subscription: SUBSCRIPTION_NAME, kind: 'parse-error' },
+        contexts: { handler: { messageId: 'bad-1' } },
+      }),
+    );
+  });
+
+  it('does NOT capture handler-error in Sentry (wrapper handles it)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const captureSpy = vi.mocked(Sentry.captureException);
+    const handler = vi.fn(async () => {
+      throw new Error('boom');
+    });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage(TEST_PAYLOAD);
+    sub.emit('message', message);
+    await message.settled;
+
+    expect(captureSpy).not.toHaveBeenCalled();
   });
 
   it('throws when called before initPubSubClient', async () => {

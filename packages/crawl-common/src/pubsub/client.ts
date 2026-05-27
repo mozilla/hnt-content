@@ -28,6 +28,7 @@
  * Tests and local dev point at a Pub/Sub emulator by passing
  * `apiEndpoint` and `useEmulator: true` to `initPubSubClient`.
  */
+import * as Sentry from '@sentry/node';
 import {
   Duration,
   PubSub,
@@ -174,7 +175,12 @@ export function startSubscriber<T>(
   const handleError =
     opts.onError ??
     ((err: Error) => {
-      // TODO(HNT-2589): also report to Sentry.
+      Sentry.captureException(err, {
+        tags: {
+          subscription: opts.subscriptionName,
+          kind: 'stream-error',
+        },
+      });
       console.error(
         `pubsub:stream-error subscription=${opts.subscriptionName}`,
         err,
@@ -208,7 +214,12 @@ export function startSubscriber<T>(
       try {
         await subscription.close();
       } catch (err) {
-        // TODO(HNT-2589): also report to Sentry.
+        Sentry.captureException(err, {
+          tags: {
+            subscription: opts.subscriptionName,
+            kind: 'close-error',
+          },
+        });
         console.error(
           `pubsub:close-error subscription=${opts.subscriptionName}`,
           err,
@@ -240,7 +251,10 @@ async function processMessage<T>(
     parsed = JSON.parse(message.data.toString()) as T;
   } catch (err) {
     message.nack();
-    // TODO(HNT-2589): also report to Sentry.
+    Sentry.captureException(err, {
+      tags: { subscription: subscriptionName, kind: 'parse-error' },
+      contexts: { handler: { messageId: message.id } },
+    });
     console.error(
       `pubsub:parse-error subscription=${subscriptionName} ` +
         `messageId=${message.id}`,
@@ -253,7 +267,9 @@ async function processMessage<T>(
     message.ack();
   } catch (err) {
     message.nack();
-    // TODO(HNT-2589): also report to Sentry.
+    // Handler errors are captured by withSentryHandler upstream
+    // before they reach this catch; no captureException here. See
+    // packages/crawl-common/src/sentry/wrap.ts.
     console.error(
       `pubsub:handler-error subscription=${subscriptionName} ` +
         `messageId=${message.id}`,
