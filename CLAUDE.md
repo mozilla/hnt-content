@@ -51,6 +51,19 @@ Use `tsc --noEmit`, not `vitest typecheck` (not configured in this repo):
 pnpm --filter crawl-agent exec tsc --noEmit
 ```
 
+# Before committing
+
+CI runs these checks; run them locally first to avoid a red build on every push:
+
+```sh
+pnpm format:check    # prettier
+pnpm lint            # eslint, via Turbo across packages
+pnpm -r exec tsc --noEmit
+pnpm test
+```
+
+Fix formatting with `pnpm format` (prettier --write).
+
 # Git conventions
 
 **Branches:** `HNT-<number>-<kebab-case-description>` (e.g. `HNT-2097-scaffold-repo`)
