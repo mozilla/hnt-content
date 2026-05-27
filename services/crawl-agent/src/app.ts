@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import express, { type Express } from 'express';
 import config from './config.js';
 
@@ -47,6 +48,10 @@ app.get('/healthz', (_req, res) => {
 app.use((_req: express.Request, res: express.Response) => {
   res.status(404).type('text/plain').send('not found');
 });
+
+// Sentry's error handler captures the error then calls next(), so
+// the user handler below still owns the response.
+Sentry.setupExpressErrorHandler(app);
 
 app.use(
   (

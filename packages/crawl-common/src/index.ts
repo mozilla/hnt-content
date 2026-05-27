@@ -43,6 +43,15 @@ export type {
   SubscriberController,
   MessageHandler,
 } from './pubsub/index.js';
+export {
+  initSentry,
+  withSentryHandler,
+  flushSentry,
+} from './sentry/index.js';
+export type {
+  InitOptions as SentryInitOptions,
+  HandlerMetadata,
+} from './sentry/index.js';
 export type {
   CorpusItem,
   CrawlArticleMessage,
