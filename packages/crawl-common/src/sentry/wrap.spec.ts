@@ -35,13 +35,19 @@ describe('withSentryHandler', () => {
   });
 
   it('does not capture when the handler resolves', async () => {
-    const wrapped = withSentryHandler(() => ({}), async () => {});
+    const wrapped = withSentryHandler(
+      () => ({}),
+      async () => {},
+    );
     await wrapped({});
     expect(Sentry.captureException).not.toHaveBeenCalled();
   });
 
   it('wraps the handler body in an isolation scope', async () => {
-    const wrapped = withSentryHandler(() => ({}), async () => {});
+    const wrapped = withSentryHandler(
+      () => ({}),
+      async () => {},
+    );
     await wrapped({});
     expect(Sentry.withIsolationScope).toHaveBeenCalledOnce();
   });
@@ -80,13 +86,19 @@ describe('withSentryHandler', () => {
   });
 
   it('skips setContext when context is empty', async () => {
-    const wrapped = withSentryHandler(() => ({ context: {} }), async () => {});
+    const wrapped = withSentryHandler(
+      () => ({ context: {} }),
+      async () => {},
+    );
     await wrapped({});
     expect(Sentry.setContext).not.toHaveBeenCalled();
   });
 
   it('skips both setTag and setContext when metadata is empty', async () => {
-    const wrapped = withSentryHandler(() => ({}), async () => {});
+    const wrapped = withSentryHandler(
+      () => ({}),
+      async () => {},
+    );
     await wrapped({});
     expect(Sentry.setTag).not.toHaveBeenCalled();
     expect(Sentry.setContext).not.toHaveBeenCalled();
