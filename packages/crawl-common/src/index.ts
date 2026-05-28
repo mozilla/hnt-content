@@ -41,12 +41,14 @@ export type {
   PubSubClientOptions,
   SubscriberOptions,
   SubscriberController,
+  SubscriberErrorContext,
   MessageHandler,
 } from './pubsub/index.js';
 export {
   initSentry,
   withSentryHandler,
   shutdownSentry,
+  sentryPubSubErrorHandler,
 } from './sentry/index.js';
 export type { SentryInitOptions, HandlerMetadata } from './sentry/index.js';
 export type {
