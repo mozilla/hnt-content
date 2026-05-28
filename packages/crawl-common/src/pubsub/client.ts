@@ -28,7 +28,6 @@
  * Tests and local dev point at a Pub/Sub emulator by passing
  * `apiEndpoint` and `useEmulator: true` to `initPubSubClient`.
  */
-import * as Sentry from '@sentry/node';
 import {
   Duration,
   PubSub,
@@ -38,6 +37,7 @@ import {
 } from '@google-cloud/pubsub';
 import type {
   SubscriberController,
+  SubscriberErrorContext,
   SubscriberOptions,
   MessageHandler,
   PubSubClientOptions,
@@ -174,18 +174,16 @@ export function startSubscriber<T>(
 
   const handleError =
     opts.onError ??
-    ((err: Error) => {
-      Sentry.captureException(err, {
-        tags: {
-          subscription: opts.subscriptionName,
-          kind: 'stream-error',
-        },
-      });
+    ((err: Error, ctx: SubscriberErrorContext) => {
+      const id = ctx.messageId ? ` messageId=${ctx.messageId}` : '';
       console.error(
-        `pubsub:stream-error subscription=${opts.subscriptionName}`,
+        `pubsub:${ctx.kind} subscription=${opts.subscriptionName}${id}`,
         err,
       );
     });
+
+  const onStreamError = (err: Error) =>
+    handleError(err, { kind: 'stream-error' });
 
   const onMessage = (message: Message) => {
     // We prefix the call with `void` because the SDK's Subscription
@@ -195,11 +193,16 @@ export function startSubscriber<T>(
     // is safe because processMessage catches every error path and
     // signals completion through ack or nack on the message rather
     // than through this promise.
-    void processMessage(opts.subscriptionName, opts.handler, message);
+    void processMessage(
+      opts.subscriptionName,
+      opts.handler,
+      message,
+      handleError,
+    );
   };
 
   subscription.on('message', onMessage);
-  subscription.on('error', handleError);
+  subscription.on('error', onStreamError);
 
   const controller: SubscriberController = {
     async stop(): Promise<void> {
@@ -214,19 +217,10 @@ export function startSubscriber<T>(
       try {
         await subscription.close();
       } catch (err) {
-        Sentry.captureException(err, {
-          tags: {
-            subscription: opts.subscriptionName,
-            kind: 'close-error',
-          },
-        });
-        console.error(
-          `pubsub:close-error subscription=${opts.subscriptionName}`,
-          err,
-        );
+        handleError(err as Error, { kind: 'close-error' });
       } finally {
         subscription.removeListener('message', onMessage);
-        subscription.removeListener('error', handleError);
+        subscription.removeListener('error', onStreamError);
         subscriberControllers.delete(controller);
       }
     },
@@ -245,21 +239,14 @@ async function processMessage<T>(
   subscriptionName: string,
   handler: MessageHandler<T>,
   message: Message,
+  onError: (err: Error, ctx: SubscriberErrorContext) => void,
 ): Promise<void> {
   let parsed: T;
   try {
     parsed = JSON.parse(message.data.toString()) as T;
   } catch (err) {
     message.nack();
-    Sentry.captureException(err, {
-      tags: { subscription: subscriptionName, kind: 'parse-error' },
-      contexts: { handler: { messageId: message.id } },
-    });
-    console.error(
-      `pubsub:parse-error subscription=${subscriptionName} ` +
-        `messageId=${message.id}`,
-      err,
-    );
+    onError(err as Error, { kind: 'parse-error', messageId: message.id });
     return;
   }
   try {
@@ -267,10 +254,11 @@ async function processMessage<T>(
     message.ack();
   } catch (err) {
     message.nack();
-    // withSentryHandler wraps handlers upstream and captures before
-    // rethrowing, so we don't capture here. TODO(HNT-2113): when the
-    // worker wires startSubscriber, confirm every call site uses
-    // withSentryHandler.
+    // Handler errors don't route through onError: callers should
+    // wrap their handler with withSentryHandler (or equivalent),
+    // which captures inside the isolation scope where per-message
+    // tags/context still apply. TODO(HNT-2113): when the worker
+    // wires startSubscriber, confirm every call site wraps.
     console.error(
       `pubsub:handler-error subscription=${subscriptionName} ` +
         `messageId=${message.id}`,
