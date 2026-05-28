@@ -217,7 +217,38 @@ describe('startSubscriber', () => {
     const err = new Error('transient stream error');
     sub.emit('error', err);
 
-    expect(onError).toHaveBeenCalledWith(err);
+    expect(onError).toHaveBeenCalledWith(err, { kind: 'stream-error' });
+  });
+
+  it('routes close errors to onError when provided', async () => {
+    const onError = vi.fn();
+    const controller = startSubscriber({
+      ...TEST_SUBSCRIBER_OPTIONS,
+      onError,
+    });
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const err = new Error('gRPC close failed');
+    sub.close.mockImplementation(async () => {
+      throw err;
+    });
+
+    await controller.stop();
+
+    expect(onError).toHaveBeenCalledWith(err, { kind: 'close-error' });
+  });
+
+  it('routes parse errors to onError with messageId', async () => {
+    const onError = vi.fn();
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, onError });
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const bad = createMockMessageRaw(Buffer.from('not json'), 'bad-1');
+    sub.emit('message', bad);
+    await bad.settled;
+
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), {
+      kind: 'parse-error',
+      messageId: 'bad-1',
+    });
   });
 
   it('wires caller-supplied options to the subscription', () => {
@@ -259,6 +290,22 @@ describe('startSubscriber', () => {
     expect(
       errorSpy.mock.calls.some((c) => /pubsub:close-error/.test(c[0])),
     ).toBe(true);
+  });
+
+  it('does not call onError for handler-error (wrapper owns capture)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onError = vi.fn();
+    const handler = vi.fn(async () => {
+      throw new Error('boom');
+    });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler, onError });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage(TEST_PAYLOAD);
+    sub.emit('message', message);
+    await message.settled;
+
+    expect(onError).not.toHaveBeenCalled();
   });
 
   it('throws when called before initPubSubClient', async () => {

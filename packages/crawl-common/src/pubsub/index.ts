@@ -9,5 +9,6 @@ export type {
   PubSubClientOptions,
   SubscriberOptions,
   SubscriberController,
+  SubscriberErrorContext,
   MessageHandler,
 } from './types.js';

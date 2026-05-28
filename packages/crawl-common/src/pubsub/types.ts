@@ -27,6 +27,16 @@ export interface PubSubClientOptions {
  */
 export type MessageHandler<T> = (message: T) => Promise<void>;
 
+/**
+ * Context passed to `onError` describing which internal failure
+ * mode produced the error. `messageId` is populated for
+ * parse-error; absent for stream-error and close-error.
+ */
+export type SubscriberErrorContext = {
+  kind: 'stream-error' | 'close-error' | 'parse-error';
+  messageId?: string;
+};
+
 /** Options for starting a subscriber. */
 export interface SubscriberOptions<T> {
   /** Short subscription name (not fully qualified). */
@@ -50,13 +60,15 @@ export interface SubscriberOptions<T> {
    */
   maxExtensionSeconds: number;
   /**
-   * Called on subscription-level errors (auth, network,
-   * subscription deletion). Defaults to console.error so
-   * silent failures stay visible in logs; override to route to
-   * metrics or a health probe, e.g. a StatsD counter or a
-   * `/healthz` failure.
+   * Called on the Pub/Sub library's own internal errors
+   * (stream-error, close-error, parse-error). Defaults to
+   * console.error with a `pubsub:<kind>` prefix. Callers wanting
+   * Sentry capture should pass `sentryPubSubErrorHandler(name)`
+   * from `crawl-common/sentry`, optionally composed with metrics
+   * or healthz hooks. A custom override replaces the default;
+   * pubsub itself is Sentry-neutral so it does not double-call.
    */
-  onError?: (err: Error) => void;
+  onError?: (err: Error, ctx: SubscriberErrorContext) => void;
 }
 
 /** Controller returned by startSubscriber for lifecycle management. */

@@ -27,6 +27,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build . \
+            --build-arg GIT_SHA=${{ github.sha }} \
             -t us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:latest \
             -t us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${{ github.sha }}
 
