@@ -51,10 +51,12 @@ export interface SubscriberOptions<T> {
   maxExtensionSeconds: number;
   /**
    * Called on subscription-level errors (auth, network,
-   * subscription deletion). Defaults to console.error so
-   * silent failures stay visible in logs; override to route to
-   * metrics or a health probe, e.g. a StatsD counter or a
-   * `/healthz` failure.
+   * subscription deletion). Defaults to a handler that logs to
+   * console.error and reports to Sentry; override to route to
+   * metrics or a health probe (e.g. a StatsD counter or a
+   * `/healthz` failure). A custom override replaces the default
+   * entirely, so it should call Sentry.captureException itself
+   * if Sentry reporting is still wanted.
    */
   onError?: (err: Error) => void;
 }
