@@ -3,7 +3,8 @@ import * as Sentry from '@sentry/node';
 export type HandlerMetadata = {
   /**
    * Low-cardinality key/value pairs set as Sentry tags (indexed,
-   * searchable). Undefined values are skipped. Example: topic,
+   * searchable). Undefined values are skipped so callers can pass
+   * optional fields without conditional branching. Example: topic,
    * surface_id, subscription.
    */
   tags?: Record<string, string | undefined>;
@@ -22,25 +23,26 @@ export type HandlerMetadata = {
  * apply.
  */
 export function withSentryHandler<T>(
-  extractMetadata: (msg: T) => HandlerMetadata,
-  handler: (msg: T) => Promise<void>,
-): (msg: T) => Promise<void> {
-  return (msg) =>
-    Sentry.withIsolationScope(async () => {
-      const { tags, context } = extractMetadata(msg);
+  extractMetadata: (input: T) => HandlerMetadata,
+  handler: (input: T) => Promise<void>,
+): (input: T) => Promise<void> {
+  return async (input) => {
+    await Sentry.withIsolationScope(async () => {
+      const { tags, context } = extractMetadata(input);
       if (tags) {
         for (const [k, v] of Object.entries(tags)) {
-          if (v) Sentry.setTag(k, v);
+          if (v !== undefined) Sentry.setTag(k, v);
         }
       }
       if (context && Object.keys(context).length > 0) {
         Sentry.setContext('handler', context);
       }
       try {
-        await handler(msg);
+        await handler(input);
       } catch (err) {
         Sentry.captureException(err);
         throw err;
       }
     });
+  };
 }

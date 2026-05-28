@@ -3,7 +3,7 @@
 import './sentry-init.js';
 
 import { setTimeout as delay } from 'node:timers/promises';
-import { flushSentry, withSentryHandler } from 'crawl-common';
+import { shutdownSentry, withSentryHandler } from 'crawl-common';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
 
@@ -30,7 +30,7 @@ function shutdown() {
   stopRunning();
   ac.abort();
   server.close(async () => {
-    await flushSentry();
+    await shutdownSentry();
     process.exit(0);
   });
   setTimeout(() => {
@@ -55,11 +55,10 @@ async function tick() {
   setLastTickAt(Date.now());
 }
 
-// Wrap tick so each invocation runs in its own Sentry isolation
-// scope. The wrapper captures + rethrows; the run() loop swallows
-// the rethrow so a single failed tick doesn't kill the loop.
-const wrappedTick = withSentryHandler<{ startedAt: string }>(
-  (ctx) => ({ context: { started_at: ctx.startedAt } }),
+// Wrap tick in a fresh Sentry isolation scope per invocation so
+// tags don't leak between ticks.
+const tickWithSentry = withSentryHandler<{ startedAt: string }>(
+  ({ startedAt }) => ({ context: { startedAt } }),
   tick,
 );
 
@@ -70,10 +69,13 @@ const wrappedTick = withSentryHandler<{ startedAt: string }>(
 async function run() {
   while (isRunning()) {
     const start = Date.now();
+    const startedAt = new Date(start).toISOString();
     try {
-      await wrappedTick({ startedAt: new Date(start).toISOString() });
+      await tickWithSentry({ startedAt });
     } catch (err) {
-      // wrappedTick already captured; just log and continue.
+      // tickWithSentry already captured the error and rethrew so
+      // the loop sees it; swallowing here keeps a single failed
+      // tick from killing the agent.
       console.error('tick failed:', err);
     }
     const elapsed = Date.now() - start;

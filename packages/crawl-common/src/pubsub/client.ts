@@ -267,9 +267,10 @@ async function processMessage<T>(
     message.ack();
   } catch (err) {
     message.nack();
-    // Handler errors are captured by withSentryHandler upstream
-    // before they reach this catch; no captureException here. See
-    // packages/crawl-common/src/sentry/wrap.ts.
+    // withSentryHandler wraps handlers upstream and captures before
+    // rethrowing, so we don't capture here. TODO(HNT-2113): when the
+    // worker wires startSubscriber, confirm every call site uses
+    // withSentryHandler.
     console.error(
       `pubsub:handler-error subscription=${subscriptionName} ` +
         `messageId=${message.id}`,

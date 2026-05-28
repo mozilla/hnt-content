@@ -104,7 +104,9 @@ describe('withSentryHandler', () => {
     expect(Sentry.setContext).not.toHaveBeenCalled();
   });
 
-  it('attaches tags BEFORE the handler runs (so a throw inside the handler sees them)', async () => {
+  // Order matters: if the handler throws, captureException must
+  // see the tags already on the isolation scope.
+  it('attaches tags before invoking the handler', async () => {
     const order: string[] = [];
     vi.mocked(Sentry.setTag).mockImplementation(() => {
       order.push('setTag');

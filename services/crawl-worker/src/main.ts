@@ -2,7 +2,7 @@
 // top-level code runs.
 import './sentry-init.js';
 
-import { flushSentry } from 'crawl-common';
+import { shutdownSentry } from 'crawl-common';
 import { app } from './app.js';
 import config from './config.js';
 
@@ -24,7 +24,7 @@ function shutdown() {
   shuttingDown = true;
   console.log('Shutting down');
   server.close(async () => {
-    await flushSentry();
+    await shutdownSentry();
     process.exit(0);
   });
   setTimeout(() => {

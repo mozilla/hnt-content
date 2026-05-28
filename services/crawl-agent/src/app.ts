@@ -45,13 +45,15 @@ app.get('/healthz', (_req, res) => {
   res.status(200).type('text/plain').send('ok');
 });
 
+// Register before the 404 catch-all: Sentry's request-data
+// middleware (url, method, headers, query) only runs for routes
+// that call next(), so it has to sit ahead of the catch-all to
+// reach normal traffic.
+Sentry.setupExpressErrorHandler(app);
+
 app.use((_req: express.Request, res: express.Response) => {
   res.status(404).type('text/plain').send('not found');
 });
-
-// Sentry's error handler captures the error then calls next(), so
-// the user handler below still owns the response.
-Sentry.setupExpressErrorHandler(app);
 
 app.use(
   (

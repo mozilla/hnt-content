@@ -1,14 +1,17 @@
 import * as Sentry from '@sentry/node';
 
-// Two seconds is the @sentry/node docs' suggested upper bound for a
-// pod's SIGTERM-to-exit window. Long enough to drain a small queue
-// of pending events; short enough that K8s won't SIGKILL us first.
+// Match Sentry's SDK default of 2s. Leaves most of the pod's 10s
+// SIGTERM window for application shutdown and Pub/Sub drain.
 const FLUSH_TIMEOUT_MS = 2_000;
 
 /**
- * Flush any in-flight Sentry events and disable the SDK. Call on
- * SIGTERM after other shutdown work so captured errors aren't lost.
+ * Flush pending Sentry events and disable the SDK. Logs a warning
+ * if the flush times out (events dropped). Call once on SIGTERM
+ * after other shutdown work.
  */
-export async function flushSentry(): Promise<void> {
-  await Sentry.close(FLUSH_TIMEOUT_MS);
+export async function shutdownSentry(): Promise<void> {
+  const flushed = await Sentry.close(FLUSH_TIMEOUT_MS);
+  if (!flushed) {
+    console.error('Sentry shutdown timed out; events may be lost');
+  }
 }
