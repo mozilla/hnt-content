@@ -67,9 +67,6 @@ importers:
 
   services/crawl-agent:
     dependencies:
-      '@sentry/node':
-        specifier: ^10.0.0
-        version: 10.54.0
       crawl-common:
         specifier: workspace:*
         version: link:../../packages/crawl-common
@@ -104,9 +101,6 @@ importers:
 
   services/crawl-worker:
     dependencies:
-      '@sentry/node':
-        specifier: ^10.0.0
-        version: 10.54.0
       crawl-common:
         specifier: workspace:*
         version: link:../../packages/crawl-common

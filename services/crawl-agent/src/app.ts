@@ -1,7 +1,10 @@
-import * as Sentry from '@sentry/node';
 import express, { type Express } from 'express';
 import config from './config.js';
 
+// /healthz is the only endpoint. Express is here for shape
+// consistency with content-monorepo; there is no plan to add
+// richer routes. If that changes, reconsider wiring
+// Sentry.setupExpressErrorHandler too.
 export const app: Express = express();
 app.disable('x-powered-by');
 
@@ -44,12 +47,6 @@ app.get('/healthz', (_req, res) => {
   }
   res.status(200).type('text/plain').send('ok');
 });
-
-// Register before the 404 catch-all: Sentry's request-data
-// middleware (url, method, headers, query) only runs for routes
-// that call next(), so it has to sit ahead of the catch-all to
-// reach normal traffic.
-Sentry.setupExpressErrorHandler(app);
 
 app.use((_req: express.Request, res: express.Response) => {
   res.status(404).type('text/plain').send('not found');
