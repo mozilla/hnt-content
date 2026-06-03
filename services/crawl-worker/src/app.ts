@@ -1,9 +1,11 @@
 import express, { type Express } from 'express';
 
-// /healthz is the only endpoint. Express is here for shape
-// consistency with content-monorepo; there is no plan to add
-// richer routes. If that changes, reconsider wiring
-// Sentry.setupExpressErrorHandler too.
+// Why Express in a service that is otherwise Pub/Sub-only: the
+// only HTTP endpoint is /healthz, used by the Kubernetes
+// liveness probe. We use Express (rather than node:http) to
+// stay consistent with content-monorepo, which is planned to
+// migrate into this repo. No richer routes are planned; if any
+// are added, reconsider wiring Sentry.setupExpressErrorHandler.
 export const app: Express = express();
 app.disable('x-powered-by');
 
