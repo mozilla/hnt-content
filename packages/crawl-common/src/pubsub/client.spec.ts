@@ -209,7 +209,7 @@ describe('startSubscriber', () => {
     expect(message.ack).toHaveBeenCalledOnce();
   });
 
-  it('routes subscription errors to onError when provided', () => {
+  it('routes stream errors to onError when provided', () => {
     const onError = vi.fn();
     startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, onError });
 
@@ -293,6 +293,8 @@ describe('startSubscriber', () => {
   });
 
   it('does not call onError for handler-error (wrapper owns capture)', async () => {
+    // The caller owns the handler, so it owns handler errors: it has
+    // the per-message context (url, crawl_id) that pubsub lacks here.
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const onError = vi.fn();
     const handler = vi.fn(async () => {

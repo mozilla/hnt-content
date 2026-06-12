@@ -71,6 +71,8 @@ async function run() {
     const start = Date.now();
     const startedAt = new Date(start).toISOString();
     try {
+      // Wrap tick(), not run(): the catch below swallows tick errors,
+      // so tick() is the outermost frame that still bubbles them up.
       await tickWithSentry({ startedAt });
     } catch (err) {
       // tickWithSentry already captured the error and rethrew so

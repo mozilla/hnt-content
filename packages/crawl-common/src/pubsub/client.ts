@@ -257,8 +257,7 @@ async function processMessage<T>(
     // Handler errors don't route through onError: callers should
     // wrap their handler with withSentryHandler (or equivalent),
     // which captures inside the isolation scope where per-message
-    // tags/context still apply. TODO(HNT-2113): when the worker
-    // wires startSubscriber, confirm every call site wraps.
+    // tags/context still apply.
     console.error(
       `pubsub:handler-error subscription=${subscriptionName} ` +
         `messageId=${message.id}`,

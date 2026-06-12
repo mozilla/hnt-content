@@ -2,5 +2,6 @@
 // module's evaluation doesn't pull in pubsub/zyte/corpus-api
 // before Sentry.init runs.
 import { initSentry } from 'crawl-common/sentry';
+import config from './config.js';
 
-initSentry({ service: 'crawl-worker' });
+initSentry({ service: config.service });

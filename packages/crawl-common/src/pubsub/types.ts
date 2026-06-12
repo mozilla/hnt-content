@@ -29,8 +29,8 @@ export type MessageHandler<T> = (message: T) => Promise<void>;
 
 /**
  * Context passed to `onError` describing which internal failure
- * mode produced the error. `messageId` is populated for
- * parse-error; absent for stream-error and close-error.
+ * mode produced the error. `messageId` is only populated for
+ * parse-error. The SDK's error object carries none of this.
  */
 export type SubscriberErrorContext = {
   kind: 'stream-error' | 'close-error' | 'parse-error';
@@ -62,11 +62,9 @@ export interface SubscriberOptions<T> {
   /**
    * Called on the Pub/Sub library's own internal errors
    * (stream-error, close-error, parse-error). Defaults to
-   * console.error with a `pubsub:<kind>` prefix. Callers wanting
-   * Sentry capture should pass `sentryPubSubErrorHandler(name)`
-   * from `crawl-common/sentry`, optionally composed with metrics
-   * or healthz hooks. A custom override replaces the default;
-   * pubsub itself is Sentry-neutral so it does not double-call.
+   * console.error. Callers should pass `sentryPubSubErrorHandler(name)`
+   * from `crawl-common/sentry` to report them to Sentry, optionally
+   * composed with metrics or healthz hooks.
    */
   onError?: (err: Error, ctx: SubscriberErrorContext) => void;
 }
