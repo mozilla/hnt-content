@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { sentryPubSubErrorHandler } from './pubsub-error-handler.js';
+import { sentryPubSubErrorHandler } from './sentry-error-handler.js';
 
 vi.mock('@sentry/node', () => ({
   captureException: vi.fn(),

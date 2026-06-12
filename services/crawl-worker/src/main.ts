@@ -2,7 +2,7 @@
 // top-level code runs.
 import './sentry-init.js';
 
-import { shutdownSentry } from 'crawl-common';
+import { shutdownSentry } from 'sentry';
 import { app } from './app.js';
 import config from './config.js';
 

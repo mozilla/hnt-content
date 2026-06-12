@@ -3,7 +3,7 @@
 import './sentry-init.js';
 
 import { setTimeout as delay } from 'node:timers/promises';
-import { shutdownSentry, withSentryHandler } from 'crawl-common';
+import { shutdownSentry, withSentryHandler } from 'sentry';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
 

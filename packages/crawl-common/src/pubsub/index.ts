@@ -5,6 +5,7 @@ export {
   flushTopics,
   shutdownPubSub,
 } from './client.js';
+export { sentryPubSubErrorHandler } from './sentry-error-handler.js';
 export type {
   PubSubClientOptions,
   SubscriberOptions,

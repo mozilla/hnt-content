@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/node';
-import type { SubscriberErrorContext } from '../pubsub/index.js';
+import type { SubscriberErrorContext } from './types.js';
 
 /**
  * Build an `onError` callback for `startSubscriber` that reports

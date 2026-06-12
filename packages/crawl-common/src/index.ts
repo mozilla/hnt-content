@@ -36,6 +36,7 @@ export {
   publishMessage,
   flushTopics,
   shutdownPubSub,
+  sentryPubSubErrorHandler,
 } from './pubsub/index.js';
 export type {
   PubSubClientOptions,
@@ -44,13 +45,6 @@ export type {
   SubscriberErrorContext,
   MessageHandler,
 } from './pubsub/index.js';
-export {
-  initSentry,
-  withSentryHandler,
-  shutdownSentry,
-  sentryPubSubErrorHandler,
-} from './sentry/index.js';
-export type { SentryInitOptions, HandlerMetadata } from './sentry/index.js';
 export type {
   CorpusItem,
   CrawlArticleMessage,
