@@ -16,17 +16,17 @@ export type HandlerMetadata = {
 };
 
 /**
- * Wrap an async handler so its execution runs in a fresh Sentry
- * isolation scope. Tags and context from extractMetadata are
- * attached to anything captured during the call. Errors are
- * captured and rethrown so the caller's ack/nack semantics still
- * apply.
+ * Wrap an async handler so events it reports to Sentry carry the tags
+ * and context from extractMetadata, and any error it throws is
+ * captured before being rethrown so the caller's ack/nack still apply.
  */
 export function withSentryHandler<T>(
   extractMetadata: (input: T) => HandlerMetadata,
   handler: (input: T) => Promise<void>,
 ): (input: T) => Promise<void> {
   return async (input) => {
+    // withIsolationScope forks a fresh isolation scope for this call,
+    // isolating its events so tags/context here don't leak to others.
     await Sentry.withIsolationScope(async () => {
       const { tags, context } = extractMetadata(input);
       if (tags) {
