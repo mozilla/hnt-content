@@ -11,8 +11,10 @@ export default {
     process.env.CRAWL_ARTICLE_SUBSCRIPTION ?? 'crawl-article',
   articlesTopic: process.env.ARTICLES_TOPIC ?? 'articles',
   // Longest a single message may be processed before Pub/Sub
-  // redelivers it. Article extraction stays well under three minutes.
-  maxExtensionSeconds: Number(process.env.MAX_EXTENSION_SECONDS ?? '180'),
+  // redelivers it. Set just under the subscription's 600s ack
+  // deadline so a slow extraction, e.g. when Zyte retries, is not
+  // redelivered while it is still running.
+  maxExtensionSeconds: Number(process.env.MAX_EXTENSION_SECONDS ?? '570'),
   zyteApiKey: process.env.ZYTE_API_KEY ?? '',
   // Only needed to sync live articles. When unset, the worker still
   // processes discovered articles and skips Corpus API updates.

@@ -22,16 +22,18 @@ async function processArticle(message: CrawlArticleMessage): Promise<void> {
 }
 
 /**
- * processArticle wrapped so any error it throws reaches Sentry with
- * the job's identifying fields attached. worker_role distinguishes
- * this article worker from the discovery worker added in Task 6.2.
+ * Wrap processArticle so any error it throws reaches Sentry with the
+ * job's identifying fields attached. worker_role distinguishes this
+ * article worker from the discovery worker added in Task 6.2.
  */
 const handleMessage = withSentryHandler<CrawlArticleMessage>(
   (message) => ({
     tags: {
       worker_role: 'article',
       has_corpus_item: String(message.corpus_item != null),
-      topic: message.corpus_item?.topic,
+      // The editorial category, present only for live articles. Named
+      // corpus_topic so it is not mistaken for the Pub/Sub topic.
+      corpus_topic: message.corpus_item?.topic,
     },
     context: {
       url: message.url,
