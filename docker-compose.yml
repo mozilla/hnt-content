@@ -4,8 +4,10 @@
 #
 #   docker compose up -d
 #   PUBSUB_EMULATOR_HOST=localhost:8085 PROJECT_ID=local \
-#     pnpm --filter crawl-worker dev
+#     ZYTE_API_KEY=<key> pnpm --filter crawl-worker dev
 #
+# The emulator starts empty, so create the crawl-article subscription
+# and articles topic first (e.g. with @google-cloud/pubsub or gcloud).
 # Redis is added in Milestone 8 when the worker starts using it.
 services:
   pubsub-emulator:

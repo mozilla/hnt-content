@@ -64,8 +64,9 @@ start().catch((err) => {
   process.exit(1);
 });
 
-// Allows the Pub/Sub drain (up to 25s) plus topic flush, client
-// close, and Sentry flush to finish within K8s's 30s grace period.
+// Allows the Pub/Sub drain (crawl-common's 25s SHUTDOWN_TIMEOUT_SECONDS)
+// plus topic flush, client close, and Sentry flush to finish within
+// K8s's 30s grace period. Keep this above that drain timeout.
 const SHUTDOWN_TIMEOUT_MS = 28_000;
 
 let shuttingDown = false;

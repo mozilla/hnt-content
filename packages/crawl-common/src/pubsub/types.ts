@@ -60,6 +60,14 @@ export interface SubscriberOptions<T> {
    */
   maxExtensionSeconds: number;
   /**
+   * Cap on messages the SDK holds in flight at once. The handler
+   * runs per message, so this bounds handler concurrency, e.g. the
+   * number of Zyte calls in progress. The SDK default is 1000; set a
+   * lower value when each message does heavy external work. Leave
+   * unset to keep the SDK default.
+   */
+  maxConcurrentMessages?: number;
+  /**
    * Called on the Pub/Sub library's own internal errors
    * (stream-error, close-error, parse-error). Defaults to
    * console.error. Callers should pass `sentryPubSubErrorHandler(name)`
