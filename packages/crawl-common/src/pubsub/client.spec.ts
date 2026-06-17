@@ -279,7 +279,10 @@ describe('startSubscriber', () => {
       string,
       { flowControl?: { maxMessages: number } },
     ];
-    expect(opts.flowControl).toEqual({ maxMessages: 20 });
+    expect(opts.flowControl).toEqual({
+      maxMessages: 20,
+      allowExcessMessages: false,
+    });
   });
 
   it('stop() calls subscription.close()', async () => {
