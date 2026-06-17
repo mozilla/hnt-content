@@ -18,24 +18,12 @@ const server = app.listen(config.port, () => {
 
 /**
  * Initialize the API clients, then start consuming crawl-article
- * jobs. Zyte and Pub/Sub are always required. The Corpus API client
- * is only used to sync live articles, so it is skipped when its
- * credentials are absent, e.g. local runs that only process
- * discovered articles.
+ * jobs. Zyte and Pub/Sub are always required; the Corpus API client
+ * is only needed for live articles (see initCorpusApi).
  */
 async function start() {
   initZyteClient({ apiKey: config.zyteApiKey });
-
-  if (config.corpusApi.jwkJson) {
-    await initCorpusApiClient({
-      endpoint: config.corpusApi.endpoint,
-      jwkJson: config.corpusApi.jwkJson,
-      issuer: config.corpusApi.issuer,
-      audience: config.corpusApi.audience,
-    });
-  } else {
-    console.warn('Corpus API not configured; live-article sync disabled');
-  }
+  await initCorpusApi();
 
   initPubSubClient({
     projectId: config.projectId,
@@ -48,6 +36,27 @@ async function start() {
     `crawl-worker consuming ${config.crawlArticleSubscription}, ` +
       `publishing to ${config.articlesTopic}`,
   );
+}
+
+/**
+ * Initialize the Corpus API client, which syncs live articles. Its
+ * four settings are required together, so a partial set fails fast.
+ * When none are set, skip it so local runs can still process
+ * discovered articles.
+ */
+async function initCorpusApi() {
+  const { endpoint, jwkJson, issuer, audience } = config.corpusApi;
+  const values = [endpoint, jwkJson, issuer, audience];
+  if (values.every((v) => v === '')) {
+    console.warn('Corpus API not configured; live-article sync disabled');
+    return;
+  }
+  if (values.some((v) => v === '')) {
+    throw new Error(
+      'Corpus API is partially configured; set all CORPUS_API_* vars or none',
+    );
+  }
+  await initCorpusApiClient({ endpoint, jwkJson, issuer, audience });
 }
 
 start().catch((err) => {
@@ -80,15 +89,21 @@ async function shutdown() {
   }, SHUTDOWN_TIMEOUT_MS);
   forceExit.unref();
 
+  // Drain Pub/Sub before flushing Sentry. Flush Sentry even if the
+  // drain fails, so any error it raised still reaches Sentry.
+  let exitCode = 0;
   try {
     await shutdownPubSub();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    await shutdownSentry();
-    process.exit(0);
   } catch (err) {
-    console.error('Error during shutdown:', err);
-    process.exit(1);
+    console.error('Error draining Pub/Sub:', err);
+    exitCode = 1;
   }
+  // Drop keep-alive sockets (e.g. the liveness probe) so close()
+  // resolves promptly instead of waiting out the force-exit timer.
+  server.closeAllConnections();
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  await shutdownSentry();
+  process.exit(exitCode);
 }
 
 process.on('SIGTERM', shutdown);

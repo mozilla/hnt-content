@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ArticleEvent } from 'crawl-common';
-import { BASE_MESSAGE } from './handlers/test-helpers.js';
+import { BASE_MESSAGE, CORPUS_ITEM } from './handlers/test-helpers.js';
 
 vi.mock('crawl-common', async (importOriginal) => {
   const actual = await importOriginal<typeof import('crawl-common')>();
@@ -11,6 +11,23 @@ vi.mock('crawl-common', async (importOriginal) => {
     sentryPubSubErrorHandler: vi.fn(() => vi.fn()),
   };
 });
+
+// Pass the handler through unchanged but capture the metadata
+// extractor so the tags and context it builds can be asserted.
+const { captured } = vi.hoisted(() => ({
+  captured: {
+    extractMetadata: undefined as ((m: unknown) => unknown) | undefined,
+  },
+}));
+vi.mock('sentry', () => ({
+  withSentryHandler: (
+    extractMetadata: (m: unknown) => unknown,
+    handler: unknown,
+  ) => {
+    captured.extractMetadata = extractMetadata;
+    return handler;
+  },
+}));
 
 vi.mock('./handlers/extract-article.js', () => ({
   handleArticleExtraction: vi.fn(),
@@ -49,7 +66,7 @@ describe('article consumer', () => {
     expect(startSubscriber).toHaveBeenCalledTimes(1);
     const opts = vi.mocked(startSubscriber).mock.calls[0]![0];
     expect(opts.subscriptionName).toBe('crawl-article');
-    expect(opts.maxExtensionSeconds).toBe(180);
+    expect(opts.maxExtensionSeconds).toBe(570);
     expect(sentryPubSubErrorHandler).toHaveBeenCalledWith('crawl-article');
   });
 
@@ -73,5 +90,29 @@ describe('article consumer', () => {
     vi.mocked(publishMessage).mockRejectedValue(err);
 
     await expect(registeredHandler()(BASE_MESSAGE)).rejects.toThrow(err);
+  });
+
+  it('reports the url and crawl_id to Sentry, tagged by article type', () => {
+    const discovered = captured.extractMetadata!(BASE_MESSAGE);
+    expect(discovered).toEqual({
+      tags: {
+        worker_role: 'article',
+        has_corpus_item: 'false',
+        corpus_topic: undefined,
+      },
+      context: {
+        url: BASE_MESSAGE.url,
+        crawl_id: BASE_MESSAGE.crawl_id,
+        source_url: BASE_MESSAGE.source_url,
+        enqueued_at: BASE_MESSAGE.enqueued_at,
+      },
+    });
+
+    const live = captured.extractMetadata!({
+      ...BASE_MESSAGE,
+      corpus_item: CORPUS_ITEM,
+    }) as { tags: Record<string, unknown> };
+    expect(live.tags.has_corpus_item).toBe('true');
+    expect(live.tags.corpus_topic).toBe(CORPUS_ITEM.topic);
   });
 });
