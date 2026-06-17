@@ -14,10 +14,6 @@ export default {
   // the handler runs: the per-message budget before Pub/Sub
   // redelivers. 570s leaves room for Zyte retries on a slow site.
   maxExtensionSeconds: Number(process.env.MAX_EXTENSION_SECONDS ?? '570'),
-  // Most messages processed at once per pod. Each one makes a Zyte
-  // call, so this bounds concurrent Zyte requests well below the
-  // SDK's default of 1000.
-  maxConcurrentMessages: Number(process.env.MAX_CONCURRENT_MESSAGES ?? '20'),
   zyteApiKey: process.env.ZYTE_API_KEY ?? '',
   // Only needed to sync live articles. When unset, the worker still
   // processes articles without a corpus_item and skips Corpus updates.

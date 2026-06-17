@@ -67,7 +67,6 @@ describe('article consumer', () => {
     const opts = vi.mocked(startSubscriber).mock.calls[0]![0];
     expect(opts.subscriptionName).toBe('crawl-article');
     expect(opts.maxExtensionSeconds).toBe(570);
-    expect(opts.maxConcurrentMessages).toBe(20);
     expect(sentryPubSubErrorHandler).toHaveBeenCalledWith('crawl-article');
   });
 
