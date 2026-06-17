@@ -19,7 +19,7 @@ const server = app.listen(config.port, () => {
 /**
  * Initialize the API clients, then start consuming crawl-article
  * jobs. Zyte and Pub/Sub are always required; the Corpus API client
- * is only needed for live articles (see initCorpusApi).
+ * is only needed for live articles (see the initCorpusApi helper).
  */
 async function start() {
   initZyteClient({ apiKey: config.zyteApiKey });
@@ -42,7 +42,7 @@ async function start() {
  * Initialize the Corpus API client, which syncs live articles. Its
  * four settings are required together, so a partial set fails fast.
  * When none are set, skip it so local runs can still process
- * discovered articles.
+ * articles without a corpus_item.
  */
 async function initCorpusApi() {
   const { endpoint, jwkJson, issuer, audience } = config.corpusApi;
@@ -89,8 +89,9 @@ async function shutdown() {
   }, SHUTDOWN_TIMEOUT_MS);
   forceExit.unref();
 
-  // Drain Pub/Sub before flushing Sentry. Flush Sentry even if the
-  // drain fails, so any error it raised still reaches Sentry.
+  // Drain Pub/Sub first so errors captured while handlers finish are
+  // sent when Sentry is flushed below. Log a drain failure but keep
+  // going, so the flush always runs.
   let exitCode = 0;
   try {
     await shutdownPubSub();
@@ -98,10 +99,14 @@ async function shutdown() {
     console.error('Error draining Pub/Sub:', err);
     exitCode = 1;
   }
-  // Drop keep-alive sockets (e.g. the liveness probe) so close()
-  // resolves promptly instead of waiting out the force-exit timer.
+  // Stop accepting connections, then force-close any that remain (this
+  // server only handles health probes) so close() resolves promptly
+  // instead of waiting on a keep-alive socket.
+  const serverClosed = new Promise<void>((resolve) =>
+    server.close(() => resolve()),
+  );
   server.closeAllConnections();
-  await new Promise<void>((resolve) => server.close(() => resolve()));
+  await serverClosed;
   await shutdownSentry();
   process.exit(exitCode);
 }
