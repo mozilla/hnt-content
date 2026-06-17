@@ -6,7 +6,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc",
     "start": "node dist/main.js",
-    "dev": "tsx src/main.ts",
+    "dev": "tsx --env-file-if-exists=.env src/main.ts",
     "test": "vitest run",
     "lint": "eslint src/"
   },
