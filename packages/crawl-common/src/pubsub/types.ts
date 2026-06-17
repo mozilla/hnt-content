@@ -28,9 +28,9 @@ export interface PubSubClientOptions {
 export type MessageHandler<T> = (message: T) => Promise<void>;
 
 /**
- * Context passed to `onError` describing which internal failure
+ * Extra context passed to `onError` describing which internal failure
  * mode produced the error. `messageId` is only populated for
- * parse-error. The SDK's error object carries none of this.
+ * parse-error. The SDK error doesn't contain these fields.
  */
 export type SubscriberErrorContext = {
   kind: 'stream-error' | 'close-error' | 'parse-error';

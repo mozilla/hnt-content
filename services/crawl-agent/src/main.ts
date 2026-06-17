@@ -1,5 +1,4 @@
-// Must be first: initializes Sentry before any other module's
-// top-level code runs.
+// Initialize Sentry first to capture errors from other modules.
 import './sentry-init.js';
 
 import { setTimeout as delay } from 'node:timers/promises';
@@ -20,8 +19,7 @@ let shuttingDown = false;
  * Initiate graceful shutdown: stop the tick loop, close the server,
  * flush Sentry, and force-exit after a timeout. K8s sends SIGTERM
  * before pod termination; a clean shutdown prevents duplicate
- * Pub/Sub message processing and ensures captured errors reach
- * Sentry.
+ * Pub/Sub message processing and ensures errors reach Sentry.
  */
 function shutdown() {
   if (shuttingDown) return;
@@ -55,8 +53,7 @@ async function tick() {
   setLastTickAt(Date.now());
 }
 
-// Wrap tick in a fresh Sentry isolation scope per invocation so
-// tags don't leak between ticks.
+// tick() wrapped to report its errors to Sentry with startedAt context.
 const tickWithSentry = withSentryHandler<{ startedAt: string }>(
   ({ startedAt }) => ({ context: { startedAt } }),
   tick,
@@ -71,8 +68,8 @@ async function run() {
     const start = Date.now();
     const startedAt = new Date(start).toISOString();
     try {
-      // Wrap tick(), not run(): the catch below swallows tick errors,
-      // so tick() is the outermost frame that still bubbles them up.
+      // Wrap tick() with a Sentry emission helper because it's the
+      // outermost frame that bubbles errors up before the catch swallows them.
       await tickWithSentry({ startedAt });
     } catch (err) {
       // tickWithSentry already captured the error and rethrew so

@@ -23,16 +23,17 @@ export function initSentry({ service }: SentryInitOptions): void {
     dsn: config.dsn || undefined,
     environment: config.environment,
     release: config.release,
-    // Keep Sentry's OpenTelemetry setup (the default): it installs the
-    // context manager that withSentryHandler's isolation scope relies
-    // on, so per-message tags don't leak across handlers.
+    // Keep Sentry's internal OpenTelemetry setup, the default: it
+    // installs the context manager withSentryHandler relies on so
+    // per-message tags don't leak. Only skip it when a separate OTel
+    // SDK provides that context manager, which we don't run.
     skipOpenTelemetrySetup: false,
     // Disable sentry-trace/baggage header injection on outbound
     // HTTP/fetch; without it every outgoing request (Zyte, Corpus
     // API, gcloud auth) carries headers we never read.
     tracePropagationTargets: [],
     // Raise from the 250-char default so longer errors aren't
-    // truncated; adopted from the @pocket-tools/sentry library we used.
+    // truncated; adopted from the @pocket-tools/sentry library.
     maxValueLength: 2000,
   });
 

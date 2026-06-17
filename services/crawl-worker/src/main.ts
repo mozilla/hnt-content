@@ -1,5 +1,4 @@
-// Must be first: initializes Sentry before any other module's
-// top-level code runs.
+// Initialize Sentry first to capture errors from other modules.
 import './sentry-init.js';
 
 import { shutdownSentry } from 'sentry';

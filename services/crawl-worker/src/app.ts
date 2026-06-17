@@ -1,11 +1,8 @@
 import express, { type Express } from 'express';
 
-// Why Express in a service that is otherwise Pub/Sub-only: the
-// only HTTP endpoint is /healthz, used by the Kubernetes
-// liveness probe. We use Express (rather than node:http) to
-// stay consistent with content-monorepo, which is planned to
-// migrate into this repo. No richer routes are planned; if any
-// are added, reconsider wiring Sentry.setupExpressErrorHandler.
+// Express serves the only HTTP endpoint, /healthz, for the
+// Kubernetes liveness probe. We use it (rather than node:http) to
+// stay consistent with content-monorepo, which will migrate here.
 export const app: Express = express();
 app.disable('x-powered-by');
 

@@ -254,10 +254,9 @@ async function processMessage<T>(
     message.ack();
   } catch (err) {
     message.nack();
-    // Handler errors don't route through onError: callers should
-    // wrap their handler with withSentryHandler (or equivalent),
-    // which captures inside the isolation scope where per-message
-    // tags/context still apply.
+    // Handler errors aren't routed to onError; the caller's
+    // withSentryHandler wrapper captures them with the per-message
+    // tags/context that onError lacks.
     console.error(
       `pubsub:handler-error subscription=${subscriptionName} ` +
         `messageId=${message.id}`,
