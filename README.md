@@ -18,6 +18,19 @@ pnpm --filter crawl-agent dev
 pnpm --filter crawl-worker dev
 ```
 
+Each service reads its config from environment variables. For local
+runs, copy the service's `.env.example` to `.env` and fill in the
+blanks; `pnpm dev` loads `.env` automatically. `.env` is gitignored,
+so keep real keys there and never commit them. In deployed
+environments these variables come from the Helm chart and Google
+Secret Manager, not from a file.
+
+```sh
+cp services/crawl-worker/.env.example services/crawl-worker/.env
+# edit .env: add your personal ZYTE_API_KEY
+pnpm --filter crawl-worker dev
+```
+
 | Command | Description |
 |---------|-------------|
 | `pnpm build` | Build all packages and services |
