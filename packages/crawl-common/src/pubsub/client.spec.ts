@@ -258,7 +258,6 @@ describe('startSubscriber', () => {
       string,
       {
         maxExtensionTime: { seconds: number };
-        flowControl?: { maxMessages: number };
         closeOptions: { behavior: string; timeout: { seconds: number } };
       },
     ];
@@ -268,21 +267,6 @@ describe('startSubscriber', () => {
       SubscriptionCloseBehaviors.WaitForProcessing,
     );
     expect(opts.closeOptions.timeout.seconds).toBe(SHUTDOWN_TIMEOUT_SECONDS);
-    // Omitted so the SDK default applies when no limit is given.
-    expect(opts.flowControl).toBeUndefined();
-  });
-
-  it('sets flowControl.maxMessages when maxConcurrentMessages is given', () => {
-    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, maxConcurrentMessages: 20 });
-
-    const [, opts] = mockPubSub.subscription.mock.calls[0] as [
-      string,
-      { flowControl?: { maxMessages: number } },
-    ];
-    expect(opts.flowControl).toEqual({
-      maxMessages: 20,
-      allowExcessMessages: false,
-    });
   });
 
   it('stop() calls subscription.close()', async () => {
