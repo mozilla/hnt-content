@@ -162,6 +162,11 @@ export function startSubscriber<T>(
     maxExtensionTime: Duration.from({
       seconds: opts.maxExtensionSeconds,
     }),
+    // Bound how many messages the SDK leases at once, which bounds
+    // handler concurrency. Omitted when unset so the SDK default applies.
+    ...(opts.maxConcurrentMessages !== undefined && {
+      flowControl: { maxMessages: opts.maxConcurrentMessages },
+    }),
     // WaitForProcessing lets in-flight handlers finish on
     // close() rather than immediately nacking them. The
     // timeout is an upper bound; close() resolves earlier

@@ -67,6 +67,7 @@ describe('article consumer', () => {
     const opts = vi.mocked(startSubscriber).mock.calls[0]![0];
     expect(opts.subscriptionName).toBe('crawl-article');
     expect(opts.maxExtensionSeconds).toBe(570);
+    expect(opts.maxConcurrentMessages).toBe(20);
     expect(sentryPubSubErrorHandler).toHaveBeenCalledWith('crawl-article');
   });
 
@@ -92,7 +93,7 @@ describe('article consumer', () => {
     await expect(registeredHandler()(BASE_MESSAGE)).rejects.toThrow(err);
   });
 
-  it('reports the url and crawl_id to Sentry, tagged by article type', () => {
+  it('reports the url and crawl_id to Sentry, tagged by corpus_item presence', () => {
     const discovered = captured.extractMetadata!(BASE_MESSAGE);
     expect(discovered).toEqual({
       tags: {
