@@ -10,14 +10,13 @@ export default {
   crawlArticleSubscription:
     process.env.CRAWL_ARTICLE_SUBSCRIPTION ?? 'crawl-article',
   articlesTopic: process.env.ARTICLES_TOPIC ?? 'articles',
-  // Longest a single message may be processed before Pub/Sub
-  // redelivers it. Set just under the subscription's 600s ack
-  // deadline so a slow extraction, e.g. when Zyte retries, is not
-  // redelivered while it is still running.
+  // Cap on how long the SDK keeps extending a message's lease while
+  // the handler runs: the per-message budget before Pub/Sub
+  // redelivers. 570s leaves room for Zyte retries on a slow site.
   maxExtensionSeconds: Number(process.env.MAX_EXTENSION_SECONDS ?? '570'),
   zyteApiKey: process.env.ZYTE_API_KEY ?? '',
   // Only needed to sync live articles. When unset, the worker still
-  // processes discovered articles and skips Corpus API updates.
+  // processes articles without a corpus_item and skips Corpus updates.
   corpusApi: {
     endpoint: process.env.CORPUS_API_ENDPOINT ?? '',
     jwkJson: process.env.CORPUS_API_JWK_JSON ?? '',

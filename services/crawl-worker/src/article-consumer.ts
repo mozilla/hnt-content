@@ -12,19 +12,20 @@ import { handleArticleExtraction } from './handlers/extract-article.js';
 /**
  * Extract an article and publish the result to the articles topic.
  * Publishing lives inside the handler so a failure to extract or
- * publish throws, which nacks the message and lets Pub/Sub redeliver
- * it. A message must never be acked unless its article reached the
- * topic.
+ * publish throws, which nacks the message for redelivery. A message
+ * is acked only after its event reaches the topic.
  */
-async function processArticle(message: CrawlArticleMessage): Promise<void> {
+async function extractAndPublishArticle(
+  message: CrawlArticleMessage,
+): Promise<void> {
   const event = await handleArticleExtraction(message);
   await publishMessage<ArticleEvent>(config.articlesTopic, event);
 }
 
 /**
- * Wrap processArticle so any error it throws reaches Sentry with the
- * job's identifying fields attached. worker_role distinguishes this
- * article worker from the discovery worker added in Task 6.2.
+ * Wrap extractAndPublishArticle so any error it throws reaches Sentry
+ * with the job's identifying fields attached. worker_role distinguishes
+ * this article worker from the discovery worker added in Task 6.2.
  */
 const handleMessage = withSentryHandler<CrawlArticleMessage>(
   (message) => ({
@@ -42,7 +43,7 @@ const handleMessage = withSentryHandler<CrawlArticleMessage>(
       enqueued_at: message.enqueued_at,
     },
   }),
-  processArticle,
+  extractAndPublishArticle,
 );
 
 /** Start consuming jobs from the crawl-article subscription. */
