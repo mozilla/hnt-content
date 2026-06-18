@@ -15,20 +15,25 @@ Run a service locally (no build step, uses tsx):
 
 ```sh
 pnpm --filter crawl-agent dev
-pnpm --filter crawl-worker dev
+pnpm --filter crawl-worker dev:article
 ```
+
+The worker runs as one role per process: `dev:article` extracts
+articles and `dev:discovery` extracts article links from publisher
+pages. The discovery consumer is not built yet, so `dev:discovery`
+exits immediately until then.
 
 Each service reads its config from environment variables. For local
 runs, copy the service's `.env.example` to `.env` and fill in the
-blanks; `pnpm dev` loads `.env` automatically. `.env` is gitignored,
-so keep real keys there and never commit them. In deployed
+blanks; the dev scripts load `.env` automatically. `.env` is
+gitignored, so keep real keys there and never commit them. In deployed
 environments these variables come from the Helm chart and Google
 Secret Manager, not from a file.
 
 ```sh
 cp services/crawl-worker/.env.example services/crawl-worker/.env
 # edit .env: add your personal ZYTE_API_KEY
-pnpm --filter crawl-worker dev
+pnpm --filter crawl-worker dev:article
 ```
 
 | Command | Description |

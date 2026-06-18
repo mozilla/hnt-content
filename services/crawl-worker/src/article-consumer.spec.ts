@@ -65,16 +65,16 @@ describe('article consumer', () => {
   it('subscribes to crawl-article with a Sentry error handler', () => {
     expect(startSubscriber).toHaveBeenCalledTimes(1);
     const opts = vi.mocked(startSubscriber).mock.calls[0]![0];
-    expect(opts.subscriptionName).toBe('crawl-article');
+    expect(opts.subscriptionName).toBe('test-crawl-article');
     expect(opts.maxExtensionSeconds).toBe(570);
-    expect(sentryPubSubErrorHandler).toHaveBeenCalledWith('crawl-article');
+    expect(sentryPubSubErrorHandler).toHaveBeenCalledWith('test-crawl-article');
   });
 
   it('extracts the article then publishes the event to the articles topic', async () => {
     await registeredHandler()(BASE_MESSAGE);
 
     expect(handleArticleExtraction).toHaveBeenCalledWith(BASE_MESSAGE);
-    expect(publishMessage).toHaveBeenCalledWith('articles', EVENT);
+    expect(publishMessage).toHaveBeenCalledWith('test-articles', EVENT);
   });
 
   it('propagates extraction errors without publishing', async () => {

@@ -6,7 +6,8 @@
   "scripts": {
     "build": "rm -rf dist && tsc",
     "start": "node dist/main.js",
-    "dev": "tsx --env-file-if-exists=.env src/main.ts",
+    "dev:article": "WORKER_ROLE=article tsx --env-file-if-exists=.env src/main.ts",
+    "dev:discovery": "WORKER_ROLE=discovery PORT=8081 tsx --env-file-if-exists=.env src/main.ts",
     "test": "vitest run",
     "lint": "eslint src/"
   },

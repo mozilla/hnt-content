@@ -25,12 +25,12 @@ async function extractAndPublishArticle(
 /**
  * Wrap extractAndPublishArticle so any error it throws reaches Sentry
  * with the job's identifying fields attached. worker_role distinguishes
- * this article worker from the discovery worker added in Task 6.2.
+ * this worker from the discovery worker added in Task 6.2.
  */
 const handleMessage = withSentryHandler<CrawlArticleMessage>(
   (message) => ({
     tags: {
-      worker_role: 'article',
+      worker_role: config.workerRole,
       has_corpus_item: String(message.corpus_item != null),
       // The editorial category, present only for live articles. Named
       // corpus_topic so it is not mistaken for the Pub/Sub topic.
