@@ -22,6 +22,14 @@ const server = app.listen(config.port, () => {
  * is only needed for live articles (see the initCorpusApi helper).
  */
 async function start() {
+  // Only the article worker is wired today; discovery is Task 6.2.
+  // Fail fast rather than run as an unset or unsupported role.
+  if (config.workerRole !== 'article') {
+    throw new Error(
+      `WORKER_ROLE must be 'article' (got '${config.workerRole}')`,
+    );
+  }
+
   initZyteClient({ apiKey: config.zyteApiKey });
   await initCorpusApi();
 
@@ -39,24 +47,18 @@ async function start() {
 }
 
 /**
- * Initialize the Corpus API client, which syncs live articles. Its
- * four settings are required together, so a partial set fails fast.
- * When none are set, skip it so local runs can still process
- * articles without a corpus_item.
+ * Initialize the Corpus API client, which syncs live articles. The
+ * endpoint, issuer, and audience have app defaults, so the JWK key is
+ * the only required input and the thing that gates the sync. When it
+ * is absent, skip the client so local runs that only process
+ * articles without a corpus_item still work.
  */
 async function initCorpusApi() {
-  const { endpoint, jwkJson, issuer, audience } = config.corpusApi;
-  const values = [endpoint, jwkJson, issuer, audience];
-  if (values.every((v) => v === '')) {
-    console.warn('Corpus API not configured; live-article sync disabled');
+  if (!config.corpusApi.jwkJson) {
+    console.warn('Corpus API key not set; live-article sync disabled');
     return;
   }
-  if (values.some((v) => v === '')) {
-    throw new Error(
-      'Corpus API is partially configured; set all CORPUS_API_* vars or none',
-    );
-  }
-  await initCorpusApiClient({ endpoint, jwkJson, issuer, audience });
+  await initCorpusApiClient(config.corpusApi);
 }
 
 start().catch((err) => {
