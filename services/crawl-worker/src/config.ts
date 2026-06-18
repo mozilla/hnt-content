@@ -1,3 +1,7 @@
+// Deploy environment (dev/stage/prod). Drives the Pub/Sub names and
+// the Corpus endpoint below, mirroring how Terraform names resources.
+const environment = process.env.ENVIRONMENT;
+
 export default {
   service: 'crawl-worker',
   // Which worker this pod runs as, set per deployment by the Helm
@@ -9,15 +13,12 @@ export default {
   // Set to 'host:port' to point the Pub/Sub SDK at a local emulator.
   // Unset in production, where the SDK uses the real endpoint.
   pubsubEmulatorHost: process.env.PUBSUB_EMULATOR_HOST,
-  // Pub/Sub names are env-prefixed (e.g. dev-crawl-article), matching
-  // how Terraform names the resources. Derived from ENVIRONMENT so the
-  // Helm chart doesn't set them; the explicit env var overrides, e.g.
-  // to point at an emulator topic.
+  // Pub/Sub names are env-prefixed (e.g. dev-crawl-article). Derived
+  // from ENVIRONMENT so the Helm chart doesn't set them; the explicit
+  // env var overrides, e.g. to point at an emulator topic.
   crawlArticleSubscription:
-    process.env.CRAWL_ARTICLE_SUBSCRIPTION ??
-    `${process.env.ENVIRONMENT}-crawl-article`,
-  articlesTopic:
-    process.env.ARTICLES_TOPIC ?? `${process.env.ENVIRONMENT}-articles`,
+    process.env.CRAWL_ARTICLE_SUBSCRIPTION ?? `${environment}-crawl-article`,
+  articlesTopic: process.env.ARTICLES_TOPIC ?? `${environment}-articles`,
   // Cap on how long the SDK keeps extending a message's lease while
   // the handler runs: the per-message budget before Pub/Sub
   // redelivers. 570s leaves room for Zyte retries on a slow site.
@@ -25,12 +26,12 @@ export default {
   zyteApiKey: process.env.ZYTE_API_KEY ?? '',
   // Corpus Admin API config. Endpoint, issuer, and audience are
   // app-level constants (matching content-monorepo); the endpoint
-  // follows ENVIRONMENT, using the nonprod admin-api outside prod. Only
-  // the JWK is a secret, sourced from GSM. Each is env-overridable.
+  // uses the nonprod admin-api outside prod. Only the JWK is a secret,
+  // sourced from GSM. Each is env-overridable.
   corpusApi: {
     endpoint:
       process.env.CORPUS_API_ENDPOINT ??
-      (process.env.ENVIRONMENT === 'prod'
+      (environment === 'prod'
         ? 'https://admin-api.getpocket.com'
         : 'https://admin-api.getpocket.dev'),
     jwkJson: process.env.CORPUS_API_JWK_JSON ?? '',

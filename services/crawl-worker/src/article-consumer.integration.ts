@@ -27,10 +27,11 @@ import { BASE_MESSAGE, ZYTE_ARTICLE } from './handlers/test-helpers.js';
 const PROJECT_ID = 'test-project';
 const CRAWL_ARTICLE_SUB = 'crawl-article-sub';
 const ARTICLES_TOPIC = 'articles-topic';
+const ZYTE_API_KEY = 'test-zyte-key';
 process.env.PROJECT_ID = PROJECT_ID;
 process.env.CRAWL_ARTICLE_SUBSCRIPTION = CRAWL_ARTICLE_SUB;
 process.env.ARTICLES_TOPIC = ARTICLES_TOPIC;
-process.env.ZYTE_API_KEY = 'test-zyte-key';
+process.env.ZYTE_API_KEY = ZYTE_API_KEY;
 
 const CRAWL_ARTICLE_TOPIC = 'crawl-article-topic';
 const ARTICLES_VERIFY_SUB = 'articles-verify-sub';
@@ -81,7 +82,7 @@ describe('article consumer integration', () => {
   });
 
   beforeEach(() => {
-    initZyteClient({ apiKey: 'test-zyte-key', maxRetries: 0 });
+    initZyteClient({ apiKey: ZYTE_API_KEY, maxRetries: 0 });
     initPubSubClient({
       projectId: PROJECT_ID,
       apiEndpoint: endpoint,
