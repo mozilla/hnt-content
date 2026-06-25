@@ -52,6 +52,7 @@ describe('processArticle', () => {
     vi.mocked(getString).mockResolvedValue(null);
     vi.mocked(handleArticleExtraction).mockResolvedValue(EVENT);
     vi.mocked(publishMessage).mockResolvedValue('message-id');
+    vi.mocked(releaseLock).mockResolvedValue();
   });
 
   afterEach(() => {
@@ -150,6 +151,16 @@ describe('processArticle', () => {
     // Skipping setTimestamp lets the message redeliver and retry.
     expect(setTimestamp).not.toHaveBeenCalled();
     expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
+  });
+
+  it('still succeeds when releasing the lock fails (cleanup must not mask the outcome)', async () => {
+    vi.mocked(releaseLock).mockRejectedValue(new Error('redis blip'));
+
+    // A release failure in finally must not turn a successful publish
+    // into a throw (which would nack and redeliver the message).
+    expect(await processArticle(BASE_MESSAGE)).toBe('processed');
+    expect(publishMessage).toHaveBeenCalledOnce();
+    expect(setTimestamp).toHaveBeenCalledOnce();
   });
 
   it('returns processed on extraction and skipped when deduped', async () => {

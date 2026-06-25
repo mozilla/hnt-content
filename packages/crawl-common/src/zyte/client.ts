@@ -33,6 +33,12 @@ export function isRetryable(error: unknown): boolean {
   if (error instanceof ZyteError) {
     return RETRYABLE_STATUS_CODES.includes(error.status);
   }
+  // A per-request timeout (AbortSignal.timeout) rejects with a
+  // DOMException named TimeoutError, which is transient and worth a
+  // retry rather than an immediate fail.
+  if (error instanceof DOMException && error.name === 'TimeoutError') {
+    return true;
+  }
   return isNetworkError(error);
 }
 

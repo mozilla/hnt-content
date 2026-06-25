@@ -1,5 +1,6 @@
 import { extractArticleList, getRegistrableDomain } from 'crawl-common';
 import { time } from 'metrics';
+import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 import type {
   ArticleDiscoveryEvent,
   CrawlArticleDiscoveryMessage,
@@ -90,9 +91,9 @@ function mapToDiscoveryEvent(
     url: article.url,
     source_url: sourceUrl,
     crawled_at: crawledAt,
-    published_at: item.datePublished ?? undefined,
+    published_at: toEventTimestamp(item.datePublished),
     headline: item.headline ?? undefined,
-    authors: item.authors?.map((a) => ({ name: a.name })),
+    authors: toEventAuthors(item.authors),
     summary: item.description ?? undefined,
     language: item.inLanguage ?? undefined,
     topic: context.topic,
