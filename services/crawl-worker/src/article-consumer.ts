@@ -2,6 +2,7 @@ import {
   publishMessage,
   sentryPubSubErrorHandler,
   startSubscriber,
+  validateCrawlArticleMessage,
   type ArticleEvent,
   type CrawlArticleMessage,
 } from 'crawl-common';
@@ -51,6 +52,7 @@ export function startArticleConsumer(): void {
   startSubscriber<CrawlArticleMessage>({
     subscriptionName: config.crawlArticleSubscription,
     maxExtensionSeconds: config.maxExtensionSeconds,
+    validate: validateCrawlArticleMessage,
     handler: handleMessage,
     onError: sentryPubSubErrorHandler(config.crawlArticleSubscription),
   });

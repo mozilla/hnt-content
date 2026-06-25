@@ -29,11 +29,12 @@ export type MessageHandler<T> = (message: T) => Promise<void>;
 
 /**
  * Extra context passed to `onError` describing which internal failure
- * mode produced the error. `messageId` is only populated for
- * parse-error. The SDK error doesn't contain these fields.
+ * mode produced the error. `messageId` is populated for the per-message
+ * kinds (parse-error, validation-error). The SDK error doesn't contain
+ * these fields.
  */
 export type SubscriberErrorContext = {
-  kind: 'stream-error' | 'close-error' | 'parse-error';
+  kind: 'stream-error' | 'close-error' | 'parse-error' | 'validation-error';
   messageId?: string;
 };
 
@@ -42,6 +43,14 @@ export interface SubscriberOptions<T> {
   /** Short subscription name (not fully qualified). */
   subscriptionName: string;
   handler: MessageHandler<T>;
+  /**
+   * Validate the JSON-parsed payload at the consumer boundary
+   * before the handler runs. Return the typed message or throw
+   * to reject a malformed payload; the subscriber nacks it and
+   * reports a `validation-error`. Omit to pass the parsed JSON
+   * through unchecked (an unchecked cast to T).
+   */
+  validate?: (raw: unknown) => T;
   /**
    * Cap on how long the SDK will keep extending a message's ack
    * deadline while the handler runs. Effectively the maximum

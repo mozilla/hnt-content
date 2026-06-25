@@ -39,7 +39,6 @@ import type {
   SubscriberController,
   SubscriberErrorContext,
   SubscriberOptions,
-  MessageHandler,
   PubSubClientOptions,
 } from './types.js';
 
@@ -193,12 +192,7 @@ export function startSubscriber<T>(
     // is safe because processMessage catches every error path and
     // signals completion through ack or nack on the message rather
     // than through this promise.
-    void processMessage(
-      opts.subscriptionName,
-      opts.handler,
-      message,
-      handleError,
-    );
+    void processMessage(opts, message, handleError);
   };
 
   subscription.on('message', onMessage);
@@ -230,23 +224,34 @@ export function startSubscriber<T>(
 }
 
 /**
- * Parse, dispatch, and ack/nack a single message. Both
- * parse and handler failures nack; distinct log prefixes
- * (pubsub:parse-error / pubsub:handler-error) let us tell
- * a poison payload from a transient handler failure.
+ * Parse, validate, dispatch, and ack/nack a single message.
+ * Parse, validation, and handler failures all nack; distinct
+ * log prefixes (pubsub:parse-error / pubsub:validation-error /
+ * pubsub:handler-error) let us tell a poison payload from a
+ * transient handler failure. Parse and validation errors are
+ * routed to onError so a malformed payload surfaces with the
+ * messageId; the handler owns reporting its own failures.
  */
 async function processMessage<T>(
-  subscriptionName: string,
-  handler: MessageHandler<T>,
+  opts: SubscriberOptions<T>,
   message: Message,
   onError: (err: Error, ctx: SubscriberErrorContext) => void,
 ): Promise<void> {
-  let parsed: T;
+  const { subscriptionName, handler, validate } = opts;
+  let raw: unknown;
   try {
-    parsed = JSON.parse(message.data.toString()) as T;
+    raw = JSON.parse(message.data.toString());
   } catch (err) {
     message.nack();
     onError(err as Error, { kind: 'parse-error', messageId: message.id });
+    return;
+  }
+  let parsed: T;
+  try {
+    parsed = validate ? validate(raw) : (raw as T);
+  } catch (err) {
+    message.nack();
+    onError(err as Error, { kind: 'validation-error', messageId: message.id });
     return;
   }
   try {

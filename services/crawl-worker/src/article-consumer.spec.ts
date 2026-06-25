@@ -37,6 +37,7 @@ import {
   publishMessage,
   sentryPubSubErrorHandler,
   startSubscriber,
+  validateCrawlArticleMessage,
 } from 'crawl-common';
 import { handleArticleExtraction } from './handlers/extract-article.js';
 import { startArticleConsumer } from './article-consumer.js';
@@ -67,6 +68,7 @@ describe('article consumer', () => {
     const opts = vi.mocked(startSubscriber).mock.calls[0]![0];
     expect(opts.subscriptionName).toBe('test-crawl-article');
     expect(opts.maxExtensionSeconds).toBe(570);
+    expect(opts.validate).toBe(validateCrawlArticleMessage);
     expect(sentryPubSubErrorHandler).toHaveBeenCalledWith('test-crawl-article');
   });
 
