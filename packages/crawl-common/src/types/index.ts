@@ -8,4 +8,5 @@ export type {
   ArticleAuthor,
   ArticleBreadcrumb,
   ArticleEvent,
+  ArticleDiscoveryEvent,
 } from './events.js';
