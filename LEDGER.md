@@ -274,3 +274,26 @@ gitignored rather than committed: it is large, regenerable, and churns on every
 sheet re-export, and how the agent gets it at deploy time (baked image, mounted
 config, or bucket fetch) is a human-gated shadow-mode decision. The committed
 artifacts are the generator and publishers.example.json.
+
+## End-to-end validation against dev
+
+The full pipeline was validated against the real dev project (moz-fx-hnt-nonprod)
+by running the agent and both workers locally (no deploy) against real dev
+Pub/Sub, real Zyte, and local Docker Redis, with a 10-page en_US subset of the
+generated publisher list. One agent tick enqueued 10 discovery jobs; the
+discovery worker extracted article lists via Zyte and published 42 discovery
+events and 42 crawl-article jobs; the article worker extracted each via Zyte and
+published 42 article events. Both BigQuery subscriptions wrote correctly: 42 rows
+in article_discoveries and 42 in articles, every article tracing back to a
+discovery url, zero duplicate urls (the Redis fetch markers, locks, and content
+hash held under at-least-once delivery), and correct fields (2000-char
+body_truncated, language, authors, lowercase topic, NEW_TAB_EN_US surface,
+1-based page_position). This exercises the discovery to crawl-article to article
+flow, the event schemas the BigQuery subscriptions enforce, the publisher-list
+mapping, and the dedup design at realistic throughput.
+
+Local-dev note: metrics default to the in-cluster StatsD gateway host, which does
+not resolve outside the cluster, so a local run logs benign getaddrinfo errors
+unless STATSD_HOST is set empty. The empty-to-disable knob is documented in the
+.env.example files; the unset default targeting the gateway is correct for
+deployed environments.
