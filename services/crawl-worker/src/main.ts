@@ -9,6 +9,7 @@ import {
 } from 'crawl-common';
 import { shutdownSentry } from 'sentry';
 import { startArticleConsumer } from './article-consumer.js';
+import { startDiscoveryConsumer } from './discovery-consumer.js';
 import { app } from './app.js';
 import config from './config.js';
 
@@ -17,33 +18,42 @@ const server = app.listen(config.port, () => {
 });
 
 /**
- * Initialize the API clients, then start consuming crawl-article
- * jobs. Zyte and Pub/Sub are always required; the Corpus API client
- * is only needed for live articles (see the initCorpusApi helper).
+ * Initialize the API clients, then start the consumer for this
+ * pod's worker role. Zyte and Pub/Sub are needed by both roles; the
+ * Corpus API client is only used by the article worker for
+ * live-article sync (see the initCorpusApi helper).
  */
 async function start() {
-  // Only the article worker is wired today; discovery is Task 6.2.
+  const role = config.workerRole;
   // Fail fast rather than run as an unset or unsupported role.
-  if (config.workerRole !== 'article') {
+  if (role !== 'article' && role !== 'discovery') {
     throw new Error(
-      `WORKER_ROLE must be 'article' (got '${config.workerRole}')`,
+      `WORKER_ROLE must be 'article' or 'discovery' (got '${role}')`,
     );
   }
 
   initZyteClient({ apiKey: config.zyteApiKey });
-  await initCorpusApi();
-
   initPubSubClient({
     projectId: config.projectId,
     apiEndpoint: config.pubsubEmulatorHost,
     useEmulator: Boolean(config.pubsubEmulatorHost),
   });
 
-  startArticleConsumer();
-  console.log(
-    `crawl-worker consuming ${config.crawlArticleSubscription}, ` +
-      `publishing to ${config.articlesTopic}`,
-  );
+  if (role === 'article') {
+    await initCorpusApi();
+    startArticleConsumer();
+    console.log(
+      `crawl-worker consuming ${config.crawlArticleSubscription}, ` +
+        `publishing to ${config.articlesTopic}`,
+    );
+  } else {
+    startDiscoveryConsumer();
+    console.log(
+      `crawl-worker consuming ${config.crawlArticleDiscoverySubscription}, ` +
+        `publishing to ${config.articleDiscoveriesTopic} and ` +
+        `${config.crawlArticleTopic}`,
+    );
+  }
 }
 
 /**

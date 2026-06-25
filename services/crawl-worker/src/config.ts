@@ -19,6 +19,16 @@ export default {
   crawlArticleSubscription:
     process.env.CRAWL_ARTICLE_SUBSCRIPTION ?? `${environment}-crawl-article`,
   articlesTopic: process.env.ARTICLES_TOPIC ?? `${environment}-articles`,
+  // Discovery worker: consumes page jobs, publishes discovery events
+  // and one crawl-article job per discovered article.
+  crawlArticleDiscoverySubscription:
+    process.env.CRAWL_ARTICLE_DISCOVERY_SUBSCRIPTION ??
+    `${environment}-crawl-article-discovery`,
+  articleDiscoveriesTopic:
+    process.env.ARTICLE_DISCOVERIES_TOPIC ??
+    `${environment}-article-discoveries`,
+  crawlArticleTopic:
+    process.env.CRAWL_ARTICLE_TOPIC ?? `${environment}-crawl-article`,
   // Cap on how long the SDK keeps extending a message's lease while
   // the handler runs: the per-message budget before Pub/Sub
   // redelivers. 570s leaves room for Zyte retries on a slow site.

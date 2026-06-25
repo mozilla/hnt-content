@@ -21,7 +21,11 @@ import {
   shutdownPubSub,
   type ArticleEvent,
 } from 'crawl-common';
-import { BASE_MESSAGE, ZYTE_ARTICLE } from './handlers/test-helpers.js';
+import {
+  BASE_MESSAGE,
+  waitFor,
+  ZYTE_ARTICLE,
+} from './handlers/test-helpers.js';
 
 // Set before importing config so the consumer reads these names.
 const PROJECT_ID = 'test-project';
@@ -124,17 +128,3 @@ describe('article consumer integration', () => {
     expect(events[0]!.headline).toBe(ZYTE_ARTICLE.headline);
   });
 });
-
-/** Poll until the predicate returns true, or reject on timeout. */
-async function waitFor(
-  predicate: () => boolean,
-  timeoutMs: number,
-): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (!predicate()) {
-    if (Date.now() > deadline) {
-      throw new Error(`waitFor timed out after ${timeoutMs}ms`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-}
