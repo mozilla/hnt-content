@@ -1,8 +1,13 @@
-import { PubSub, type Message } from '@google-cloud/pubsub';
+import { PubSub, type Message, type Subscription } from '@google-cloud/pubsub';
 import {
   PubSubEmulatorContainer,
   type StartedPubSubEmulatorContainer,
 } from '@testcontainers/gcloud';
+import {
+  GenericContainer,
+  type StartedTestContainer,
+  Wait,
+} from 'testcontainers';
 import {
   afterAll,
   afterEach,
@@ -16,9 +21,11 @@ import {
 import {
   flushTopics,
   initPubSubClient,
+  initRedisClient,
   initZyteClient,
   publishMessage,
   shutdownPubSub,
+  shutdownRedis,
   type ArticleEvent,
 } from 'crawl-common';
 import {
@@ -40,29 +47,43 @@ process.env.ZYTE_API_KEY = ZYTE_API_KEY;
 const CRAWL_ARTICLE_TOPIC = 'crawl-article-topic';
 const ARTICLES_VERIFY_SUB = 'articles-verify-sub';
 
-// Pinned for reproducibility; matches the crawl-common integration test.
+// Pinned for reproducibility; matches the crawl-common integration tests.
 const EMULATOR_IMAGE =
   'gcr.io/google.com/cloudsdktool/google-cloud-cli:568.0.0-emulators';
+const REDIS_IMAGE = 'redis:7.4.1-alpine';
 const CONTAINER_START_TIMEOUT_MS = 120_000;
 const CONSUME_TIMEOUT_MS = 10_000;
 
 /**
- * Integration test for the article consumer. Runs the real handler
- * and Pub/Sub client against an emulator, with Zyte stubbed at the
- * fetch boundary, to verify a crawl-article job produces an event
- * on the articles topic.
+ * Integration test for the article consumer. Runs the real handler,
+ * Pub/Sub client, and Redis dedup against emulators, with Zyte stubbed
+ * at the fetch boundary, to verify a crawl-article job produces an
+ * event on the articles topic and that a duplicate is deduplicated.
  */
 describe('article consumer integration', () => {
-  let container: StartedPubSubEmulatorContainer;
+  let pubsubContainer: StartedPubSubEmulatorContainer;
+  let redisContainer: StartedTestContainer;
   let endpoint: string;
+  let redisHost: string;
+  let redisPort: number;
   let adminClient: PubSub;
   let startArticleConsumer: () => void;
+  let verifySub: Subscription | undefined;
+  let testNum = 0;
 
   beforeAll(async () => {
-    container = await new PubSubEmulatorContainer(EMULATOR_IMAGE)
-      .withProjectId(PROJECT_ID)
-      .start();
-    endpoint = container.getEmulatorEndpoint();
+    [pubsubContainer, redisContainer] = await Promise.all([
+      new PubSubEmulatorContainer(EMULATOR_IMAGE)
+        .withProjectId(PROJECT_ID)
+        .start(),
+      new GenericContainer(REDIS_IMAGE)
+        .withExposedPorts(6379)
+        .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
+        .start(),
+    ]);
+    endpoint = pubsubContainer.getEmulatorEndpoint();
+    redisHost = redisContainer.getHost();
+    redisPort = redisContainer.getMappedPort(6379);
     adminClient = new PubSub({
       projectId: PROJECT_ID,
       apiEndpoint: endpoint,
@@ -82,7 +103,7 @@ describe('article consumer integration', () => {
 
   afterAll(async () => {
     await adminClient?.close();
-    await container?.stop();
+    await Promise.all([pubsubContainer?.stop(), redisContainer?.stop()]);
   });
 
   beforeEach(() => {
@@ -92,14 +113,26 @@ describe('article consumer integration', () => {
       apiEndpoint: endpoint,
       useEmulator: true,
     });
+    // A per-test key prefix so dedup state from one test cannot leak
+    // into the next through the shared Redis keyspace.
+    initRedisClient({
+      host: redisHost,
+      port: redisPort,
+      keyPrefix: `it-${++testNum}:`,
+    });
   });
 
   afterEach(async () => {
+    // Close the verify subscription so its streaming pull does not
+    // linger and steal the next test's events.
+    await verifySub?.close();
+    verifySub = undefined;
     await shutdownPubSub();
+    await shutdownRedis();
     vi.unstubAllGlobals();
   });
 
-  it('extracts a published job and publishes the article event', async () => {
+  function stubZyte(): void {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>
@@ -110,21 +143,46 @@ describe('article consumer integration', () => {
         }),
       ),
     );
+  }
 
+  function collectArticleEvents(): ArticleEvent[] {
     const events: ArticleEvent[] = [];
-    adminClient
-      .subscription(ARTICLES_VERIFY_SUB)
-      .on('message', (m: Message) => {
-        events.push(JSON.parse(m.data.toString()) as ArticleEvent);
-        m.ack();
-      });
+    verifySub = adminClient.subscription(ARTICLES_VERIFY_SUB);
+    verifySub.on('message', (m: Message) => {
+      events.push(JSON.parse(m.data.toString()) as ArticleEvent);
+      m.ack();
+    });
+    return events;
+  }
+
+  it('extracts a published job and publishes the article event', async () => {
+    stubZyte();
+    const events = collectArticleEvents();
 
     startArticleConsumer();
     await publishMessage(CRAWL_ARTICLE_TOPIC, BASE_MESSAGE);
     await flushTopics();
 
-    await waitFor(() => events.length === 1, CONSUME_TIMEOUT_MS);
+    await waitFor(() => events.length >= 1, CONSUME_TIMEOUT_MS);
     expect(events[0]!.url).toBe(BASE_MESSAGE.url);
     expect(events[0]!.headline).toBe(ZYTE_ARTICLE.headline);
+  });
+
+  it('deduplicates a re-published job via the Redis fetch marker', async () => {
+    stubZyte();
+    const events = collectArticleEvents();
+
+    startArticleConsumer();
+    await publishMessage(CRAWL_ARTICLE_TOPIC, BASE_MESSAGE);
+    await flushTopics();
+    await waitFor(() => events.length >= 1, CONSUME_TIMEOUT_MS);
+
+    // Re-publish the same job: the fetch marker suppresses a 2nd event.
+    // Asserting an absence is time-bounded; wait comfortably longer than
+    // a real round-trip would take so a broken dedup would surface.
+    await publishMessage(CRAWL_ARTICLE_TOPIC, BASE_MESSAGE);
+    await flushTopics();
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+    expect(events).toHaveLength(1);
   });
 });

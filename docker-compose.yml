@@ -8,7 +8,7 @@
 #
 # The emulator starts empty, so create the crawl-article subscription
 # and articles topic first (e.g. with @google-cloud/pubsub or gcloud).
-# Redis is added in Milestone 8 when the worker starts using it.
+# Redis backs the worker and agent dedup state (REDIS_HOST=localhost).
 services:
   pubsub-emulator:
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:568.0.0-emulators
@@ -22,3 +22,8 @@ services:
       - --project=local
     ports:
       - '8085:8085'
+
+  redis:
+    image: redis:7.4.1-alpine
+    ports:
+      - '6379:6379'

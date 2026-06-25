@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ArticleEvent } from 'crawl-common';
 import { BASE_MESSAGE, CORPUS_ITEM } from './handlers/test-helpers.js';
 
 vi.mock('crawl-common', async (importOriginal) => {
@@ -7,7 +6,6 @@ vi.mock('crawl-common', async (importOriginal) => {
   return {
     ...actual,
     startSubscriber: vi.fn(),
-    publishMessage: vi.fn(),
     sentryPubSubErrorHandler: vi.fn(() => vi.fn()),
   };
 });
@@ -29,24 +27,17 @@ vi.mock('sentry', () => ({
   },
 }));
 
-vi.mock('./handlers/extract-article.js', () => ({
-  handleArticleExtraction: vi.fn(),
+vi.mock('./process-article.js', () => ({
+  processArticle: vi.fn(),
 }));
 
 import {
-  publishMessage,
   sentryPubSubErrorHandler,
   startSubscriber,
   validateCrawlArticleMessage,
 } from 'crawl-common';
-import { handleArticleExtraction } from './handlers/extract-article.js';
+import { processArticle } from './process-article.js';
 import { startArticleConsumer } from './article-consumer.js';
-
-const EVENT: ArticleEvent = {
-  url: BASE_MESSAGE.url,
-  extracted_at: '2025-06-01T12:01:00Z',
-  headline: 'Test Headline',
-};
 
 /** Invoke the message handler registered with startSubscriber. */
 function registeredHandler() {
@@ -55,7 +46,6 @@ function registeredHandler() {
 
 describe('article consumer', () => {
   beforeEach(() => {
-    vi.mocked(handleArticleExtraction).mockResolvedValue(EVENT);
     startArticleConsumer();
   });
 
@@ -63,7 +53,7 @@ describe('article consumer', () => {
     vi.clearAllMocks();
   });
 
-  it('subscribes to crawl-article with a Sentry error handler', () => {
+  it('subscribes to crawl-article with validation and a Sentry error handler', () => {
     expect(startSubscriber).toHaveBeenCalledTimes(1);
     const opts = vi.mocked(startSubscriber).mock.calls[0]![0];
     expect(opts.subscriptionName).toBe('test-crawl-article');
@@ -72,26 +62,10 @@ describe('article consumer', () => {
     expect(sentryPubSubErrorHandler).toHaveBeenCalledWith('test-crawl-article');
   });
 
-  it('extracts the article then publishes the event to the articles topic', async () => {
+  it('delegates each message to processArticle', async () => {
     await registeredHandler()(BASE_MESSAGE);
 
-    expect(handleArticleExtraction).toHaveBeenCalledWith(BASE_MESSAGE);
-    expect(publishMessage).toHaveBeenCalledWith('test-articles', EVENT);
-  });
-
-  it('propagates extraction errors without publishing', async () => {
-    const err = new Error('extraction failed');
-    vi.mocked(handleArticleExtraction).mockRejectedValue(err);
-
-    await expect(registeredHandler()(BASE_MESSAGE)).rejects.toThrow(err);
-    expect(publishMessage).not.toHaveBeenCalled();
-  });
-
-  it('propagates publish errors so the message is redelivered', async () => {
-    const err = new Error('publish failed');
-    vi.mocked(publishMessage).mockRejectedValue(err);
-
-    await expect(registeredHandler()(BASE_MESSAGE)).rejects.toThrow(err);
+    expect(processArticle).toHaveBeenCalledWith(BASE_MESSAGE);
   });
 
   it('reports the url and crawl_id to Sentry, tagged by corpus_item presence', () => {

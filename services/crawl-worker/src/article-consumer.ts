@@ -1,32 +1,17 @@
 import {
-  publishMessage,
   sentryPubSubErrorHandler,
   startSubscriber,
   validateCrawlArticleMessage,
-  type ArticleEvent,
   type CrawlArticleMessage,
 } from 'crawl-common';
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
-import { handleArticleExtraction } from './handlers/extract-article.js';
+import { processArticle } from './process-article.js';
 
 /**
- * Extract an article and publish the result to the articles topic.
- * Publishing lives inside the handler so a failure to extract or
- * publish throws, which nacks the message for redelivery. A message
- * is acked only after its event reaches the topic.
- */
-async function extractAndPublishArticle(
-  message: CrawlArticleMessage,
-): Promise<void> {
-  const event = await handleArticleExtraction(message);
-  await publishMessage<ArticleEvent>(config.articlesTopic, event);
-}
-
-/**
- * Wrap extractAndPublishArticle so any error it throws reaches Sentry
- * with the job's identifying fields attached. worker_role distinguishes
- * this worker from the discovery worker added in Task 6.2.
+ * Wrap processArticle so any error it throws reaches Sentry with the
+ * job's identifying fields attached. worker_role distinguishes this
+ * worker from the discovery worker.
  */
 const handleMessage = withSentryHandler<CrawlArticleMessage>(
   (message) => ({
@@ -44,7 +29,7 @@ const handleMessage = withSentryHandler<CrawlArticleMessage>(
       enqueued_at: message.enqueued_at,
     },
   }),
-  extractAndPublishArticle,
+  processArticle,
 );
 
 /** Start consuming jobs from the crawl-article subscription. */
