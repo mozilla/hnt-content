@@ -335,3 +335,149 @@ not articleBody, despite the BigQuery column comment mentioning articleBody: the
 dek is the closest analog to the legacy RSS summary field, and articleBody would
 put full body text in a summary column. Left as is; flagged for human
 confirmation if the legacy source differs.
+
+## Capability gaps vs tech spec and legacy (content-ml-services)
+
+Dated note (2026-06-25). This section is a capability gap analysis comparing
+three sources against the current implementation on the integration branch:
+the tech spec and implementation guide, the legacy Cloud Functions plus
+Metaflow crawler in content-ml-services, and the code in packages/crawl-common,
+services/crawl-agent, and services/crawl-worker. Each gap below was verified
+against the actual code, not inferred from the spec text alone. Gaps already
+captured as decisions above (the lock TTL sizing, the StatsD transport choice,
+the Redis latency deferral) are not repeated here except where a concrete
+follow-up remains. Severity is blocker (cutover or shadow mode cannot proceed
+without it), important (needed for production parity or operability), or
+nice-to-have.
+
+The current pipeline already covers the core flow end to end: the agent tick
+loop and publisher list, Zyte article and article-list extraction, both worker
+roles wired to Pub/Sub, Redis fetch and lock and content-hash dedup, the
+distributed Zyte rate limiter, message validation at the consumer boundary,
+event mapping to both BigQuery tables, Sentry, and StatsD metrics. The gaps are
+the pieces around that core.
+
+### Blockers for shadow mode and cutover
+
+1. Fetch live section items from the Corpus API and wire them to the agent.
+   The spec's agent reads live articles from the Corpus API in Phase 5, and the
+   legacy HydrateSectionItemsFlow (jobs/metaflow/prospecting/HydrateSectionItemsFlow.py)
+   already does the read half: CorpusApiPublicBackend.fetch_sections and
+   fetch_section_items_df (ml_shared/common/corpus_api/public_backend.py) query
+   the public curated-corpus-api per ScheduledSurfaceGUID and flatten each
+   sectionItem.corpusItem into a row with CORPUS_ITEM_ID, RESOLVED_URL, TITLE,
+   TEXT (excerpt), TOPIC, PUBLISHER, TIME_SENSITIVE, IMAGE_URL, AUTHOR. The new
+   Corpus client (packages/crawl-common/src/corpus-api/client.ts and index.ts)
+   exports only initCorpusApiClient and updateApprovedCorpusItem, so it is
+   write-only; there is no public-backend read, no getScheduledSurface query,
+   and no LiveArticle source. The agent loads a static JSON file
+   (services/crawl-agent/src/publisher-list.ts and config.ts), and the generated
+   list ships live_articles empty (scripts/generate-publishers.py and the
+   publisher-list-generation note above). Affected area: a new Corpus public
+   read path in crawl-common plus agent wiring to populate live_articles.
+   Severity: blocker for the live-article sync the spec's Article Worker step 5
+   describes; the write path exists but is never exercised in production because
+   nothing populates corpus_item.
+
+2. Article parse-quality monitoring and alerting. The legacy
+   article_monitoring.py (jobs/cloudfunctions/crawl/article_monitoring.py)
+   computes, per locale, the percentage of discovered URLs that were successfully
+   parsed (zyte_articleBody longer than 200 chars) over an 8-day window and
+   raises an error when it falls below a target (default 94 percent,
+   parse_min_percentage). The new system has Sentry for individual errors and
+   StatsD success/failure counters, but no equivalent parse-yield ratio metric or
+   threshold alert that would catch a silent degradation where Zyte returns 200
+   but empty or thin bodies. Affected area: a derived metric or scheduled query
+   plus an alert (the spec's Monitoring section and the Grafana dashboard task
+   HNT-2129). Severity: blocker for the shadow-mode comparison and the
+   content-alerts requirement, important thereafter.
+
+### Important for production parity and operability
+
+3. Deploy-time ACK_DEADLINE_SECONDS guardrail. The worker derives its lock TTL
+   from config.ackDeadlineSeconds (services/crawl-worker/src/config.ts, default
+   300, lockTtlSeconds = ackDeadlineSeconds - 30), and the Terraform subscription
+   hardcodes ack_deadline_seconds = 300 (webservices-infra
+   hnt/tf/modules/pubsub/main.tf). The two are coupled only by convention:
+   ACK_DEADLINE_SECONDS is not set in the Helm values
+   (webservices-infra hnt/k8s/hnt/values.yaml), so the worker silently relies on
+   its default matching the Terraform value, and a drift between them would
+   resize the lock window without any check. The lock-TTL decision note above
+   already flags this as a possible follow-up; it remains unbuilt. Affected area:
+   either set ACK_DEADLINE_SECONDS from the same source as the Terraform value, or
+   add a startup or deploy check that the configured value matches the live
+   subscription. Severity: important (mis-sizing the lock reintroduces the
+   double-fetch the note describes).
+
+4. StatsD delivery to Yardstick is unverified in a deployed environment. The
+   metrics package defaults to the in-cluster gateway host
+   (packages/metrics/src/config.ts) and the apps wire counters and timings, but no
+   STATSD_HOST is set in the Helm values and the gateway is unreachable from this
+   workspace, so end-to-end delivery to Yardstick has never been confirmed (see
+   the metrics decision note and the end-to-end validation note above). The HPA in
+   webservices-infra hnt/k8s/hnt/values.yaml also autoscales on CPU only, with the
+   metric and replica-range tuning (HNT-2152) still a backlog deploy task.
+   Affected area: a dev deploy to confirm metric flow, plus HPA tuning. Severity:
+   important for operability before shadow mode.
+
+5. Per-operation Redis latency metric. The spec's crawl-agent metrics list Redis
+   latency, and the Task 5.8 plan specifies an onTiming hook. It was deliberately
+   deferred (see the operational-metrics note above): wrapping every crawl-common
+   Redis op is the most invasive change for the lowest-value signal. Affected
+   area: an injected timing hook in packages/crawl-common/src/redis. Severity:
+   nice-to-have, but listed because the spec names it explicitly.
+
+6. crawl-common package split (HNT-2682). The spec's structure keeps a single
+   crawl-common, but HNT-2682 plans to split it into independent packages to
+   reduce coupling; packages/ still contains one crawl-common (plus the already
+   separate metrics and sentry). Affected area: packages/crawl-common. Severity:
+   nice-to-have (Backlog in Jira; explicitly out of the buildable set in the
+   integration-baseline note above).
+
+### Legacy capabilities intentionally not mirrored (scope confirmations)
+
+These are legacy behaviors the new design deliberately drops or replaces.
+Listed so a reviewer can confirm the scope decision rather than treat them as
+oversights.
+
+7. RSS and OPML feed discovery. The legacy crawl_handler.py
+   (jobs/cloudfunctions/crawl/crawl_handler.py) ingests both RSS via OPML feed
+   lists from a GCS bucket (split_opml_requests, listparser, crawl_type RSS) and
+   PAGE crawling. The new system is PAGE-only: there is no feed parser, and the
+   backfill migration takes only source = PAGE rows
+   (migrations/002_backfill_article_discoveries.sql). This matches the spec
+   (article_discoveries replaces rss_feed_items with PAGE-source discovery) and is
+   a confirmed scope reduction, not a gap to close, unless any surface still
+   depends on RSS-only publishers.
+
+8. MERGE dedup-on-write and load_count. The legacy bq_merge.py
+   (jobs/cloudfunctions/crawl/bq_merge.py) writes via a BigQuery MERGE keyed on
+   canonical_url plus category plus surface, updating in place and incrementing a
+   load_count column. The new pipeline writes append-only via BigQuery Pub/Sub
+   subscriptions and resolves duplicates with latest-per-URL queries (the spec's
+   at-least-once model). Consequently load_count and the in-place update are gone
+   by design. Affected area: the comparison queries in the shadow-mode task
+   (HNT-2131) should account for the append-only versus MERGE difference.
+
+9. Dropped legacy columns. The spec's field tables drop origin_title, source,
+   category, keywords, content_cleaned, engagement, unread, id, crawled_date,
+   published_date, loaded_at, and load_count from article_discoveries, and the new
+   articles and article_discoveries schemas omit them
+   (packages/crawl-common/src/types/events.ts, migrations/001 and 002). This is the
+   intended schema simplification; flagged only so the ML team confirms none of
+   these are still consumed downstream during shadow mode.
+
+10. Google Sheet exporter to generate the publisher list from the curated sheet.
+    The legacy publisher source is a Google Apps Script ("Exporter, Generate
+    Python") that converts the curated publisher Google Sheet into a hardcoded
+    Python module; the legacy pages.py header
+    (jobs/cloudfunctions/crawl/pages.py) references it, and the script itself
+    lives at jobs/cloudfunctions/crawl/docs/sheets_app_script.js. hnt-content has
+    no equivalent sheet-to-list exporter and no docs directory. Because such a
+    script runs inside Google Sheets (Apps Script), not in this Node repo, it
+    should be tracked under hnt-content/docs as non-executing reference rather
+    than run here. This is distinct from scripts/generate-publishers.py, which
+    only converts the already-exported legacy pages.py into publishers.json and
+    does not talk to the sheet. Severity: nice-to-have until the hardcoded list is
+    retired (Phase 5 replaces the list with the Corpus API per the spec, which
+    supersedes the sheet path entirely).
