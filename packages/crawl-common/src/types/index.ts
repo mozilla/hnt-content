@@ -3,6 +3,8 @@ export type {
   CrawlArticleMessage,
   DiscoveryContext,
   CrawlArticleDiscoveryMessage,
+  LiveArticle,
+  PublisherList,
 } from './messages.js';
 export type {
   ArticleAuthor,

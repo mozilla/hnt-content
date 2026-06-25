@@ -13,6 +13,7 @@ export {
   pageFetchKey,
   pageLockKey,
   pageEnqueuedKey,
+  articleEnqueuedKey,
   articleFetchKey,
   articleLockKey,
   articleContentKey,

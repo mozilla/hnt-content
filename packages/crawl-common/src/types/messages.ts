@@ -51,3 +51,23 @@ export interface CrawlArticleDiscoveryMessage {
   interval_minutes: number;
   contexts: DiscoveryContext[];
 }
+
+/**
+ * A live (curated) article in the agent's publisher list. The agent
+ * enqueues a crawl-article job carrying this corpus_item so the
+ * worker can re-extract and sync editorial metadata.
+ */
+export interface LiveArticle {
+  url: string;
+  corpus_item: CorpusItem;
+}
+
+/**
+ * The agent's publisher list, loaded from JSON. pages drive
+ * discovery crawls; live_articles are re-crawled directly to keep
+ * curated metadata fresh. Phase 5 replaces this with the Corpus API.
+ */
+export interface PublisherList {
+  pages: CrawlArticleDiscoveryMessage[];
+  live_articles: LiveArticle[];
+}

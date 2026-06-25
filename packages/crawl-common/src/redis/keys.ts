@@ -27,6 +27,11 @@ export function pageEnqueuedKey(url: string): string {
   return `page:enqueued:${hashUrl(url)}`;
 }
 
+/** Last time the agent enqueued a crawl job for a live article. */
+export function articleEnqueuedKey(url: string): string {
+  return `article:enqueued:${hashUrl(url)}`;
+}
+
 /** Last time an article was fetched (extracted) by the article worker. */
 export function articleFetchKey(url: string): string {
   return `article:fetch:${hashUrl(url)}`;

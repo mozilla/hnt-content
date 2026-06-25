@@ -3,6 +3,7 @@ import {
   MessageValidationError,
   validateCrawlArticleMessage,
   validateCrawlArticleDiscoveryMessage,
+  validatePublisherList,
 } from './messages.js';
 
 /** Return a shallow copy of obj without the given key. */
@@ -161,5 +162,68 @@ describe('validateCrawlArticleDiscoveryMessage', () => {
         contexts: [{ topic: 'technology' }],
       }),
     ).toThrow(/contexts\[0\].surface_id/);
+  });
+});
+
+describe('validatePublisherList', () => {
+  const VALID_LIST = {
+    pages: [VALID_DISCOVERY],
+    live_articles: [{ url: VALID_ARTICLE.url, corpus_item: VALID_CORPUS_ITEM }],
+  };
+
+  it('accepts a well-formed publisher list', () => {
+    expect(validatePublisherList(VALID_LIST)).toEqual(VALID_LIST);
+  });
+
+  it('accepts empty page and live-article lists', () => {
+    expect(validatePublisherList({ pages: [], live_articles: [] })).toEqual({
+      pages: [],
+      live_articles: [],
+    });
+  });
+
+  it('rejects a non-array pages field', () => {
+    expect(() =>
+      validatePublisherList({ pages: {}, live_articles: [] }),
+    ).toThrow(/pages must be an array/);
+  });
+
+  it('rejects an invalid page entry', () => {
+    expect(() =>
+      validatePublisherList({
+        pages: [omit(VALID_DISCOVERY, 'url')],
+        live_articles: [],
+      }),
+    ).toThrow(/url must be a non-empty string/);
+  });
+
+  it('rejects duplicate page URLs', () => {
+    expect(() =>
+      validatePublisherList({
+        pages: [VALID_DISCOVERY, VALID_DISCOVERY],
+        live_articles: [],
+      }),
+    ).toThrow(/pages has a duplicate url/);
+  });
+
+  it('rejects duplicate live-article URLs', () => {
+    const entry = { url: VALID_ARTICLE.url, corpus_item: VALID_CORPUS_ITEM };
+    expect(() =>
+      validatePublisherList({ pages: [], live_articles: [entry, entry] }),
+    ).toThrow(/live_articles has a duplicate url/);
+  });
+
+  it('rejects a live article with a malformed corpus_item', () => {
+    expect(() =>
+      validatePublisherList({
+        pages: [],
+        live_articles: [
+          {
+            url: VALID_ARTICLE.url,
+            corpus_item: omit(VALID_CORPUS_ITEM, 'topic'),
+          },
+        ],
+      }),
+    ).toThrow(/corpus_item.topic/);
   });
 });
