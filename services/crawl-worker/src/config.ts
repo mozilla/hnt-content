@@ -11,14 +11,24 @@ function numberEnv(value: string | undefined, fallback: number): number {
   return parsed;
 }
 
-// Cap on how long the SDK keeps extending a message's lease while the
-// handler runs: the per-message budget before Pub/Sub redelivers. 570s
-// leaves room for Zyte retries on a slow site. Must exceed 30 so the
-// derived lock TTL below stays positive.
+// Cap on how long the SDK keeps extending a healthy message's lease
+// while the handler runs: the per-message processing budget. 570s leaves
+// room for Zyte retries on a slow site.
 const maxExtensionSeconds = numberEnv(process.env.MAX_EXTENSION_SECONDS, 570);
-if (maxExtensionSeconds <= 30) {
+if (maxExtensionSeconds <= 0) {
   throw new Error(
-    `MAX_EXTENSION_SECONDS must be > 30, got ${maxExtensionSeconds}`,
+    `MAX_EXTENSION_SECONDS must be > 0, got ${maxExtensionSeconds}`,
+  );
+}
+
+// The subscription's ack deadline in seconds. Must match the Terraform
+// subscription setting: it is the lease granularity, so a crashed
+// worker's message redelivers within about this long. The lock TTL is
+// derived from it. Must exceed 30 so that derived TTL stays positive.
+const ackDeadlineSeconds = numberEnv(process.env.ACK_DEADLINE_SECONDS, 300);
+if (ackDeadlineSeconds <= 30) {
+  throw new Error(
+    `ACK_DEADLINE_SECONDS must be > 30, got ${ackDeadlineSeconds}`,
   );
 }
 
@@ -50,10 +60,12 @@ export default {
   crawlArticleTopic:
     process.env.CRAWL_ARTICLE_TOPIC ?? `${environment}-crawl-article`,
   maxExtensionSeconds,
-  // Distributed-lock TTL for a per-article fetch. Kept just below the
-  // max message lease so a crashed worker's lock clears around when the
-  // message redelivers, never while this worker still holds the message.
-  lockTtlSeconds: maxExtensionSeconds - 30,
+  ackDeadlineSeconds,
+  // Distributed-lock TTL for a per-article or per-page fetch: the ack
+  // deadline minus 30s (not the max extension), so the lock clears
+  // just before redelivery. A healthy worker that runs past it still
+  // holds the message via lease extension, so nothing races the lock.
+  lockTtlSeconds: ackDeadlineSeconds - 30,
   // How long a discovered article's last fetch suppresses a re-fetch.
   // Should stay below the agent's live-article interval so live articles
   // (which bypass this check) keep resyncing on their own cadence.

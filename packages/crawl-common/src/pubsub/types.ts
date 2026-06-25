@@ -52,20 +52,18 @@ export interface SubscriberOptions<T> {
    */
   validate?: (raw: unknown) => T;
   /**
-   * Cap on how long the SDK will keep extending a message's ack
-   * deadline while the handler runs. Effectively the maximum
-   * time a single message can be processed before being
-   * redelivered. Independent of the subscription's
-   * ack_deadline_seconds, which only sets the initial deadline.
-   * The SDK default of 1 hour is far longer than article
-   * extraction needs (well under 2 min even on slow sites).
-   * Setting this too high means a stuck handler keeps its
-   * message for the full window before another worker can retry.
-   * Must match the TTL of any per-message lock the handler
-   * takes, so the lock can't outlive the SDK's lease extensions.
-   * Will be sourced from a shared config module so this and the
-   * Redis lock TTL stay linked; for now each caller passes the
-   * value explicitly, e.g. 180 for a 3-minute budget per message.
+   * Cap on how long the SDK will keep extending a healthy
+   * message's ack deadline while the handler runs. Effectively
+   * the maximum time a single message can be processed before
+   * being redelivered. Independent of the subscription's
+   * ack_deadline_seconds, which sets the lease granularity and
+   * is what a crashed worker's message redelivers around. The
+   * SDK default of 1 hour is far longer than article extraction
+   * needs (well under 2 min even on slow sites). Setting this too
+   * high means a stuck handler keeps its message for the full
+   * window before another worker can retry. The handler's
+   * per-message lock TTL is derived from the ack deadline, not
+   * this value, so the lock clears around redelivery time.
    */
   maxExtensionSeconds: number;
   /**
