@@ -19,7 +19,7 @@ export type {
   ZyteArticleListItemMetadata,
   ZyteResponse,
 } from './zyte/index.js';
-export { normalizeText } from './utils/index.js';
+export { normalizeText, getRegistrableDomain } from './utils/index.js';
 export {
   initCorpusApiClient,
   updateApprovedCorpusItem,
@@ -53,6 +53,7 @@ export type {
   ArticleAuthor,
   ArticleBreadcrumb,
   ArticleEvent,
+  ArticleDiscoveryEvent,
 } from './types/index.js';
 export {
   MessageValidationError,
