@@ -12,6 +12,7 @@ import {
 import { shutdownSentry } from 'sentry';
 import { startArticleConsumer } from './article-consumer.js';
 import { startDiscoveryConsumer } from './discovery-consumer.js';
+import { awaitZyteToken } from './zyte-rate-limit.js';
 import { app } from './app.js';
 import config from './config.js';
 
@@ -34,7 +35,12 @@ async function start() {
     );
   }
 
-  initZyteClient({ apiKey: config.zyteApiKey });
+  initZyteClient({
+    apiKey: config.zyteApiKey,
+    // Gate Zyte calls through the shared Redis rate limiter when one
+    // is configured; awaitZyteToken no-ops when it is disabled.
+    ...(config.zyteRateLimitPerMinute > 0 && { beforeRequest: awaitZyteToken }),
+  });
   initPubSubClient({
     projectId: config.projectId,
     apiEndpoint: config.pubsubEmulatorHost,

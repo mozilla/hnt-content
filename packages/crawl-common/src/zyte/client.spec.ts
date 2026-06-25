@@ -84,6 +84,36 @@ describe('initZyteClient', () => {
   });
 });
 
+describe('beforeRequest hook', () => {
+  it('awaits beforeRequest before the request', async () => {
+    const beforeRequest = vi.fn(async () => {});
+    initZyteClient({ apiKey: 'test-key', maxRetries: 0, beforeRequest });
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
+
+    await extractArticle('https://example.com/article');
+
+    expect(beforeRequest).toHaveBeenCalledOnce();
+    expect(beforeRequest.mock.invocationCallOrder[0]!).toBeLessThan(
+      fetchMock.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it('aborts the request when beforeRequest throws', async () => {
+    initZyteClient({
+      apiKey: 'test-key',
+      maxRetries: 0,
+      beforeRequest: async () => {
+        throw new Error('rate limited');
+      },
+    });
+
+    await expect(extractArticle('https://example.com/article')).rejects.toThrow(
+      'rate limited',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('extractArticle', () => {
   describe('request', () => {
     it('sends correct request body', async () => {

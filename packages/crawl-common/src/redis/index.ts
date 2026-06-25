@@ -7,8 +7,10 @@ export {
   getString,
   acquireLock,
   releaseLock,
+  acquireRateLimitToken,
   DEFAULT_TTL_SECONDS,
 } from './client.js';
+export type { RateLimitResult } from './client.js';
 export {
   pageFetchKey,
   pageLockKey,

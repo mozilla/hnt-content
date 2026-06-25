@@ -29,6 +29,7 @@ export {
   getString,
   acquireLock,
   releaseLock,
+  acquireRateLimitToken,
   DEFAULT_TTL_SECONDS,
   pageFetchKey,
   pageLockKey,
@@ -38,7 +39,7 @@ export {
   articleLockKey,
   articleContentKey,
 } from './redis/index.js';
-export type { RedisClientOptions } from './redis/index.js';
+export type { RedisClientOptions, RateLimitResult } from './redis/index.js';
 export {
   initCorpusApiClient,
   updateApprovedCorpusItem,
