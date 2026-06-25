@@ -510,3 +510,34 @@ so the read and write share one transport with identical semantics (retry 5xx an
 network, fail fast on 4xx and GraphQL errors); the write path behavior and its
 tests are unchanged. Corpus author names are non-null, so no nameless-author
 filtering is needed here, unlike the Zyte path.
+
+## Agent live articles from the Corpus API
+
+The agent now sources live_articles from the Corpus API (getScheduledSectionItems)
+when configured, mirroring the legacy HydrateSectionItemsFlow. pages still come
+from the publisher list file; only live_articles move to the Corpus, since the
+discovery-context mapping for pages is undefined and the legacy refresh is
+scoped to section items. The Corpus source is gated on CORPUS_API_JWK_JSON being
+set, like the worker's optional Corpus sync: with no JWK the agent falls back to
+the file's live_articles (empty by default), so local and emulator runs work
+without a key. tick.ts is unchanged because it still consumes the same
+PublisherList.live_articles shape; the wiring sits in loadPublisherList's sibling
+fetchLiveArticles and in main.ts.
+
+The list is refreshed on its own interval (CORPUS_REFRESH_MINUTES, default 15,
+matching the legacy cadence) rather than every tick, so editorial changes
+propagate without a restart while a Corpus outage does not couple to every 60s
+tick. The first load at startup fails fast (a misconfigured or unauthorized
+client should not start a degraded agent), but a later refresh failure keeps the
+last good list and retries next tick, reported to Sentry: degraded freshness is
+preferred over dropping live articles, matching the spec's failure-mode stance.
+Surfaces are a config list (default NEW_TAB_EN_US, matching the legacy en-US-only
+deployment) so adding locales is a config change, not a redeploy. The same
+curator-full JWT group authorizes the read, so no new credential is needed.
+
+When the Corpus source is enabled, config load fails fast if no surfaces are
+configured or the refresh interval is not positive, so a typo cannot silently
+crawl zero live articles. The first Corpus read blocks startup and can retry for
+tens of seconds on a cold blip, during which /healthz is not yet ready, so the
+deploy should add a K8s startupProbe (noted for the webservices-infra follow-up)
+to avoid a liveness restart loop.
