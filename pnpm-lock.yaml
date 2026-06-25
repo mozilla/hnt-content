@@ -177,6 +177,9 @@ importers:
       supertest:
         specifier: ^7.0.0
         version: 7.2.2
+      testcontainers:
+        specifier: ^11.14.0
+        version: 11.14.0
       tsx:
         specifier: ^4.0.0
         version: 4.21.0

@@ -7,5 +7,8 @@ export default defineConfig({
     // the test run (ENVIRONMENT also drives the derived Pub/Sub names).
     env: { WORKER_ROLE: 'article', ENVIRONMENT: 'test' },
     include: ['src/**/*.spec.ts', 'src/**/*.integration.ts'],
+    // Emulator/container integration tests need headroom over the 5s
+    // default, especially when packages run in parallel.
+    testTimeout: 30_000,
   },
 });
