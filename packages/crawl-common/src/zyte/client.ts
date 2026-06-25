@@ -41,6 +41,7 @@ let apiUrl = DEFAULT_API_URL;
 let timeout = DEFAULT_TIMEOUT_MS;
 let maxRetries = DEFAULT_MAX_RETRIES;
 let beforeRequest: (() => Promise<void>) | undefined;
+let onRetry: (() => void) | undefined;
 
 /**
  * Initialize the Zyte API client. Must be called once before
@@ -55,6 +56,7 @@ export function initZyteClient(opts: ZyteClientOptions): void {
   timeout = opts.timeout ?? DEFAULT_TIMEOUT_MS;
   maxRetries = opts.maxRetries ?? DEFAULT_MAX_RETRIES;
   beforeRequest = opts.beforeRequest;
+  onRetry = opts.onRetry;
 }
 
 /**
@@ -200,6 +202,14 @@ async function zyteRequest(
       factor: 2,
       shouldRetry({ error }) {
         return isRetryable(error);
+      },
+      onFailedAttempt({ error, retriesLeft }) {
+        // Count an attempt that will be retried (transient, attempts
+        // left). The final failed attempt has retriesLeft 0. p-retry
+        // passes a context object, so destructure the error out of it.
+        if (onRetry && retriesLeft > 0 && isRetryable(error)) {
+          onRetry();
+        }
       },
     },
   );

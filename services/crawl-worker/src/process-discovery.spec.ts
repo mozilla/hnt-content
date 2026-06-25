@@ -141,4 +141,11 @@ describe('processDiscovery', () => {
     expect(setTimestamp).not.toHaveBeenCalled();
     expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
   });
+
+  it('returns processed on a crawl and skipped when the page is recent', async () => {
+    expect(await processDiscovery(DISCOVERY_MESSAGE)).toBe('processed');
+
+    vi.mocked(getTimestamp).mockResolvedValue(Date.now());
+    expect(await processDiscovery(DISCOVERY_MESSAGE)).toBe('skipped');
+  });
 });

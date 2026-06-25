@@ -151,4 +151,11 @@ describe('processArticle', () => {
     expect(setTimestamp).not.toHaveBeenCalled();
     expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
   });
+
+  it('returns processed on extraction and skipped when deduped', async () => {
+    expect(await processArticle(BASE_MESSAGE)).toBe('processed');
+
+    vi.mocked(getTimestamp).mockResolvedValue(Date.now());
+    expect(await processArticle(BASE_MESSAGE)).toBe('skipped');
+  });
 });

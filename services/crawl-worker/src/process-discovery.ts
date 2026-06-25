@@ -13,6 +13,7 @@ import {
 } from 'crawl-common';
 import config from './config.js';
 import { handleArticleDiscovery } from './handlers/extract-discovery.js';
+import type { MessageOutcome } from './message-metrics.js';
 import { withinMinutes } from './recency.js';
 
 /**
@@ -27,13 +28,13 @@ import { withinMinutes } from './recency.js';
  */
 export async function processDiscovery(
   message: CrawlArticleDiscoveryMessage,
-): Promise<void> {
+): Promise<MessageOutcome> {
   const fetchKey = pageFetchKey(message.url);
-  if (await withinMinutes(fetchKey, message.interval_minutes)) return;
+  if (await withinMinutes(fetchKey, message.interval_minutes)) return 'skipped';
 
   const lockKey = pageLockKey(message.url);
   const token = await acquireLock(lockKey, config.lockTtlSeconds);
-  if (token === null) return;
+  if (token === null) return 'skipped';
   try {
     const { events, articleUrls } = await handleArticleDiscovery(message);
     // Discovery events and crawl-article jobs are independent, so
@@ -50,6 +51,7 @@ export async function processDiscovery(
       enqueueUnfetchedArticles(articleUrls, message.url),
     ]);
     await setTimestamp(fetchKey);
+    return 'processed';
   } finally {
     await releaseLock(lockKey, token);
   }

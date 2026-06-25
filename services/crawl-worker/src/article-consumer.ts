@@ -6,6 +6,7 @@ import {
 } from 'crawl-common';
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
+import { withMessageMetrics } from './message-metrics.js';
 import { processArticle } from './process-article.js';
 
 /**
@@ -29,7 +30,7 @@ const handleMessage = withSentryHandler<CrawlArticleMessage>(
       enqueued_at: message.enqueued_at,
     },
   }),
-  processArticle,
+  withMessageMetrics(processArticle),
 );
 
 /** Start consuming jobs from the crawl-article subscription. */

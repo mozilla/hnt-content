@@ -3,6 +3,7 @@ import {
   updateApprovedCorpusItem,
   normalizeText,
 } from 'crawl-common';
+import { time } from 'metrics';
 import type {
   CrawlArticleMessage,
   ArticleEvent,
@@ -22,9 +23,11 @@ const EXCERPT_COMPARE_LENGTH = 255;
 export async function handleArticleExtraction(
   message: CrawlArticleMessage,
 ): Promise<ArticleEvent> {
-  const { data: article, url } = await extractArticle(message.url, {
-    extractFrom: 'httpResponseBody',
-  });
+  const { data: article, url } = await time(
+    'crawl.zyte.duration_ms',
+    () => extractArticle(message.url, { extractFrom: 'httpResponseBody' }),
+    { extraction: 'article' },
+  );
 
   const event = mapToArticleEvent(article, url);
 

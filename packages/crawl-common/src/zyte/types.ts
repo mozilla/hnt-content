@@ -17,6 +17,12 @@ export interface ZyteClientOptions {
    * token). Awaited; throwing aborts the request.
    */
   beforeRequest?: () => Promise<void>;
+  /**
+   * Called when a failed attempt will be retried (a transient error
+   * with attempts remaining), so callers can count retries. Not
+   * awaited; must not throw.
+   */
+  onRetry?: () => void;
 }
 
 /** Per-request extraction options. */

@@ -1,5 +1,6 @@
-// Initialize Sentry first to capture errors from other modules.
+// Initialize Sentry and metrics first to capture from other modules.
 import './sentry-init.js';
+import './metrics-init.js';
 
 import {
   initCorpusApiClient,
@@ -9,6 +10,7 @@ import {
   shutdownPubSub,
   shutdownRedis,
 } from 'crawl-common';
+import { incr, shutdownMetrics } from 'metrics';
 import { shutdownSentry } from 'sentry';
 import { startArticleConsumer } from './article-consumer.js';
 import { startDiscoveryConsumer } from './discovery-consumer.js';
@@ -40,6 +42,7 @@ async function start() {
     // Gate Zyte calls through the shared Redis rate limiter when one
     // is configured; awaitZyteToken no-ops when it is disabled.
     ...(config.zyteRateLimitPerMinute > 0 && { beforeRequest: awaitZyteToken }),
+    onRetry: () => incr('crawl.zyte.retries'),
   });
   initPubSubClient({
     projectId: config.projectId,
@@ -137,7 +140,7 @@ async function shutdown() {
   );
   server.closeAllConnections();
   await serverClosed;
-  await shutdownSentry();
+  await Promise.all([shutdownMetrics(), shutdownSentry()]);
   process.exit(exitCode);
 }
 

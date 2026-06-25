@@ -373,6 +373,42 @@ describe('extractArticleList', () => {
   });
 });
 
+describe('onRetry hook', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('fires once when a retryable error is followed by success', async () => {
+    const onRetry = vi.fn();
+    initZyteClient({ apiKey: 'test-key', maxRetries: 1, onRetry });
+    fetchMock
+      .mockResolvedValueOnce(mockResponse({ status: 503 }, 503))
+      .mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
+
+    const promise = extractArticle('https://example.com/a');
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('does not fire for a non-retryable error', async () => {
+    const onRetry = vi.fn();
+    initZyteClient({ apiKey: 'test-key', maxRetries: 1, onRetry });
+    fetchMock.mockResolvedValue(mockResponse({ status: 401 }, 401));
+
+    await expect(extractArticle('https://example.com/a')).rejects.toThrow(
+      ZyteError,
+    );
+    expect(onRetry).not.toHaveBeenCalled();
+  });
+});
+
 describe('isRetryable', () => {
   it('returns true for transient Zyte status codes', () => {
     for (const code of [429, 500, 503, 520, 521]) {
