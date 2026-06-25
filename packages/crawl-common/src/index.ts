@@ -48,7 +48,14 @@ export type {
 export type {
   CorpusItem,
   CrawlArticleMessage,
+  DiscoveryContext,
+  CrawlArticleDiscoveryMessage,
   ArticleAuthor,
   ArticleBreadcrumb,
   ArticleEvent,
 } from './types/index.js';
+export {
+  MessageValidationError,
+  validateCrawlArticleMessage,
+  validateCrawlArticleDiscoveryMessage,
+} from './validation/index.js';

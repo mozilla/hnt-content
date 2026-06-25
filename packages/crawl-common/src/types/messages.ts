@@ -29,3 +29,25 @@ export interface CrawlArticleMessage {
   enqueued_at: string;
   corpus_item?: CorpusItem;
 }
+
+/**
+ * Surface and topic a discovered page is crawled for. A page
+ * can be crawled for several surfaces, so each discovery job
+ * carries one context per (surface, topic) pair.
+ */
+export interface DiscoveryContext {
+  surface_id: string;
+  topic: string;
+}
+
+/**
+ * Pub/Sub message consumed from the crawl-article-discovery
+ * subscription. Tells the discovery worker which page to crawl,
+ * how recently it may have been crawled, and the contexts to
+ * attribute discovered articles to.
+ */
+export interface CrawlArticleDiscoveryMessage {
+  url: string;
+  interval_minutes: number;
+  contexts: DiscoveryContext[];
+}
