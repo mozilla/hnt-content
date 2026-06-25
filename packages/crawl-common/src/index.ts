@@ -33,6 +33,7 @@ export {
   pageFetchKey,
   pageLockKey,
   pageEnqueuedKey,
+  articleEnqueuedKey,
   articleFetchKey,
   articleLockKey,
   articleContentKey,
@@ -72,9 +73,12 @@ export type {
   ArticleBreadcrumb,
   ArticleEvent,
   ArticleDiscoveryEvent,
+  LiveArticle,
+  PublisherList,
 } from './types/index.js';
 export {
   MessageValidationError,
   validateCrawlArticleMessage,
   validateCrawlArticleDiscoveryMessage,
+  validatePublisherList,
 } from './validation/index.js';
