@@ -253,3 +253,24 @@ publisher list does not carry one.
 The publisher list is validated at startup via validatePublisherList in
 crawl-common (reusing the message validators), so a malformed config fails
 fast rather than enqueuing bad jobs.
+
+## Publisher list generation from the legacy crawl pages
+
+scripts/generate-publishers.py converts the legacy crawl pages (the curated
+publisher Google Sheet exported as a Python PAGES list) into the agent's
+publisher list. The legacy entries are {url, targets:[{locale, topics[]}]}; the
+script flattens each to one discovery context per (locale, topic). A locale
+maps to a New Tab scheduled surface as NEW_TAB_<LOCALE> (en_US to NEW_TAB_EN_US),
+which is the surface id format the rest of the content system uses; all twelve
+legacy locales have a matching surface. The topic is lowercased to match the
+discovery context convention in publishers.example.json (the curated subtopic
+label is otherwise kept verbatim, since the article_discoveries.topic column is
+free text, the renamed page_subtopic). Entries are merged by URL so a page
+crawled for several surfaces is one entry with several contexts, satisfying the
+validator's unique-URL rule. interval_minutes defaults to 20 and live_articles
+is empty (the legacy list has none; curated live articles arrive via the Corpus
+API in Phase 5). The full generated publishers.json (about 3400 pages) is
+gitignored rather than committed: it is large, regenerable, and churns on every
+sheet re-export, and how the agent gets it at deploy time (baked image, mounted
+config, or bucket fetch) is a human-gated shadow-mode decision. The committed
+artifacts are the generator and publishers.example.json.
