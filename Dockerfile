@@ -39,10 +39,13 @@ COPY turbo.json turbo.json
 COPY tsconfig.json tsconfig.json
 RUN pnpm run build
 
-# Deploy each service to a self-contained directory with prod deps only
+# Deploy each service to a self-contained directory with prod deps only.
+# Our workspace deps are symlinks, so pnpm 10's default deploy fails (it
+# expects deps to be pre-copied, or "injected"). --legacy handles symlinks
+# by copying each dep's built dist/ into the deploy directory.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm --filter=crawl-agent --prod deploy /prod/crawl-agent && \
-    pnpm --filter=crawl-worker --prod deploy /prod/crawl-worker
+    pnpm --filter=crawl-agent --prod deploy --legacy /prod/crawl-agent && \
+    pnpm --filter=crawl-worker --prod deploy --legacy /prod/crawl-worker
 
 # ---- runner ----
 FROM node:24.14-alpine AS runner
@@ -55,6 +58,10 @@ WORKDIR /app
 COPY --from=builder --chown=app:app /prod/ ./
 USER app
 
+# Set by CI from the merging commit SHA; surfaced to Sentry as the
+# release tag so issues can be grouped by deployed revision.
+ARG GIT_SHA=""
+ENV GIT_SHA=$GIT_SHA
 ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080

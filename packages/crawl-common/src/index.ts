@@ -36,11 +36,13 @@ export {
   publishMessage,
   flushTopics,
   shutdownPubSub,
+  sentryPubSubErrorHandler,
 } from './pubsub/index.js';
 export type {
   PubSubClientOptions,
   SubscriberOptions,
   SubscriberController,
+  SubscriberErrorContext,
   MessageHandler,
 } from './pubsub/index.js';
 export type {

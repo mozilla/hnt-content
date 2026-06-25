@@ -1,4 +1,8 @@
+// Initialize Sentry first to capture errors from other modules.
+import './sentry-init.js';
+
 import { setTimeout as delay } from 'node:timers/promises';
+import { shutdownSentry, withSentryHandler } from 'sentry';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
 
@@ -12,9 +16,10 @@ const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 let shuttingDown = false;
 /**
- * Initiate graceful shutdown: stop the tick loop, close the server, and
- * force-exit after a timeout. K8s sends SIGTERM before pod termination;
- * a clean shutdown prevents duplicate Pub/Sub message processing.
+ * Initiate graceful shutdown: stop the tick loop, close the server,
+ * flush Sentry, and force-exit after a timeout. K8s sends SIGTERM
+ * before pod termination; a clean shutdown prevents duplicate
+ * Pub/Sub message processing and ensures errors reach Sentry.
  */
 function shutdown() {
   if (shuttingDown) return;
@@ -22,7 +27,10 @@ function shutdown() {
   console.log('Shutting down');
   stopRunning();
   ac.abort();
-  server.close(() => process.exit(0));
+  server.close(async () => {
+    await shutdownSentry();
+    process.exit(0);
+  });
   setTimeout(() => {
     console.error(`Forced exit after ${SHUTDOWN_TIMEOUT_MS}ms timeout`);
     process.exit(1);
@@ -45,6 +53,12 @@ async function tick() {
   setLastTickAt(Date.now());
 }
 
+// tick() wrapped to report its errors to Sentry with startedAt context.
+const tickWithSentry = withSentryHandler<{ startedAt: string }>(
+  ({ startedAt }) => ({ context: { startedAt } }),
+  tick,
+);
+
 /**
  * Run the tick loop at the configured interval until the
  * process is signalled to stop.
@@ -52,9 +66,15 @@ async function tick() {
 async function run() {
   while (isRunning()) {
     const start = Date.now();
+    const startedAt = new Date(start).toISOString();
     try {
-      await tick();
+      // Wrap tick() with a Sentry emission helper because it's the
+      // outermost frame that bubbles errors up before the catch swallows them.
+      await tickWithSentry({ startedAt });
     } catch (err) {
+      // tickWithSentry already captured the error and rethrew so
+      // the loop sees it; swallowing here keeps a single failed
+      // tick from killing the agent.
       console.error('tick failed:', err);
     }
     const elapsed = Date.now() - start;

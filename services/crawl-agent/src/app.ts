@@ -1,6 +1,9 @@
 import express, { type Express } from 'express';
 import config from './config.js';
 
+// Express serves the only HTTP endpoint, /healthz, for the
+// Kubernetes liveness probe. We use it (rather than node:http) to
+// stay consistent with content-monorepo, which will migrate here.
 export const app: Express = express();
 app.disable('x-powered-by');
 
