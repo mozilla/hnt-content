@@ -1,6 +1,7 @@
 export {
   initCorpusApiClient,
   updateApprovedCorpusItem,
+  getScheduledSectionItems,
   CorpusApiError,
   RETRY_MAX_TIMEOUT_MS,
 } from './client.js';

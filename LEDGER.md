@@ -481,3 +481,32 @@ oversights.
     does not talk to the sheet. Severity: nice-to-have until the hardcoded list is
     retired (Phase 5 replaces the list with the Corpus API per the spec, which
     supersedes the sheet path entirely).
+
+## Corpus API read for live section items
+
+The Corpus client gains a read alongside the existing write:
+getScheduledSectionItems queries getSectionsWithSectionItems on the admin API for
+a scheduled surface and maps the result to the agent's LiveArticle shape. This
+mirrors the legacy HydrateSectionItemsFlow read half (which used the public
+getSections). The admin sections query is chosen over the date-based
+getScheduledCorpusItems because it matches the legacy "section items" semantics,
+needs no date-window bookkeeping, returns the full ApprovedCorpusItem including
+language (so non-EN surfaces are correct rather than defaulted), and is authorized
+by the same scheduled_surface_curator_full JWT group the write path already uses,
+so no new credential or scope is needed. The surface is passed as the bare string
+(NEW_TAB_EN_US); the schema types it as ID, not an enum.
+
+Only sections whose computed status is LIVE are kept; SCHEDULED, DISABLED, and
+EXPIRED sections are skipped. This matters because the admin sections query,
+unlike the public getSections the legacy flow used, does not apply the date-window
+liveness filter, so it returns not-yet-live and expired custom sections too;
+gating on status == LIVE restores the legacy "currently on the surface" semantics
+(ML-created sections carry no date window and compute to LIVE, so they are
+unaffected). Items are de-duplicated by URL across sections, because the agent's
+publisher list requires unique live-article URLs (assertUniqueUrls) and the same
+article can be scheduled in more than one section. The inline fetch, retry, and error handling
+were factored out of updateApprovedCorpusItem into a shared graphqlRequest helper
+so the read and write share one transport with identical semantics (retry 5xx and
+network, fail fast on 4xx and GraphQL errors); the write path behavior and its
+tests are unchanged. Corpus author names are non-null, so no nameless-author
+filtering is needed here, unlike the Zyte path.
