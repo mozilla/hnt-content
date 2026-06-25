@@ -6,6 +6,7 @@ import {
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   acquireLock,
+  acquireRateLimitToken,
   getString,
   getTimestamp,
   initRedisClient,
@@ -112,5 +113,36 @@ describe('redis state client integration', () => {
     await acquireLock('article:lock:ttl', 1);
     await new Promise((r) => setTimeout(r, 1_500));
     expect(await acquireLock('article:lock:ttl', 60)).not.toBeNull();
+  });
+
+  it('grants up to the burst, then throttles the token bucket', async () => {
+    // 60/min = 1/sec, burst 2: two immediate tokens, then empty.
+    const first = await acquireRateLimitToken('zyte:rate:a', 60, 2);
+    const second = await acquireRateLimitToken('zyte:rate:a', 60, 2);
+    const third = await acquireRateLimitToken('zyte:rate:a', 60, 2);
+    expect(first.allowed).toBe(true);
+    expect(second.allowed).toBe(true);
+    expect(third.allowed).toBe(false);
+    expect(third.retryAfterMs).toBeGreaterThan(0);
+  });
+
+  it('refills the bucket over time', async () => {
+    // 600/min = 10/sec, burst 1: take the token, wait for one refill.
+    await acquireRateLimitToken('zyte:rate:b', 600, 1);
+    const blocked = await acquireRateLimitToken('zyte:rate:b', 600, 1);
+    expect(blocked.allowed).toBe(false);
+
+    await new Promise((r) => setTimeout(r, blocked.retryAfterMs + 50));
+    const refilled = await acquireRateLimitToken('zyte:rate:b', 600, 1);
+    expect(refilled.allowed).toBe(true);
+  });
+
+  it('rejects a non-positive rate or a sub-one burst', async () => {
+    await expect(acquireRateLimitToken('zyte:rate:c', 0, 5)).rejects.toThrow(
+      /ratePerMinute must be positive/,
+    );
+    await expect(acquireRateLimitToken('zyte:rate:c', 60, 0)).rejects.toThrow(
+      /burst must be at least 1/,
+    );
   });
 });

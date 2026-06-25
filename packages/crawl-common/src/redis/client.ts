@@ -33,6 +33,38 @@ else
   return 0
 end`;
 
+// Token-bucket rate limiter shared across worker replicas. Refills
+// continuously at refillPerSec up to capacity, then tries to take one
+// token. Uses the Redis server clock (TIME) so all replicas agree on
+// elapsed time without depending on synchronized client clocks. Runs
+// atomically, so concurrent callers cannot over-draw the bucket.
+// ARGV: capacity, refillPerSec, ttlSeconds. Returns {allowed, retryMs}.
+const TOKEN_BUCKET_SCRIPT = `
+local capacity = tonumber(ARGV[1])
+local refill = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
+local t = redis.call("TIME")
+local now = tonumber(t[1]) + tonumber(t[2]) / 1000000
+local state = redis.call("HMGET", KEYS[1], "tokens", "ts")
+local tokens = tonumber(state[1])
+local ts = tonumber(state[2])
+if tokens == nil then
+  tokens = capacity
+  ts = now
+end
+tokens = math.min(capacity, tokens + math.max(0, now - ts) * refill)
+local allowed = 0
+local retryMs = 0
+if tokens >= 1 then
+  tokens = tokens - 1
+  allowed = 1
+else
+  retryMs = math.ceil((1 - tokens) / refill * 1000)
+end
+redis.call("HSET", KEYS[1], "tokens", tokens, "ts", now)
+redis.call("EXPIRE", KEYS[1], ttl)
+return {allowed, retryMs}`;
+
 // Module-level state.
 let client: Redis | undefined;
 let defaultTtl = DEFAULT_TTL_SECONDS;
@@ -142,6 +174,45 @@ export async function acquireLock(
  */
 export async function releaseLock(key: string, token: string): Promise<void> {
   await requireClient().eval(RELEASE_LOCK_SCRIPT, 1, key, token);
+}
+
+/** Outcome of a rate-limit token request. */
+export interface RateLimitResult {
+  /** Whether a token was available and consumed. */
+  allowed: boolean;
+  /** When not allowed, milliseconds until the next token refills. */
+  retryAfterMs: number;
+}
+
+/**
+ * Take one token from a shared token bucket at key, refilling at
+ * ratePerMinute up to a burst capacity. Distributes a global rate
+ * limit (e.g. Zyte API calls) across worker replicas. Atomic, so
+ * concurrent callers cannot exceed the rate.
+ */
+export async function acquireRateLimitToken(
+  key: string,
+  ratePerMinute: number,
+  burst: number,
+): Promise<RateLimitResult> {
+  if (ratePerMinute <= 0) {
+    throw new Error(`ratePerMinute must be positive, got ${ratePerMinute}`);
+  }
+  if (burst < 1) {
+    throw new Error(`burst must be at least 1, got ${burst}`);
+  }
+  const refillPerSec = ratePerMinute / 60;
+  // Keep the bucket alive a little past a full refill from empty.
+  const ttlSeconds = Math.ceil(burst / refillPerSec) + 10;
+  const [allowed, retryAfterMs] = (await requireClient().eval(
+    TOKEN_BUCKET_SCRIPT,
+    1,
+    key,
+    burst,
+    refillPerSec,
+    ttlSeconds,
+  )) as [number, number];
+  return { allowed: allowed === 1, retryAfterMs };
 }
 
 /**

@@ -62,6 +62,16 @@ export default {
   redisHost: process.env.REDIS_HOST ?? '',
   redisPort: numberEnv(process.env.REDIS_PORT, 6379),
   zyteApiKey: process.env.ZYTE_API_KEY ?? '',
+  // Distributed Zyte rate limit shared across replicas via Redis. 0
+  // disables it (local/test default); deployed envs set the Zyte
+  // plan's RPM. Burst defaults to one minute of tokens; the wait caps
+  // how long a handler blocks for a token before nacking to shed load.
+  zyteRateLimitPerMinute: numberEnv(process.env.ZYTE_RATE_LIMIT_PER_MINUTE, 0),
+  zyteRateLimitBurst: numberEnv(process.env.ZYTE_RATE_LIMIT_BURST, 0),
+  zyteRateLimitMaxWaitMs: numberEnv(
+    process.env.ZYTE_RATE_LIMIT_MAX_WAIT_MS,
+    30_000,
+  ),
   // Corpus Admin API config. Endpoint, issuer, and audience are
   // app-level constants (matching content-monorepo); the endpoint
   // uses the nonprod admin-api outside prod. Only the JWK is a secret,

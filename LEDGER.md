@@ -162,6 +162,24 @@ keeps its own helper that imports the mockable getTimestamp. The agent's
 equivalent enqueuedWithin stays separate for the same reason; the small
 cross-package duplication is accepted over breaking test isolation.
 
+## HNT-2441: distributed Zyte rate limiter
+
+The Zyte rate limit is a Redis token bucket: an atomic Lua script refills at
+ratePerMinute up to a burst capacity and takes one token per call. It uses the
+Redis server clock (TIME) so all replicas measure elapsed time against one
+clock rather than depending on synchronized client clocks. One bucket key is
+shared by both worker roles because the limit is per Zyte API account; the key
+is not environment-prefixed since each environment has its own Redis instance.
+
+The limiter gates the Zyte client through an injected beforeRequest hook,
+awaited before every request including each retry, so the client stays
+decoupled from Redis and the agent (which makes no Zyte calls) is unaffected.
+The worker's awaitZyteToken waits for a token up to a max, then throws so the
+message nacks and redelivers, which sheds load when Zyte is saturated rather
+than pinning a worker. It is disabled by default (rate 0) for local and test
+runs; deployed environments set the plan's RPM. This limiter also bounds the
+blast radius of the lock-TTL double-fetch noted in the backlog item.
+
 ## HNT-2120: agent main loop and health check
 
 The once-a-minute tick loop, the /healthz staleness probe (500 if the last

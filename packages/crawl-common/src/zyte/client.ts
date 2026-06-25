@@ -40,6 +40,7 @@ let apiKey: string | undefined;
 let apiUrl = DEFAULT_API_URL;
 let timeout = DEFAULT_TIMEOUT_MS;
 let maxRetries = DEFAULT_MAX_RETRIES;
+let beforeRequest: (() => Promise<void>) | undefined;
 
 /**
  * Initialize the Zyte API client. Must be called once before
@@ -53,6 +54,7 @@ export function initZyteClient(opts: ZyteClientOptions): void {
   apiUrl = opts.apiUrl ?? DEFAULT_API_URL;
   timeout = opts.timeout ?? DEFAULT_TIMEOUT_MS;
   maxRetries = opts.maxRetries ?? DEFAULT_MAX_RETRIES;
+  beforeRequest = opts.beforeRequest;
 }
 
 /**
@@ -155,6 +157,9 @@ async function zyteRequest(
 
   return pRetry(
     async () => {
+      // Gate each attempt (including retries) so a distributed rate
+      // limiter can throttle Zyte calls across replicas.
+      if (beforeRequest) await beforeRequest();
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
