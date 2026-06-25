@@ -36,3 +36,24 @@ normalization), keeping the boundary a pure check. URL normalization for
 deduplication is deferred to the Milestone 8 key-derivation helper, which is
 the single place that hashes a URL, so trimming lives with the hash rather
 than being half-applied at the edge.
+
+## HNT-2111: article-list discovery handler
+
+The cross-domain filter compares each discovered article's registrable domain
+(eTLD+1) against the page's. Registrable-domain extraction uses tldts (the
+same library content-monorepo uses) so multi-part suffixes like .co.uk resolve
+correctly for non-US publishers. getDomain runs with allowPrivateDomains so
+platform suffixes (e.g. blogspot.com) are the boundary, treating two
+publishers on one platform as different domains.
+
+The same-domain baseline and each discovery event's source_url are the
+enqueued page URL (message.url), not Zyte's post-redirect URL. The publisher
+pages come from a curated first-party list and do not cross-domain redirect,
+and using the enqueued URL keeps the discovery event's source_url aligned with
+the crawl-article job that triggered it. A page that did cross-domain redirect
+would yield zero discoveries, which is a safe failure surfaced by monitoring
+rather than bad data.
+
+page_position is the article's 1-based index in the original Zyte list, so it
+reflects true page placement; gaps after cross-domain and duplicate filtering
+are intentional.
