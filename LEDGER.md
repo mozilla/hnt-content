@@ -57,3 +57,29 @@ rather than bad data.
 page_position is the article's 1-based index in the original Zyte list, so it
 reflects true page placement; gaps after cross-domain and duplicate filtering
 are intentional.
+
+## HNT-2115: Redis state client
+
+ioredis is the client. content-monorepo has no Redis precedent, so the choice
+is on merit: ioredis is the de-facto Node client, with first-class Lua eval
+for the token-checked lock release here and the distributed rate limiter
+planned in HNT-2441.
+
+Locks release through a Lua script that deletes the key only if the stored
+token still matches the caller's. A plain DEL could release a lock that
+already expired and was re-acquired by another worker; the token check makes
+release safe under the at-least-once redelivery the workers assume.
+
+Keys are not environment-prefixed because each environment has its own
+Memorystore instance, so the keyspace is already isolated. hashUrl trims the
+URL before hashing, which is the normalization deferred from the
+message-validation boundary, kept here so the one place that derives keys also
+owns it. Fetch timestamps and content hashes default to a 30-day TTL; lock
+callers pass a short TTL derived from the Pub/Sub ack deadline. TTL-taking
+operations reject a non-positive TTL so a misconfigured lock window fails fast
+with a clear error rather than an opaque Redis one.
+
+shutdownRedis uses the capture-then-null pattern but, unlike the Pub/Sub
+client, has no shutdownPromise guard: Redis has no in-flight subscriber drain
+to coordinate, and both services already guard their SIGTERM handler against
+re-entry, so a concurrent or repeated shutdown cannot occur in practice.

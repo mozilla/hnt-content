@@ -21,6 +21,24 @@ export type {
 } from './zyte/index.js';
 export { normalizeText, getRegistrableDomain } from './utils/index.js';
 export {
+  initRedisClient,
+  shutdownRedis,
+  setTimestamp,
+  getTimestamp,
+  setString,
+  getString,
+  acquireLock,
+  releaseLock,
+  DEFAULT_TTL_SECONDS,
+  pageFetchKey,
+  pageLockKey,
+  pageEnqueuedKey,
+  articleFetchKey,
+  articleLockKey,
+  articleContentKey,
+} from './redis/index.js';
+export type { RedisClientOptions } from './redis/index.js';
+export {
   initCorpusApiClient,
   updateApprovedCorpusItem,
   CorpusApiError,
