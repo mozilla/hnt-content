@@ -109,6 +109,18 @@ restart that would not fix the upstream fault. Numeric config is validated at
 load so a malformed env value fails fast rather than surfacing as a NaN TTL
 mid-tick.
 
+## HNT-2120: agent main loop and health check
+
+The once-a-minute tick loop, the /healthz staleness probe (500 if the last
+tick is older than the threshold), and the SIGTERM drain are already
+implemented in app.ts and main.ts (the latter finalized in HNT-2117), so this
+task adds only agent operability: a .env.example and a dev script that loads
+it. The single-replica requirement is met by the chart defaulting a
+non-autoscaled workload to one replica; the matching strategy: Recreate (so a
+deploy never runs two agents and breaks the single-replica enqueue dedup) is a
+webservices-infra change, committed on a local branch since infra deploys are
+human-gated.
+
 Live articles have no discovery page, so their crawl-article job uses the
 article's own URL as source_url. They share one configurable enqueue interval
 (liveArticleIntervalMinutes) rather than a per-article interval, since the
