@@ -11,6 +11,31 @@ function numberEnv(value: string | undefined, fallback: number): number {
   return parsed;
 }
 
+// Corpus live-article source. The JWK gates the source; when it is set,
+// at least one surface and a positive refresh interval are required, so
+// a typo fails fast rather than silently crawling zero live articles.
+const corpusApiJwkJson = process.env.CORPUS_API_JWK_JSON ?? '';
+const scheduledSurfaceGuids = (
+  process.env.CORPUS_SCHEDULED_SURFACE_GUIDS ?? 'NEW_TAB_EN_US'
+)
+  .split(',')
+  .map((guid) => guid.trim())
+  .filter(Boolean);
+const corpusRefreshMinutes = numberEnv(process.env.CORPUS_REFRESH_MINUTES, 15);
+if (corpusApiJwkJson !== '') {
+  if (scheduledSurfaceGuids.length === 0) {
+    throw new Error(
+      'CORPUS_SCHEDULED_SURFACE_GUIDS must list at least one surface ' +
+        'when CORPUS_API_JWK_JSON is set',
+    );
+  }
+  if (corpusRefreshMinutes <= 0) {
+    throw new Error(
+      `CORPUS_REFRESH_MINUTES must be positive, got ${corpusRefreshMinutes}`,
+    );
+  }
+}
+
 export default {
   service: 'crawl-agent',
   port: numberEnv(process.env.PORT, 8080),
@@ -30,9 +55,31 @@ export default {
     `${environment}-crawl-article-discovery`,
   crawlArticleTopic:
     process.env.CRAWL_ARTICLE_TOPIC ?? `${environment}-crawl-article`,
-  // Path to the publisher list JSON loaded at startup. Phase 5 replaces
-  // this file with the Corpus API.
+  // Path to the publisher list JSON loaded at startup. pages always come
+  // from this file; live_articles come from the Corpus API when it is
+  // configured (corpusApi.jwkJson set), else from this file.
   publisherListPath: process.env.PUBLISHER_LIST_PATH ?? 'publishers.json',
+  // Corpus Admin API source for live (curated) articles, mirroring the
+  // crawl-worker client. The endpoint, issuer, and audience have app
+  // defaults (nonprod admin-api outside prod); only the JWK is a secret.
+  // Leave the JWK unset to source live_articles from the file instead.
+  corpusApi: {
+    endpoint:
+      process.env.CORPUS_API_ENDPOINT ??
+      (environment === 'prod'
+        ? 'https://admin-api.getpocket.com'
+        : 'https://admin-api.getpocket.dev'),
+    jwkJson: corpusApiJwkJson,
+    issuer: process.env.CORPUS_API_ISSUER ?? 'https://getpocket.com',
+    audience:
+      process.env.CORPUS_API_AUDIENCE ?? 'https://admin-api.getpocket.com/',
+  },
+  // New Tab surfaces whose currently scheduled section items become live
+  // articles. Comma-separated; defaults to en-US to match today's reality.
+  scheduledSurfaceGuids,
+  // How often to re-read the live-article list from the Corpus API, so
+  // editorial changes propagate without a restart.
+  corpusRefreshMinutes,
   // How often the agent re-enqueues a live article, so curated metadata
   // stays fresh without flooding the queue every tick.
   liveArticleIntervalMinutes: numberEnv(

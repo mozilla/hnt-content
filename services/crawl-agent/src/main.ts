@@ -4,6 +4,7 @@ import './metrics-init.js';
 
 import { setTimeout as delay } from 'node:timers/promises';
 import {
+  initCorpusApiClient,
   initPubSubClient,
   initRedisClient,
   shutdownPubSub,
@@ -14,7 +15,11 @@ import { count, shutdownMetrics, timing } from 'metrics';
 import { shutdownSentry, withSentryHandler } from 'sentry';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
-import { loadPublisherList } from './publisher-list.js';
+import {
+  corpusSourceEnabled,
+  fetchLiveArticles,
+  loadPublisherList,
+} from './publisher-list.js';
 import { runTick } from './tick.js';
 
 const server = app.listen(config.port, () => {
@@ -25,8 +30,10 @@ const server = app.listen(config.port, () => {
 const ac = new AbortController();
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
-// Loaded once at startup; Phase 5 switches to the Corpus API.
+// pages are loaded once at startup; live_articles are refreshed from
+// the Corpus API on an interval when that source is configured.
 let publisherList: PublisherList;
+let lastCorpusRefreshAt = 0;
 
 let shuttingDown = false;
 /**
@@ -99,6 +106,25 @@ const tickWithSentry = withSentryHandler<{ startedAt: string }>(
 );
 
 /**
+ * Re-read live articles from the Corpus API and swap them into the
+ * publisher list. Throws on failure so the caller keeps the last good
+ * list rather than dropping live articles; a transient Corpus outage
+ * degrades freshness, not availability.
+ */
+async function refreshLiveArticles() {
+  publisherList.live_articles = await fetchLiveArticles();
+  lastCorpusRefreshAt = Date.now();
+  console.log(
+    `Refreshed ${publisherList.live_articles.length} live articles from Corpus`,
+  );
+}
+
+const refreshWithSentry = withSentryHandler<{ startedAt: string }>(
+  ({ startedAt }) => ({ context: { startedAt, kind: 'corpus-refresh' } }),
+  refreshLiveArticles,
+);
+
+/**
  * Run the tick loop at the configured interval until the process is
  * signalled to stop.
  */
@@ -106,6 +132,18 @@ async function run() {
   while (isRunning()) {
     const start = Date.now();
     const startedAt = new Date(start).toISOString();
+    if (
+      corpusSourceEnabled() &&
+      start - lastCorpusRefreshAt >= config.corpusRefreshMinutes * 60_000
+    ) {
+      try {
+        await refreshWithSentry({ startedAt });
+      } catch (err) {
+        // Keep the last good list and retry next tick; the wrapper
+        // already reported the failure to Sentry.
+        console.error('Corpus refresh failed; keeping last list:', err);
+      }
+    }
     try {
       await tickWithSentry({ startedAt });
     } catch (err) {
@@ -142,9 +180,23 @@ async function start() {
   });
   initRedisClient({ host: config.redisHost, port: config.redisPort });
   publisherList = await loadPublisherList(config.publisherListPath);
+  const useCorpus = corpusSourceEnabled();
+  if (useCorpus) {
+    await initCorpusApiClient({
+      ...config.corpusApi,
+      clientName: config.service,
+    });
+    // First load fails fast: a misconfigured or unauthorized Corpus
+    // client should abort startup, not run a degraded agent.
+    publisherList.live_articles = await fetchLiveArticles();
+    lastCorpusRefreshAt = Date.now();
+  }
+  const liveSource = useCorpus
+    ? `Corpus: ${config.scheduledSurfaceGuids.join(', ')}`
+    : 'from file';
   console.log(
     `Loaded ${publisherList.pages.length} pages, ` +
-      `${publisherList.live_articles.length} live articles`,
+      `${publisherList.live_articles.length} live articles (${liveSource})`,
   );
   await run();
 }

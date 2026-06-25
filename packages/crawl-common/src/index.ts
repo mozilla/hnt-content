@@ -43,6 +43,7 @@ export type { RedisClientOptions, RateLimitResult } from './redis/index.js';
 export {
   initCorpusApiClient,
   updateApprovedCorpusItem,
+  getScheduledSectionItems,
   CorpusApiError,
 } from './corpus-api/index.js';
 export type {
