@@ -180,6 +180,46 @@ than pinning a worker. It is disabled by default (rate 0) for local and test
 runs; deployed environments set the plan's RPM. This limiter also bounds the
 blast radius of the lock-TTL double-fetch noted in the backlog item.
 
+## Task 5.8: operational metrics
+
+Metrics live in a standalone packages/metrics, mirroring packages/sentry: a
+module-singleton client with a transport-agnostic emit API (initMetrics, incr,
+count, timing, time, shutdownMetrics). An empty STATSD_HOST disables emission,
+like Sentry's empty DSN.
+
+Transport is StatsD UDP via hot-shots to the MozCloud OTEL gateway, chosen over
+the OTLP/OpenTelemetry SDK that the research recommended as the strategic
+primary. StatsD is the MozCloud SRE docs' GA "Preferred" path, needs no Helm
+plumbing (the OTLP path needs a human-gated OTEL_COLLECTOR_HOST from
+status.hostIP), and is simple and unit-testable now. The emit API is
+transport-agnostic, so swapping to OTLP later (the convention in the newest
+Node/TS services) touches no call sites. Delivery to Yardstick is deploy-gated
+(the gateway is in-cluster, unreachable from this workspace), so the transport
+should be confirmed in dev before locking in.
+
+Instrumentation avoids coupling crawl-common to packages/metrics: message
+duration and a per-outcome counter come from a withMessageMetrics wrapper
+(processArticle and processDiscovery return processed/skipped so a dedup/lock
+skip is not counted as real work); Zyte latency wraps the extract calls with
+the metrics time() helper at the handler call sites; Zyte retries use an
+injected onRetry hook on the Zyte client, mirroring the beforeRequest hook; and
+the agent emits tick duration and per-kind enqueue counts from its loop.
+
+The onRetry hook destructures p-retry's onFailedAttempt context as
+{ error, retriesLeft }, not the whole context as one error value. p-retry@8
+passes onFailedAttempt a RetryContext object whose error field holds the
+underlying error, so calling isRetryable on the context itself always returned
+false and the counter never fired. This typechecks (isRetryable takes unknown,
+and the context happens to carry retriesLeft), so a unit test asserting the
+counter fires on a real retry guards it.
+
+Per-operation Redis latency is deferred to a follow-up. It is the only metric
+that would require wrapping every crawl-common Redis op behind an injected
+timing hook, the most invasive change to a critical, heavily-tested module for
+the lowest-value signal (Redis ops are sub-millisecond and local, and their
+time is already captured in aggregate by tick and message duration). The
+onTiming-hook approach is specified in the Task 5.8 plan.
+
 ## HNT-2120: agent main loop and health check
 
 The once-a-minute tick loop, the /healthz staleness probe (500 if the last

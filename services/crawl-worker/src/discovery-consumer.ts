@@ -6,6 +6,7 @@ import {
 } from 'crawl-common';
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
+import { withMessageMetrics } from './message-metrics.js';
 import { processDiscovery } from './process-discovery.js';
 
 /**
@@ -22,7 +23,7 @@ const handleMessage = withSentryHandler<CrawlArticleDiscoveryMessage>(
       context_count: message.contexts.length,
     },
   }),
-  processDiscovery,
+  withMessageMetrics(processDiscovery),
 );
 
 /** Start consuming jobs from the crawl-article-discovery subscription. */

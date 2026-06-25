@@ -1,5 +1,6 @@
-// Initialize Sentry first to capture errors from other modules.
+// Initialize Sentry and metrics first to capture from other modules.
 import './sentry-init.js';
+import './metrics-init.js';
 
 import { setTimeout as delay } from 'node:timers/promises';
 import {
@@ -9,6 +10,7 @@ import {
   shutdownRedis,
   type PublisherList,
 } from 'crawl-common';
+import { count, shutdownMetrics, timing } from 'metrics';
 import { shutdownSentry, withSentryHandler } from 'sentry';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
@@ -68,7 +70,7 @@ async function shutdown() {
   );
   server.closeAllConnections();
   await serverClosed;
-  await shutdownSentry();
+  await Promise.all([shutdownMetrics(), shutdownSentry()]);
   process.exit(exitCode);
 }
 
@@ -82,6 +84,8 @@ process.on('SIGINT', shutdown);
  */
 async function tick() {
   const counts = await runTick(publisherList);
+  count('crawl.tick.enqueued', counts.pages, { kind: 'page' });
+  count('crawl.tick.enqueued', counts.liveArticles, { kind: 'live_article' });
   console.log(
     `tick enqueued ${counts.pages} pages, ` +
       `${counts.liveArticles} live articles`,
@@ -115,6 +119,7 @@ async function run() {
     // restart would not fix and that Sentry already surfaces.
     setLastTickAt(Date.now());
     const elapsed = Date.now() - start;
+    timing('crawl.tick.duration_ms', elapsed);
     const remainingMs = Math.max(0, config.tickIntervalMs - elapsed);
     try {
       await delay(remainingMs, undefined, { signal: ac.signal });

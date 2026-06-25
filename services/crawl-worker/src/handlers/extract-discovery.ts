@@ -1,4 +1,5 @@
 import { extractArticleList, getRegistrableDomain } from 'crawl-common';
+import { time } from 'metrics';
 import type {
   ArticleDiscoveryEvent,
   CrawlArticleDiscoveryMessage,
@@ -33,9 +34,11 @@ interface SelectedArticle {
 export async function handleArticleDiscovery(
   message: CrawlArticleDiscoveryMessage,
 ): Promise<DiscoveryResult> {
-  const { data: items } = await extractArticleList(message.url, {
-    extractFrom: 'httpResponseBody',
-  });
+  const { data: items } = await time(
+    'crawl.zyte.duration_ms',
+    () => extractArticleList(message.url, { extractFrom: 'httpResponseBody' }),
+    { extraction: 'articleList' },
+  );
 
   const crawledAt = new Date().toISOString();
   const articles = selectArticles(items, message.url);

@@ -14,6 +14,7 @@ import {
 } from 'crawl-common';
 import config from './config.js';
 import { handleArticleExtraction } from './handlers/extract-article.js';
+import type { MessageOutcome } from './message-metrics.js';
 import { withinMinutes } from './recency.js';
 
 /**
@@ -33,7 +34,7 @@ import { withinMinutes } from './recency.js';
  */
 export async function processArticle(
   message: CrawlArticleMessage,
-): Promise<void> {
+): Promise<MessageOutcome> {
   const { url } = message;
   const fetchKey = articleFetchKey(url);
   const isLive = message.corpus_item != null;
@@ -41,16 +42,17 @@ export async function processArticle(
     !isLive &&
     (await withinMinutes(fetchKey, config.articleFetchTtlMinutes))
   ) {
-    return;
+    return 'skipped';
   }
 
   const lockKey = articleLockKey(url);
   const token = await acquireLock(lockKey, config.lockTtlSeconds);
-  if (token === null) return;
+  if (token === null) return 'skipped';
   try {
     const event = await handleArticleExtraction(message);
     await publishIfChanged(url, event);
     await setTimestamp(fetchKey);
+    return 'processed';
   } finally {
     await releaseLock(lockKey, token);
   }
