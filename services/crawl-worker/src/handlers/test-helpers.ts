@@ -77,6 +77,20 @@ export const DISCOVERY_MESSAGE: CrawlArticleDiscoveryMessage = {
   ],
 };
 
+/** Poll until the predicate returns true, or reject on timeout. */
+export async function waitFor(
+  predicate: () => boolean,
+  timeoutMs: number,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() > deadline) {
+      throw new Error(`waitFor timed out after ${timeoutMs}ms`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 /**
  * Generated 2048-bit RSA JWK used by integration tests that
  * need to sign real JWTs against the Corpus API client. The
