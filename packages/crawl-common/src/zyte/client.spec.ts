@@ -422,6 +422,16 @@ describe('isRetryable', () => {
     }
   });
 
+  it('returns true for a request timeout (AbortSignal.timeout)', () => {
+    expect(isRetryable(new DOMException('timed out', 'TimeoutError'))).toBe(
+      true,
+    );
+  });
+
+  it('returns false for a non-timeout DOMException', () => {
+    expect(isRetryable(new DOMException('aborted', 'AbortError'))).toBe(false);
+  });
+
   it('returns true for network errors', () => {
     expect(isRetryable(new TypeError('fetch failed'))).toBe(true);
   });

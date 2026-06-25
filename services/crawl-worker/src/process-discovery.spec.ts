@@ -48,6 +48,7 @@ describe('processDiscovery', () => {
     // Page not crawled recently; lock free; articles not fetched.
     vi.mocked(getTimestamp).mockResolvedValue(null);
     vi.mocked(acquireLock).mockResolvedValue('lock-token');
+    vi.mocked(releaseLock).mockResolvedValue();
     vi.mocked(publishMessage).mockResolvedValue('message-id');
     vi.mocked(handleArticleDiscovery).mockResolvedValue({
       events: [EVENT, { ...EVENT, surface_id: 'NEW_TAB_DE_DE' }],

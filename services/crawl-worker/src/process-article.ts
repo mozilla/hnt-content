@@ -54,7 +54,12 @@ export async function processArticle(
     await setTimestamp(fetchKey);
     return 'processed';
   } finally {
-    await releaseLock(lockKey, token);
+    // Best-effort: the lock self-expires on its TTL, so a release
+    // failure must not propagate out of finally and mask the handler's
+    // outcome, which would nack a successful message and redeliver it.
+    await releaseLock(lockKey, token).catch((err) =>
+      console.error('failed to release lock', lockKey, err),
+    );
   }
 }
 

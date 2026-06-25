@@ -297,3 +297,41 @@ not resolve outside the cluster, so a local run logs benign getaddrinfo errors
 unless STATSD_HOST is set empty. The empty-to-disable knob is documented in the
 .env.example files; the unset default targeting the gateway is correct for
 deployed environments.
+
+## QA hardening of event mapping and lock release
+
+A QA pass (parallel code-review agents plus a multi-locale dev run that confirmed
+multilingual extraction and live cross-tick agent dedup) surfaced four fixes:
+
+The BigQuery authors.name subfield is REQUIRED in both tables, but the Zyte
+client does no runtime validation and Zyte can return an author carrying only
+nameRaw. The event mappers projected { name: a.name } unconditionally, so a
+nameless author serialized to an empty struct and would fail the BigQuery
+subscription write. Those subscriptions have no dead-letter queue (schema
+mismatches are treated as code bugs), so the message would wedge in endless
+redelivery. The mappers now drop nameless authors via toEventAuthors, and the
+Corpus update path filters them before falling back to the corpus item's authors.
+
+published_at was passed through from Zyte unvalidated; an empty or malformed
+value (the empty string slips past a nullish guard) would fail the BigQuery
+TIMESTAMP parse and wedge the message the same way. It is now emitted only when
+non-empty and parseable via toEventTimestamp. The two mapping helpers live in
+handlers/event-fields.ts and are shared by both extractors.
+
+releaseLock ran unguarded in a finally block. A transient Redis error during
+release would propagate out of finally and replace a successful handler return,
+nacking and redelivering a message whose work had already completed (and
+re-running the Corpus sync for live articles). The lock self-expires on its TTL,
+so a release failure is now caught and logged rather than thrown, so cleanup
+never changes the message outcome.
+
+Zyte request timeouts (AbortSignal.timeout rejects with a DOMException named
+TimeoutError) were classified non-retryable, so a hung connection failed
+immediately rather than retrying. They are now retryable, matching the Corpus
+API client which already retried timeouts.
+
+The discovery summary intentionally maps Zyte's description (the list-page dek),
+not articleBody, despite the BigQuery column comment mentioning articleBody: the
+dek is the closest analog to the legacy RSS summary field, and articleBody would
+put full body text in a summary column. Left as is; flagged for human
+confirmation if the legacy source differs.
