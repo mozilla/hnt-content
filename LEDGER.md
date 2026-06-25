@@ -120,14 +120,27 @@ bypass it so they keep resyncing curated metadata on the agent's cadence; the
 agent already throttles their enqueue interval, and the Corpus sync must run
 each time. The lock and content-hash check apply to both.
 
-The lock TTL is derived from maxExtensionSeconds (the worker's real maximum
-hold on a message) minus 30 seconds, not from the subscription's initial ack
-deadline. The tech spec says "ack deadline - 30s", but the SDK extends the
-lease up to maxExtensionSeconds, so a lock sized to the initial deadline could
-expire well before the worker stops holding the message. Deriving from
-maxExtensionSeconds keeps the lock alive for almost the whole hold and clears
-it around when a crashed worker's message redelivers, rather than letting a
-stale lock outlive the lease and block the legitimate retry.
+The lock TTL is derived from the subscription ack deadline minus 30 seconds
+(the tech spec's "ack deadline - 30s"), not from maxExtensionSeconds. An
+earlier revision of this code sized the lock to maxExtensionSeconds - 30 on the
+reasoning that the SDK holds a healthy message for up to maxExtensionSeconds.
+That was wrong for the failure mode that matters: when a worker crashes the SDK
+stops extending the lease, and Pub/Sub redelivers around the ack deadline (the
+lease granularity, 300s), not around maxExtensionSeconds (570s). A lock sized
+to 540s outlives that redelivery, so the legitimate retry on another worker
+finds the lock held and skips the fetch, which is a lost fetch. Sizing the lock
+to ackDeadline - 30 (270s) clears it just before redelivery so the retry
+re-fetches. The lock can expire mid-processing on a healthy worker that runs
+past 270s, but that worker still holds the message via lease extension, so no
+competitor races the expired lock; a rare at-least-once duplicate in that
+window is absorbed by the fetch and content-hash idempotency. ackDeadlineSeconds
+is a config value (env ACK_DEADLINE_SECONDS, default 300) that must match the
+Terraform subscription setting. That coupling is enforced only by convention,
+not code; a deploy-time check that the configured value matches the live
+subscription is a possible follow-up. The safe-failure direction is setting it
+too low (a milder duplicate-fetch window the idempotency absorbs) rather than
+too high (the lost fetch). This reversal was confirmed by an architectural
+review of the crash-and-redelivery timeline.
 
 The content hash excludes url (constant per key) and extracted_at (set fresh
 each fetch); hashing them would change the digest every fetch and republish

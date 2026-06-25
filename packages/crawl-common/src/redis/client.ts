@@ -155,7 +155,8 @@ export async function getString(key: string): Promise<string | null> {
  * token to pass to releaseLock on success, or null if another
  * holder has the lock. The TTL bounds how long a crashed holder can
  * block others, so set it to the Pub/Sub ack deadline minus a
- * margin (so the lock cannot outlive the message lease).
+ * margin, so the lock clears just before the message redelivers and
+ * the retry is not blocked by a stale lock.
  */
 export async function acquireLock(
   key: string,
