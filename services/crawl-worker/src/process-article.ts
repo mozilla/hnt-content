@@ -5,7 +5,6 @@ import {
   articleFetchKey,
   articleLockKey,
   getString,
-  getTimestamp,
   publishMessage,
   releaseLock,
   setString,
@@ -15,6 +14,7 @@ import {
 } from 'crawl-common';
 import config from './config.js';
 import { handleArticleExtraction } from './handlers/extract-article.js';
+import { withinMinutes } from './recency.js';
 
 /**
  * Extract an article and publish it, guarded by Redis so the same
@@ -37,7 +37,12 @@ export async function processArticle(
   const { url } = message;
   const fetchKey = articleFetchKey(url);
   const isLive = message.corpus_item != null;
-  if (!isLive && (await fetchedRecently(fetchKey))) return;
+  if (
+    !isLive &&
+    (await withinMinutes(fetchKey, config.articleFetchTtlMinutes))
+  ) {
+    return;
+  }
 
   const lockKey = articleLockKey(url);
   const token = await acquireLock(lockKey, config.lockTtlSeconds);
@@ -49,15 +54,6 @@ export async function processArticle(
   } finally {
     await releaseLock(lockKey, token);
   }
-}
-
-/** Return whether the fetch marker at key is within the re-fetch window. */
-async function fetchedRecently(key: string): Promise<boolean> {
-  const lastFetchedAt = await getTimestamp(key);
-  return (
-    lastFetchedAt !== null &&
-    Date.now() - lastFetchedAt < config.articleFetchTtlMinutes * 60_000
-  );
 }
 
 /** Publish the event only if its content changed since the last fetch. */

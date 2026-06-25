@@ -135,6 +135,33 @@ unchanged articles. The Corpus sync for live articles runs inside the handler
 regardless of the hash, so a curator-visible metadata change is still synced
 even when the article body is unchanged.
 
+## HNT-2119: Redis fetch checks in the discovery worker
+
+The discovery worker wraps the crawl in Redis dedup (processDiscovery): a
+page:fetch interval-skip (compared against the job's own interval_minutes), a
+per-page lock, and a per-article page check. Discovery events are published
+for every discovered article and context regardless of state, since a
+discovery is a distinct occurrence worth recording each time; only the
+crawl-article job is gated by article:fetch, so an article already crawled
+recently is not re-enqueued. The page:fetch marker is written after publishing
+(prefer a duplicate over a lost crawl, matching the article worker).
+
+The discovery worker reads article:fetch through the same articleFetchTtlMinutes
+window (default 60) the article worker writes it with, so a re-discovered
+article is not re-enqueued for ~60 minutes even though its page re-crawls every
+interval_minutes (e.g. 20). This is intended: page-crawl cadence and
+article-fetch freshness are separate dimensions, and the article worker
+double-gates on the same key, so a re-enqueued job that slipped through would
+still be skipped there.
+
+The recency predicate is shared within the worker as withinMinutes
+(recency.ts), used by both processArticle and processDiscovery. It was not
+lifted into crawl-common: a helper living there would call crawl-common's own
+getTimestamp, which the per-package unit tests cannot mock, so the worker
+keeps its own helper that imports the mockable getTimestamp. The agent's
+equivalent enqueuedWithin stays separate for the same reason; the small
+cross-package duplication is accepted over breaking test isolation.
+
 ## HNT-2120: agent main loop and health check
 
 The once-a-minute tick loop, the /healthz staleness probe (500 if the last
