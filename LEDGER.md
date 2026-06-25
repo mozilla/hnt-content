@@ -109,6 +109,32 @@ restart that would not fix the upstream fault. Numeric config is validated at
 load so a malformed env value fails fast rather than surfacing as a NaN TTL
 mid-tick.
 
+## HNT-2116: Redis fetch checks in the article worker
+
+The article worker wraps extraction in Redis dedup (processArticle): a
+fetch-recency skip, a per-article distributed lock, and a content-hash check
+that gates publishing.
+
+The fetch-recency skip applies only to discovered articles. Live articles
+bypass it so they keep resyncing curated metadata on the agent's cadence; the
+agent already throttles their enqueue interval, and the Corpus sync must run
+each time. The lock and content-hash check apply to both.
+
+The lock TTL is derived from maxExtensionSeconds (the worker's real maximum
+hold on a message) minus 30 seconds, not from the subscription's initial ack
+deadline. The tech spec says "ack deadline - 30s", but the SDK extends the
+lease up to maxExtensionSeconds, so a lock sized to the initial deadline could
+expire well before the worker stops holding the message. Deriving from
+maxExtensionSeconds keeps the lock alive for almost the whole hold and clears
+it around when a crashed worker's message redelivers, rather than letting a
+stale lock outlive the lease and block the legitimate retry.
+
+The content hash excludes url (constant per key) and extracted_at (set fresh
+each fetch); hashing them would change the digest every fetch and republish
+unchanged articles. The Corpus sync for live articles runs inside the handler
+regardless of the hash, so a curator-visible metadata change is still synced
+even when the article body is unchanged.
+
 ## HNT-2120: agent main loop and health check
 
 The once-a-minute tick loop, the /healthz staleness probe (500 if the last

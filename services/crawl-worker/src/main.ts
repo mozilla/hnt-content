@@ -4,8 +4,10 @@ import './sentry-init.js';
 import {
   initCorpusApiClient,
   initPubSubClient,
+  initRedisClient,
   initZyteClient,
   shutdownPubSub,
+  shutdownRedis,
 } from 'crawl-common';
 import { shutdownSentry } from 'sentry';
 import { startArticleConsumer } from './article-consumer.js';
@@ -38,6 +40,8 @@ async function start() {
     apiEndpoint: config.pubsubEmulatorHost,
     useEmulator: Boolean(config.pubsubEmulatorHost),
   });
+  // Both roles use Redis for fetch/lock/content dedup state.
+  initRedisClient({ host: config.redisHost, port: config.redisPort });
 
   if (role === 'article') {
     await initCorpusApi();
@@ -110,6 +114,13 @@ async function shutdown() {
     await shutdownPubSub();
   } catch (err) {
     console.error('Error draining Pub/Sub:', err);
+    exitCode = 1;
+  }
+  // Close Redis after the Pub/Sub drain, since in-flight handlers use it.
+  try {
+    await shutdownRedis();
+  } catch (err) {
+    console.error('Error closing Redis:', err);
     exitCode = 1;
   }
   // Stop accepting connections, then force-close any that remain (this
