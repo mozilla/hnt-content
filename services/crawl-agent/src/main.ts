@@ -2,9 +2,18 @@
 import './sentry-init.js';
 
 import { setTimeout as delay } from 'node:timers/promises';
+import {
+  initPubSubClient,
+  initRedisClient,
+  shutdownPubSub,
+  shutdownRedis,
+  type PublisherList,
+} from 'crawl-common';
 import { shutdownSentry, withSentryHandler } from 'sentry';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
+import { loadPublisherList } from './publisher-list.js';
+import { runTick } from './tick.js';
 
 const server = app.listen(config.port, () => {
   console.log(`crawl-agent listening on port ${config.port}`);
@@ -14,43 +23,69 @@ const server = app.listen(config.port, () => {
 const ac = new AbortController();
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
+// Loaded once at startup; Phase 5 switches to the Corpus API.
+let publisherList: PublisherList;
+
 let shuttingDown = false;
 /**
- * Initiate graceful shutdown: stop the tick loop, close the server,
- * flush Sentry, and force-exit after a timeout. K8s sends SIGTERM
- * before pod termination; a clean shutdown prevents duplicate
- * Pub/Sub message processing and ensures errors reach Sentry.
+ * Initiate graceful shutdown: stop the tick loop, drain Pub/Sub and
+ * Redis, close the server, flush Sentry, and force-exit after a
+ * timeout. K8s sends SIGTERM before pod termination; draining first
+ * flushes pending publishes and reports errors to Sentry.
  */
-function shutdown() {
+async function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('Shutting down');
   stopRunning();
   ac.abort();
-  server.close(async () => {
-    await shutdownSentry();
-    process.exit(0);
-  });
-  setTimeout(() => {
-    console.error(`Forced exit after ${SHUTDOWN_TIMEOUT_MS}ms timeout`);
-    process.exit(1);
-  }, SHUTDOWN_TIMEOUT_MS).unref();
   process.removeListener('SIGTERM', shutdown);
   process.removeListener('SIGINT', shutdown);
+
+  const forceExit = setTimeout(() => {
+    console.error(`Forced exit after ${SHUTDOWN_TIMEOUT_MS}ms timeout`);
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS);
+  forceExit.unref();
+
+  let exitCode = 0;
+  // Flush pending publishes, then close Redis. Log failures but keep
+  // going so the server close and Sentry flush always run.
+  try {
+    await shutdownPubSub();
+  } catch (err) {
+    console.error('Error draining Pub/Sub:', err);
+    exitCode = 1;
+  }
+  try {
+    await shutdownRedis();
+  } catch (err) {
+    console.error('Error closing Redis:', err);
+    exitCode = 1;
+  }
+  const serverClosed = new Promise<void>((resolve) =>
+    server.close(() => resolve()),
+  );
+  server.closeAllConnections();
+  await serverClosed;
+  await shutdownSentry();
+  process.exit(exitCode);
 }
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 /**
- * Execute a single crawl cycle. Currently only logs the time.
- * Eventually, each tick will check publisher pages and live
- * articles against Redis timestamps, then publish due items
- * to the crawl Pub/Sub queues for worker processing.
+ * Execute a single crawl cycle: enqueue due pages and live articles.
+ * The loop records the tick time separately, so /healthz tracks loop
+ * liveness rather than whether a tick succeeded.
  */
 async function tick() {
-  console.log('tick', new Date().toISOString());
-  setLastTickAt(Date.now());
+  const counts = await runTick(publisherList);
+  console.log(
+    `tick enqueued ${counts.pages} pages, ` +
+      `${counts.liveArticles} live articles`,
+  );
 }
 
 // tick() wrapped to report its errors to Sentry with startedAt context.
@@ -60,23 +95,25 @@ const tickWithSentry = withSentryHandler<{ startedAt: string }>(
 );
 
 /**
- * Run the tick loop at the configured interval until the
- * process is signalled to stop.
+ * Run the tick loop at the configured interval until the process is
+ * signalled to stop.
  */
 async function run() {
   while (isRunning()) {
     const start = Date.now();
     const startedAt = new Date(start).toISOString();
     try {
-      // Wrap tick() with a Sentry emission helper because it's the
-      // outermost frame that bubbles errors up before the catch swallows them.
       await tickWithSentry({ startedAt });
     } catch (err) {
-      // tickWithSentry already captured the error and rethrew so
-      // the loop sees it; swallowing here keeps a single failed
-      // tick from killing the agent.
+      // tickWithSentry already captured the error and rethrew so the
+      // loop sees it; swallowing here keeps a single failed tick from
+      // killing the agent.
       console.error('tick failed:', err);
     }
+    // Mark the loop alive even on a failed tick: /healthz should detect
+    // a wedged loop, not a transient Pub/Sub or Redis outage that a
+    // restart would not fix and that Sentry already surfaces.
+    setLastTickAt(Date.now());
     const elapsed = Date.now() - start;
     const remainingMs = Math.max(0, config.tickIntervalMs - elapsed);
     try {
@@ -88,7 +125,26 @@ async function run() {
   }
 }
 
-run().catch((err) => {
-  console.error('run loop crashed:', err);
+/**
+ * Initialize the Pub/Sub and Redis clients, load the publisher list,
+ * then start the tick loop. Any failure here aborts startup.
+ */
+async function start() {
+  initPubSubClient({
+    projectId: config.projectId,
+    apiEndpoint: config.pubsubEmulatorHost,
+    useEmulator: Boolean(config.pubsubEmulatorHost),
+  });
+  initRedisClient({ host: config.redisHost, port: config.redisPort });
+  publisherList = await loadPublisherList(config.publisherListPath);
+  console.log(
+    `Loaded ${publisherList.pages.length} pages, ` +
+      `${publisherList.live_articles.length} live articles`,
+  );
+  await run();
+}
+
+start().catch((err) => {
+  console.error('agent startup failed:', err);
   process.exit(1);
 });

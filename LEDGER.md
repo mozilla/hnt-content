@@ -83,3 +83,37 @@ shutdownRedis uses the capture-then-null pattern but, unlike the Pub/Sub
 client, has no shutdownPromise guard: Redis has no in-flight subscriber drain
 to coordinate, and both services already guard their SIGTERM handler against
 re-entry, so a concurrent or repeated shutdown cannot occur in practice.
+
+## HNT-2117: agent tick loop
+
+The agent dedups its own enqueues with agent-owned markers (page:enqueued and
+article:enqueued), not the worker-written fetch keys. The tech spec's state
+table omits these, but the agent must avoid re-enqueuing the same item every
+60-second tick during the window between enqueue and the worker recording a
+fetch, so an agent-side marker is required. The marker stores the enqueue
+timestamp with the default 30-day TTL, and the tick re-enqueues only once the
+crawl interval has elapsed since that timestamp. This diverges from the
+work-breakdown's "TTL = interval minus a minute" because encoding the window
+in the TTL is fragile near the tick cadence (a 1-2 minute interval would
+re-enqueue every tick); comparing timestamps stays exact and independent of
+the tick interval. The check-then-set is safe because the agent is
+single-replica; validatePublisherList additionally rejects duplicate URLs so
+no two list entries race on the same key within a tick. Publishing happens
+before the marker is set, so a failed publish retries next tick rather than
+being suppressed.
+
+/healthz tracks loop liveness, not tick success: the run loop records the tick
+time after every iteration including a failed one, so a transient Pub/Sub or
+Redis outage (surfaced to Sentry) does not trip the staleness probe into a
+restart that would not fix the upstream fault. Numeric config is validated at
+load so a malformed env value fails fast rather than surfacing as a NaN TTL
+mid-tick.
+
+Live articles have no discovery page, so their crawl-article job uses the
+article's own URL as source_url. They share one configurable enqueue interval
+(liveArticleIntervalMinutes) rather than a per-article interval, since the
+publisher list does not carry one.
+
+The publisher list is validated at startup via validatePublisherList in
+crawl-common (reusing the message validators), so a malformed config fails
+fast rather than enqueuing bad jobs.

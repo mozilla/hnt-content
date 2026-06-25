@@ -12,13 +12,16 @@ import type {
   CrawlArticleMessage,
   CrawlArticleDiscoveryMessage,
   DiscoveryContext,
+  LiveArticle,
+  PublisherList,
 } from '../types/messages.js';
 
 /**
- * Thrown when an inbound message fails validation. The
- * subscriber nacks the message and reports this under the
- * `validation-error` kind so a poison payload is told apart
- * from a transient handler failure.
+ * Thrown when a message or config fails validation. At the subscriber
+ * boundary it nacks the message and is reported under the
+ * `validation-error` kind so a poison payload is told apart from a
+ * transient handler failure; at agent startup (publisher list) it
+ * aborts the process so a bad config fails fast.
  */
 export class MessageValidationError extends Error {
   constructor(message: string) {
@@ -183,4 +186,46 @@ export function validateCrawlArticleDiscoveryMessage(
     validateContext(c, `${label}.contexts[${i}]`),
   );
   return { url, interval_minutes, contexts };
+}
+
+/** Validate a live-article entry of the publisher list. */
+function validateLiveArticle(value: unknown, label: string): LiveArticle {
+  const obj = asObject(value, label);
+  return {
+    url: requireString(obj, 'url', label),
+    corpus_item: validateCorpusItem(obj.corpus_item),
+  };
+}
+
+/** Throw if any two entries share a URL, which is a config error. */
+function assertUniqueUrls(items: { url: string }[], label: string): void {
+  const seen = new Set<string>();
+  for (const { url } of items) {
+    if (seen.has(url)) {
+      throw new MessageValidationError(`${label} has a duplicate url: ${url}`);
+    }
+    seen.add(url);
+  }
+}
+
+/**
+ * Validate the agent's publisher list. Fails fast at startup on a
+ * malformed config: pages must be valid discovery messages and
+ * live_articles must each carry a URL and a well-formed corpus_item.
+ * URLs must be unique within each list, since the agent dedups by
+ * URL and a page crawled for several surfaces is one entry with
+ * several contexts, not several entries.
+ */
+export function validatePublisherList(raw: unknown): PublisherList {
+  const label = 'publisher list';
+  const obj = asObject(raw, label);
+  const pages = requireArray(obj, 'pages', label).map((p) =>
+    validateCrawlArticleDiscoveryMessage(p),
+  );
+  const liveArticles = requireArray(obj, 'live_articles', label).map((a, i) =>
+    validateLiveArticle(a, `${label}.live_articles[${i}]`),
+  );
+  assertUniqueUrls(pages, `${label}.pages`);
+  assertUniqueUrls(liveArticles, `${label}.live_articles`);
+  return { pages, live_articles: liveArticles };
 }
