@@ -270,10 +270,16 @@ crawled for several surfaces is one entry with several contexts, satisfying the
 validator's unique-URL rule. interval_minutes defaults to 20 and live_articles
 is empty (the legacy list has none; curated live articles arrive via the Corpus
 API in Phase 5). The full generated publishers.json (about 3400 pages) is
-gitignored rather than committed: it is large, regenerable, and churns on every
-sheet re-export, and how the agent gets it at deploy time (baked image, mounted
-config, or bucket fetch) is a human-gated shadow-mode decision. The committed
-artifacts are the generator and publishers.example.json.
+committed at services/crawl-agent/publishers.json and ships in the image next to
+the package, so the agent has its list at deploy time with no mounted config or
+bucket fetch. Editors re-export it via the sheet exporter and commit the result,
+so the list is reviewed like code; the large per-export diff is the accepted
+cost of that. The agent resolves the path relative to its own module
+(import.meta.url, ../publishers.json) rather than the working directory, because
+the container runs from /app while the file sits next to the compiled code; this
+also works under tsx in local dev. One list serves every environment, so there
+is no PUBLISHER_LIST_PATH env var. publishers.example.json stays as the small
+format reference. This supersedes the earlier decision to gitignore the list.
 
 ## End-to-end validation against dev
 

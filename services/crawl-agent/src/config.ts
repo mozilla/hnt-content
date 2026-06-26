@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 // Deploy environment (dev/stage/prod). Drives the Pub/Sub topic names
 // below, mirroring how Terraform names resources.
 const environment = process.env.ENVIRONMENT;
@@ -55,10 +57,13 @@ export default {
     `${environment}-crawl-article-discovery`,
   crawlArticleTopic:
     process.env.CRAWL_ARTICLE_TOPIC ?? `${environment}-crawl-article`,
-  // Path to the publisher list JSON loaded at startup. pages always come
-  // from this file; live_articles come from the Corpus API when it is
-  // configured (corpusApi.jwkJson set), else from this file.
-  publisherListPath: process.env.PUBLISHER_LIST_PATH ?? 'publishers.json',
+  // The committed publisher list, resolved relative to this module so it
+  // loads regardless of the working directory (the container runs from /app
+  // while the file ships next to the package). One list serves every
+  // environment, so the path is fixed rather than env-configurable.
+  publisherListPath: fileURLToPath(
+    new URL('../publishers.json', import.meta.url),
+  ),
   // Corpus Admin API source for live (curated) articles, mirroring the
   // crawl-worker client. The endpoint, issuer, and audience have app
   // defaults (nonprod admin-api outside prod); only the JWK is a secret.
