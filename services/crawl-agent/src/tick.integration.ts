@@ -96,10 +96,14 @@ describe('agent tick integration', () => {
       new GenericContainer(REDIS_IMAGE)
         .withExposedPorts(6379)
         .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
+        .withStartupTimeout(CONTAINER_START_TIMEOUT_MS)
         .start(),
     ]);
 
-    const endpoint = pubsubContainer.getEmulatorEndpoint();
+    // Force IPv4 loopback (macOS Docker Desktop has no IPv6 on localhost).
+    const endpoint = pubsubContainer
+      .getEmulatorEndpoint()
+      .replace('localhost', '127.0.0.1');
     adminClient = new PubSub({
       projectId: PROJECT_ID,
       apiEndpoint: endpoint,

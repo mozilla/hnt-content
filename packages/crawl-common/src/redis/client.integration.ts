@@ -18,7 +18,13 @@ import {
 
 // Pinned for reproducibility. Bump deliberately.
 const REDIS_IMAGE = 'redis:7.4.1-alpine';
-const CONTAINER_START_TIMEOUT_MS = 120_000;
+// Generous so a cold image pull on a slow Docker VM (e.g. macOS) does
+// not trip the testcontainers default before Redis is ready.
+const CONTAINER_START_TIMEOUT_MS = 180_000;
+// The hook must outlast the container startup timeout so testcontainers
+// owns the deadline and reports a clear error, rather than vitest
+// killing the hook first.
+const HOOK_TIMEOUT_MS = CONTAINER_START_TIMEOUT_MS + 30_000;
 
 /**
  * Integration test for the Redis state client. Runs against a real
@@ -34,10 +40,11 @@ describe('redis state client integration', () => {
     container = await new GenericContainer(REDIS_IMAGE)
       .withExposedPorts(6379)
       .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
+      .withStartupTimeout(CONTAINER_START_TIMEOUT_MS)
       .start();
     host = container.getHost();
     port = container.getMappedPort(6379);
-  }, CONTAINER_START_TIMEOUT_MS);
+  }, HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
     await shutdownRedis();
@@ -132,8 +139,16 @@ describe('redis state client integration', () => {
     const blocked = await acquireRateLimitToken('zyte:rate:b', 600, 1);
     expect(blocked.allowed).toBe(false);
 
-    await new Promise((r) => setTimeout(r, blocked.retryAfterMs + 50));
-    const refilled = await acquireRateLimitToken('zyte:rate:b', 600, 1);
+    // Poll for the refill rather than sleeping a fixed span: the bucket
+    // refills on the Redis server clock, so a fixed Node setTimeout can
+    // fall short under scheduler coarseness or load and flake. A blocked
+    // call does not consume a token, so polling is side-effect free.
+    const deadline = Date.now() + blocked.retryAfterMs + 1_000;
+    let refilled = await acquireRateLimitToken('zyte:rate:b', 600, 1);
+    while (!refilled.allowed && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 10));
+      refilled = await acquireRateLimitToken('zyte:rate:b', 600, 1);
+    }
     expect(refilled.allowed).toBe(true);
   });
 

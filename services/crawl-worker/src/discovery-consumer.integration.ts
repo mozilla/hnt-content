@@ -97,9 +97,13 @@ describe('discovery consumer integration', () => {
       new GenericContainer(REDIS_IMAGE)
         .withExposedPorts(6379)
         .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
+        .withStartupTimeout(CONTAINER_START_TIMEOUT_MS)
         .start(),
     ]);
-    endpoint = pubsubContainer.getEmulatorEndpoint();
+    // Force IPv4 loopback (macOS Docker Desktop has no IPv6 on localhost).
+    endpoint = pubsubContainer
+      .getEmulatorEndpoint()
+      .replace('localhost', '127.0.0.1');
     redisHost = redisContainer.getHost();
     redisPort = redisContainer.getMappedPort(6379);
     adminClient = new PubSub({

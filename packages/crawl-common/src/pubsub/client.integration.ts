@@ -66,7 +66,12 @@ describe('Pub/Sub client integration', () => {
       .withWaitStrategy(Wait.forListeningPorts())
       .withStartupTimeout(CONTAINER_START_TIMEOUT_MS)
       .start();
-    endpoint = container.getEmulatorEndpoint();
+    // Force IPv4 loopback: a "localhost" endpoint can resolve to IPv6
+    // ::1, which Docker Desktop on macOS does not listen on, hanging the
+    // gRPC dial.
+    endpoint = container
+      .getEmulatorEndpoint()
+      .replace('localhost', '127.0.0.1');
     // Pass apiEndpoint + emulatorMode explicitly. Without
     // emulatorMode, google-auth-library still probes the GCE
     // metadata server and burns ~5s per client on the

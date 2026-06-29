@@ -85,6 +85,10 @@ export function initRedisClient(opts: RedisClientOptions): void {
   client = new Redis({
     host: opts.host,
     port: opts.port ?? 6379,
+    // Force IPv4. Memorystore is IPv4 only, and in tests a "localhost"
+    // container host can otherwise resolve to IPv6 ::1 (which Docker
+    // Desktop on macOS does not listen on), hanging the connection.
+    family: 4,
     ...(opts.keyPrefix && { keyPrefix: opts.keyPrefix }),
   });
   // Surface background connection errors. ioredis reconnects on its
