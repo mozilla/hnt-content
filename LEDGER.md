@@ -607,3 +607,27 @@ from the Corpus read still propagate, so a misconfigured or unreachable Corpus
 aborts startup as before, and the static file path stays fail-fast. This follows
 the edge-validation principle: fail fast on our own config, tolerate and isolate
 bad external data.
+
+## Cross-platform test reliability (macOS) and Redis IPv4
+
+The test suite passes on Linux CI but had latent edge cases that could flake on a
+developer's macOS machine, which we cannot test directly. Four changes harden it.
+First, the Redis client now sets ioredis `family: 4`. Memorystore is IPv4 only,
+so this is correct in production, and it also fixes tests: on macOS Docker
+Desktop a container host of `localhost` can resolve to IPv6 `::1`, which the
+container does not listen on, hanging the connection; forcing IPv4 avoids that.
+Second, the integration tests force the Pub/Sub emulator endpoint to `127.0.0.1`
+(`getEmulatorEndpoint().replace('localhost', '127.0.0.1')`) for the same IPv6
+reason on the gRPC dial. Third, the Redis `GenericContainer` now sets
+`withStartupTimeout` (matching the Pub/Sub emulator) so a cold image pull on a
+slow Docker VM does not trip the testcontainers 60s default; the redis-only suite
+also gains a hook timeout that outlasts the startup budget so testcontainers owns
+the deadline. Fourth, two real-time-dependent tests were made deterministic: the
+agent `/healthz` boundary tests freeze `Date` (only Date, so HTTP timers stay
+real) and assert at a 1ms boundary instead of a 1s wall-clock buffer, and the
+Redis rate-limit refill test polls for the refill on the server clock rather than
+sleeping a fixed span that could fall short under load. Two independent audits
+(timing/race/nondeterminism and macOS/testcontainers) found no other reliability
+hazards: endpoint construction, mock and fake-timer hygiene, `process.env`
+restoration, per-file worker isolation, and sort-before-compare on async fan-out
+were already correct.
