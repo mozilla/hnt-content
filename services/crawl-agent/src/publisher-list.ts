@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import {
   getScheduledSectionItems,
+  validateLiveArticle,
   validatePublisherList,
   type LiveArticle,
   type PublisherList,
@@ -28,19 +29,34 @@ export function corpusSourceEnabled(): boolean {
  * Fetch live articles from the Corpus API for every configured surface
  * (the currently scheduled section items), de-duplicated by URL across
  * surfaces since one article can be scheduled on more than one surface.
- * Validates each corpus item and the live-URL uniqueness the same way
- * the file path does, failing fast on a malformed item.
+ * Validates each item on its own and skips the malformed ones. Unlike
+ * the static file, the Corpus API is external input that can carry a
+ * blank required field (e.g. a curated item with no publisher), so a
+ * single bad item degrades freshness for that item rather than crash
+ * looping the whole agent. Client and transport errors still propagate
+ * so a misconfigured or unreachable Corpus aborts startup.
  */
 export async function fetchLiveArticles(): Promise<LiveArticle[]> {
   const seen = new Set<string>();
   const liveArticles: LiveArticle[] = [];
+  let skipped = 0;
   for (const guid of config.scheduledSurfaceGuids) {
     for (const article of await getScheduledSectionItems(guid)) {
       if (seen.has(article.url)) continue;
       seen.add(article.url);
-      liveArticles.push(article);
+      try {
+        liveArticles.push(validateLiveArticle(article));
+      } catch (err) {
+        skipped++;
+        const reason = err instanceof Error ? err.message : String(err);
+        console.warn(`Skipping live article ${article.url}: ${reason}`);
+      }
     }
   }
-  return validatePublisherList({ pages: [], live_articles: liveArticles })
-    .live_articles;
+  if (skipped > 0) {
+    console.warn(
+      `Skipped ${skipped} malformed live articles from the Corpus API`,
+    );
+  }
+  return liveArticles;
 }

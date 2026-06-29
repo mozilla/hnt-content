@@ -127,11 +127,30 @@ describe('fetchLiveArticles', () => {
     ]);
   });
 
-  it('validates the assembled list and throws on a malformed corpus item', async () => {
-    const bad = live('https://x/1', 'e1');
-    bad.corpus_item.title = '';
-    vi.mocked(getScheduledSectionItems).mockResolvedValue([bad]);
+  it('skips malformed corpus items and keeps the valid ones', async () => {
+    const good = live('https://x/1', 'e1');
+    const blankPublisher = live('https://x/2', 'e2');
+    blankPublisher.corpus_item.publisher = '';
+    const blankTitle = live('https://x/3', 'e3');
+    blankTitle.corpus_item.title = '';
+    vi.mocked(getScheduledSectionItems).mockResolvedValue([
+      good,
+      blankPublisher,
+      blankTitle,
+    ]);
 
-    await expect(fetchLiveArticles()).rejects.toThrow(/corpus_item\.title/);
+    const result = await fetchLiveArticles();
+
+    // A single curated item with a blank required field must not crash
+    // the agent; the bad items are dropped and the good one survives.
+    expect(result.map((a) => a.url)).toEqual(['https://x/1']);
+  });
+
+  it('propagates a Corpus client error so startup fails fast', async () => {
+    vi.mocked(getScheduledSectionItems).mockRejectedValue(
+      new Error('Corpus API error: 503'),
+    );
+
+    await expect(fetchLiveArticles()).rejects.toThrow(/503/);
   });
 });

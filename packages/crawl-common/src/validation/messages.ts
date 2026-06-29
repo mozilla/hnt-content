@@ -189,7 +189,10 @@ export function validateCrawlArticleDiscoveryMessage(
 }
 
 /** Validate a live-article entry of the publisher list. */
-function validateLiveArticle(value: unknown, label: string): LiveArticle {
+export function validateLiveArticle(
+  value: unknown,
+  label = 'live_article',
+): LiveArticle {
   const obj = asObject(value, label);
   return {
     url: requireString(obj, 'url', label),
