@@ -590,3 +590,20 @@ actually ready. The container startup budget was raised to 180s and each
 beforeAll hook timeout set to that plus 30s, so testcontainers owns the deadline
 and reports a clear error instead of vitest killing the hook first. Test files
 only; no production change.
+
+## Corpus live articles: tolerate a malformed item instead of crash-looping
+
+The first dev deploy crash-looped the agent at startup: fetchLiveArticles ran
+the Corpus API response through validatePublisherList, the same fail-fast
+validator the static publisher-list file uses, and a real curated item with a
+blank publisher threw a MessageValidationError that aborted startup. The static
+file is config (a bad entry is an operator error worth failing fast on), but the
+Corpus API is external input whose data quality we do not control, so the same
+strictness is wrong there. Fix: fetchLiveArticles now validates each item on its
+own (validateLiveArticle, newly exported from crawl-common) and skips the
+malformed ones with a warning, so one bad curated item degrades freshness for
+that item rather than taking down the whole crawler. Client and transport errors
+from the Corpus read still propagate, so a misconfigured or unreachable Corpus
+aborts startup as before, and the static file path stays fail-fast. This follows
+the edge-validation principle: fail fast on our own config, tolerate and isolate
+bad external data.
