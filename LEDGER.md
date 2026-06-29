@@ -574,3 +574,19 @@ marked TEMPORARY (HNT-2086); remove the module, its spec, and the two config
 call sites once the chart sets both env vars. The dev subscriptions use a 300s
 ack deadline, matching the worker default, so the lock-TTL derivation is
 consistent in the deployed environment.
+
+## Pub/Sub emulator integration-test startup
+
+The four integration suites that start the Pub/Sub emulator (the pubsub client
+test plus the agent tick and both worker consumers) intermittently hung their
+beforeAll hook at the 120s timeout. Root cause: PubSubEmulatorContainer defaults
+to waiting for a "Server started" log line, but the pinned cloud-cli emulator
+image stays silent through its slow JVM boot (about 165s) and emits that line
+only at the very end, so the log wait races the startup timeout. Fix: wait on
+the emulator's listening port instead (Wait.forListeningPorts), the true
+readiness signal and the same approach the Redis container in these suites
+already uses; the createTopic call right after fails fast if the emulator is not
+actually ready. The container startup budget was raised to 180s and each
+beforeAll hook timeout set to that plus 30s, so testcontainers owns the deadline
+and reports a clear error instead of vitest killing the hook first. Test files
+only; no production change.
