@@ -3,6 +3,7 @@ import {
   PubSubEmulatorContainer,
   type StartedPubSubEmulatorContainer,
 } from '@testcontainers/gcloud';
+import { Wait } from 'testcontainers';
 import {
   afterAll,
   afterEach,
@@ -31,7 +32,14 @@ import {
 // https://gcr.io/google.com/cloudsdktool/google-cloud-cli for tags.
 const EMULATOR_IMAGE =
   'gcr.io/google.com/cloudsdktool/google-cloud-cli:568.0.0-emulators';
-const CONTAINER_START_TIMEOUT_MS = 120_000;
+// The emulator boots slowly (JVM startup near two minutes here) and
+// the image is large, so the container startup budget must be
+// generous. See the wait-strategy note in beforeAll.
+const CONTAINER_START_TIMEOUT_MS = 180_000;
+// The hook must outlast the container startup timeout so
+// testcontainers owns the deadline and reports a clear error,
+// rather than vitest killing the hook first.
+const HOOK_TIMEOUT_MS = CONTAINER_START_TIMEOUT_MS + 30_000;
 const CONSUME_TIMEOUT_MS = 10_000;
 
 /**
@@ -47,8 +55,16 @@ describe('Pub/Sub client integration', () => {
   let subscriptionName: string;
 
   beforeAll(async () => {
+    // The package default waits for a "Server started" log line, but
+    // this emulator image stays silent until the very end of its
+    // slow boot and then emits that line, so the default races the
+    // startup timeout and hangs the hook. Wait on the listening port
+    // instead: it opens exactly when the emulator is ready, and the
+    // createTopic call below fails fast if it is not.
     container = await new PubSubEmulatorContainer(EMULATOR_IMAGE)
       .withProjectId(PROJECT_ID)
+      .withWaitStrategy(Wait.forListeningPorts())
+      .withStartupTimeout(CONTAINER_START_TIMEOUT_MS)
       .start();
     endpoint = container.getEmulatorEndpoint();
     // Pass apiEndpoint + emulatorMode explicitly. Without
@@ -60,7 +76,7 @@ describe('Pub/Sub client integration', () => {
       apiEndpoint: endpoint,
       emulatorMode: true,
     });
-  }, CONTAINER_START_TIMEOUT_MS);
+  }, HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
     await adminClient?.close();

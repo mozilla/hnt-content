@@ -55,7 +55,14 @@ const CRAWL_ARTICLE_VERIFY_SUB = 'crawl-article-verify-sub';
 const EMULATOR_IMAGE =
   'gcr.io/google.com/cloudsdktool/google-cloud-cli:568.0.0-emulators';
 const REDIS_IMAGE = 'redis:7.4.1-alpine';
-const CONTAINER_START_TIMEOUT_MS = 120_000;
+// The Pub/Sub emulator boots slowly (JVM startup near two minutes
+// here), so the container startup budget must be generous. See the
+// wait-strategy note in beforeAll.
+const CONTAINER_START_TIMEOUT_MS = 180_000;
+// The hook must outlast the container startup timeout so
+// testcontainers owns the deadline and reports a clear error,
+// rather than vitest killing the hook first.
+const HOOK_TIMEOUT_MS = CONTAINER_START_TIMEOUT_MS + 30_000;
 const CONSUME_TIMEOUT_MS = 10_000;
 
 /**
@@ -77,9 +84,15 @@ describe('discovery consumer integration', () => {
   let testNum = 0;
 
   beforeAll(async () => {
+    // Wait on the emulator's listening port rather than the package
+    // default log message: this image stays silent until the very
+    // end of its slow boot, so the default log wait races the
+    // startup timeout and hangs the hook.
     [pubsubContainer, redisContainer] = await Promise.all([
       new PubSubEmulatorContainer(EMULATOR_IMAGE)
         .withProjectId(PROJECT_ID)
+        .withWaitStrategy(Wait.forListeningPorts())
+        .withStartupTimeout(CONTAINER_START_TIMEOUT_MS)
         .start(),
       new GenericContainer(REDIS_IMAGE)
         .withExposedPorts(6379)
@@ -106,7 +119,7 @@ describe('discovery consumer integration', () => {
       .createSubscription(CRAWL_ARTICLE_VERIFY_SUB);
 
     ({ startDiscoveryConsumer } = await import('./discovery-consumer.js'));
-  }, CONTAINER_START_TIMEOUT_MS);
+  }, HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
     await adminClient?.close();
