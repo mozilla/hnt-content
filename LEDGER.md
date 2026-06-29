@@ -631,3 +631,23 @@ sleeping a fixed span that could fall short under load. Two independent audits
 hazards: endpoint construction, mock and fake-timer hygiene, `process.env`
 restoration, per-file worker isolation, and sort-before-compare on async fan-out
 were already correct.
+
+## Guardian (and UA-allowlisted publishers): carry over the crawler User-Agent
+
+The dev deploy surfaced a steady stream of `ZyteError: 451` (Unavailable For
+Legal Reasons) on theguardian.com, the busiest publisher in the list. The legacy
+crawler (ml-services `zyte_config.py`) sends a specific Mozilla New Tab crawler
+User-Agent for theguardian.com, paired with `Zyte-Override-Headers: User-Agent`
+so Zyte forwards our UA instead of its own; the Guardian allowlisted Mozilla's
+crawler by that exact string, and presenting it clears the 451. We had the client
+capability (`customHttpRequestHeaders`) but the worker never passed it, so we
+dropped that behavior in the rewrite. Fix: a small `zyteOptionsForUrl` helper in
+the worker builds the per-request Zyte options and, for a registrable-domain
+allowlist (currently just theguardian.com), attaches the UA headers. The custom
+UA only takes effect in `httpResponseBody` mode (a Zyte limitation), which both
+crawl paths already use, so this is purely additive. The UA string is reproduced
+byte for byte because the allowlist matches on it. Other dev errors were triaged
+as not our bug: Zyte 520s are transient and already retried, and the Corpus
+"could not generate an S3 URL" failures come from the Corpus API rejecting a few
+curated items' source images on update, not from our payload (we pass the item's
+existing imageUrl back unchanged, as the mutation requires).

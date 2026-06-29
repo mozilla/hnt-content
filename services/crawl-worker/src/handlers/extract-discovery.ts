@@ -1,6 +1,7 @@
 import { extractArticleList, getRegistrableDomain } from 'crawl-common';
 import { time } from 'metrics';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
+import { zyteOptionsForUrl } from './zyte-request-options.js';
 import type {
   ArticleDiscoveryEvent,
   CrawlArticleDiscoveryMessage,
@@ -37,7 +38,7 @@ export async function handleArticleDiscovery(
 ): Promise<DiscoveryResult> {
   const { data: items } = await time(
     'crawl.zyte.duration_ms',
-    () => extractArticleList(message.url, { extractFrom: 'httpResponseBody' }),
+    () => extractArticleList(message.url, zyteOptionsForUrl(message.url)),
     { extraction: 'articleList' },
   );
 
