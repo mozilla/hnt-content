@@ -547,3 +547,30 @@ crawl zero live articles. The first Corpus read blocks startup and can retry for
 tens of seconds on a cold blip, during which /healthz is not yet ready, so the
 deploy should add a K8s startupProbe (noted for the webservices-infra follow-up)
 to avoid a liveness restart loop.
+
+## REDIS_HOST and PROJECT_ID config wiring
+
+The crawl pods need REDIS_HOST and PROJECT_ID, which are non-secret runtime
+config the mozcloud chart does not inject by default (only secrets arrive
+automatically, via the platform ExternalSecret). The proper fix lives in
+webservices-infra: PROJECT_ID and REDIS_HOST are added to the hnt-config
+configMap for all three environments. PROJECT_ID reuses the per-env
+global.mozcloud.project_id via a YAML anchor so the two cannot drift. REDIS_HOST
+points at a new google_dns_record_set A record (hnt-redis-<env>) rather than the
+Memorystore IP, mirroring the autopush and merino convention, so the name
+survives an instance recreate; the zone comes from the projects remote state the
+tenant already reads. That change is staged on a local-only webservices-infra
+branch pending human review.
+
+To unblock deploying the app before that infra change merges, this repo carries
+a temporary fallback: crawl-common deployed-defaults maps ENVIRONMENT to the
+known dev/stage/prod Memorystore IPs and project ids, and the agent and worker
+config use it only when the env var is unset (process.env.X ?? deployedX(env)).
+The env var always wins when set, so a configured deploy (post-infra-merge) and
+local dev (which sets the values via .env) never hit the fallback, and the
+behavior is unchanged for the prior empty-default case. The defaults live in
+crawl-common because both services need the identical table (DRY). Every site is
+marked TEMPORARY (HNT-2086); remove the module, its spec, and the two config
+call sites once the chart sets both env vars. The dev subscriptions use a 300s
+ack deadline, matching the worker default, so the lock-TTL derivation is
+consistent in the deployed environment.

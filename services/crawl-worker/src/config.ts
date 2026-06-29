@@ -1,3 +1,5 @@
+import { deployedProjectId, deployedRedisHost } from 'crawl-common';
+
 // Deploy environment (dev/stage/prod). Drives the Pub/Sub names and
 // the Corpus endpoint below, mirroring how Terraform names resources.
 const environment = process.env.ENVIRONMENT;
@@ -39,7 +41,12 @@ export default {
   // uses it to pick which consumer to start (article vs discovery).
   workerRole: process.env.WORKER_ROLE ?? '',
   port: numberEnv(process.env.PORT, 8080),
-  projectId: process.env.PROJECT_ID ?? '',
+  // TEMPORARY (HNT-2086): PROJECT_ID and REDIS_HOST fall back to
+  // per-environment defaults (keyed on ENVIRONMENT) until the chart
+  // injects them; see crawl-common deployed-defaults. The env var always
+  // wins when set. Drop the fallback (back to '') once the chart sets
+  // both, here and on redisHost below.
+  projectId: process.env.PROJECT_ID ?? deployedProjectId(environment),
   // Set to 'host:port' to point the Pub/Sub SDK at a local emulator.
   // Unset in production, where the SDK uses the real endpoint.
   pubsubEmulatorHost: process.env.PUBSUB_EMULATOR_HOST,
@@ -71,7 +78,8 @@ export default {
   // (which bypass this check) keep resyncing on their own cadence.
   articleFetchTtlMinutes: numberEnv(process.env.ARTICLE_FETCH_TTL_MINUTES, 60),
   // Redis (Memorystore) for fetch/lock/content dedup state.
-  redisHost: process.env.REDIS_HOST ?? '',
+  // TEMPORARY (HNT-2086): see the PROJECT_ID note above.
+  redisHost: process.env.REDIS_HOST ?? deployedRedisHost(environment),
   redisPort: numberEnv(process.env.REDIS_PORT, 6379),
   zyteApiKey: process.env.ZYTE_API_KEY ?? '',
   // Distributed Zyte rate limit shared across replicas via Redis. 0

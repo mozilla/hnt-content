@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { deployedProjectId, deployedRedisHost } from 'crawl-common';
 
 // Deploy environment (dev/stage/prod). Drives the Pub/Sub topic names
 // below, mirroring how Terraform names resources.
@@ -46,7 +47,12 @@ export default {
     process.env.STALE_TICK_THRESHOLD_MINUTES,
     10,
   ),
-  projectId: process.env.PROJECT_ID ?? '',
+  // TEMPORARY (HNT-2086): PROJECT_ID and REDIS_HOST fall back to
+  // per-environment defaults (keyed on ENVIRONMENT) until the chart
+  // injects them; see crawl-common deployed-defaults. The env var always
+  // wins when set. Drop the fallback (back to '') once the chart sets
+  // both, here and on redisHost below.
+  projectId: process.env.PROJECT_ID ?? deployedProjectId(environment),
   // Set to 'host:port' to point the Pub/Sub SDK at a local emulator.
   pubsubEmulatorHost: process.env.PUBSUB_EMULATOR_HOST,
   // Topics the agent publishes to. Env-prefixed names are derived from
@@ -91,6 +97,7 @@ export default {
     process.env.LIVE_ARTICLE_INTERVAL_MINUTES,
     20,
   ),
-  redisHost: process.env.REDIS_HOST ?? '',
+  // TEMPORARY (HNT-2086): see the PROJECT_ID note above.
+  redisHost: process.env.REDIS_HOST ?? deployedRedisHost(environment),
   redisPort: numberEnv(process.env.REDIS_PORT, 6379),
 };
