@@ -821,3 +821,13 @@ fails the command fast (handler throws, message nacks, Pub/Sub redelivers) inste
 hanging the handler and starving throughput while holding the lease. (3) Added a reason
 tag to the skipped message metric (recent for a fetch marker within the interval,
 lock_busy for a held lock) so the dashboard can tell dedup skips from lock contention.
+
+## Enable the Zyte rate limiter by default at 2500 RPM (2026-06-30)
+
+The distributed Redis Zyte rate limiter was built (HNT-2441) but dormant:
+zyteRateLimitPerMinute defaulted to 0, which makes main.ts skip wiring
+beforeRequest and awaitZyteToken early-return, so no env had throttling unless
+it set the var. Changed the default to 2500 RPM so the limiter is on
+everywhere by default; the env var still overrides per env and 0 disables it.
+Burst is left at 0 because awaitZyteToken falls back to the per-minute rate, so
+the burst becomes 2500 automatically.

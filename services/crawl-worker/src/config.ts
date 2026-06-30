@@ -112,11 +112,15 @@ export default {
   redisHost: process.env.REDIS_HOST ?? deployedRedisHost(environment),
   redisPort: numberEnv(process.env.REDIS_PORT, 6379),
   zyteApiKey: process.env.ZYTE_API_KEY ?? '',
-  // Distributed Zyte rate limit shared across replicas via Redis. 0
-  // disables it (local/test default); deployed envs set the Zyte
-  // plan's RPM. Burst defaults to one minute of tokens; the wait caps
-  // how long a handler blocks for a token before nacking to shed load.
-  zyteRateLimitPerMinute: numberEnv(process.env.ZYTE_RATE_LIMIT_PER_MINUTE, 0),
+  // Distributed Zyte rate limit shared across replicas via Redis. The
+  // default enables the limiter at the Zyte plan's RPM; 0 disables it
+  // (set per env, e.g. local/test). Burst defaults to one minute of
+  // tokens; the wait caps how long a handler blocks for a token before
+  // nacking to shed load.
+  zyteRateLimitPerMinute: numberEnv(
+    process.env.ZYTE_RATE_LIMIT_PER_MINUTE,
+    2500,
+  ),
   zyteRateLimitBurst: numberEnv(process.env.ZYTE_RATE_LIMIT_BURST, 0),
   zyteRateLimitMaxWaitMs: numberEnv(
     process.env.ZYTE_RATE_LIMIT_MAX_WAIT_MS,

@@ -80,3 +80,22 @@ describe('worker config Pub/Sub flow control', () => {
     );
   });
 });
+
+describe('worker config Zyte rate limit', () => {
+  it('enables the limiter by default at the plan RPM', async () => {
+    const config = await loadConfig({});
+
+    expect(config.zyteRateLimitPerMinute).toBe(2500);
+  });
+
+  it('reads ZYTE_RATE_LIMIT_PER_MINUTE when set, including 0 to disable', async () => {
+    expect(
+      (await loadConfig({ ZYTE_RATE_LIMIT_PER_MINUTE: '600' }))
+        .zyteRateLimitPerMinute,
+    ).toBe(600);
+    expect(
+      (await loadConfig({ ZYTE_RATE_LIMIT_PER_MINUTE: '0' }))
+        .zyteRateLimitPerMinute,
+    ).toBe(0);
+  });
+});
