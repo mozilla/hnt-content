@@ -8,6 +8,7 @@ vi.mock('crawl-common', async (importOriginal) => {
 // Mutable config so each test can toggle the rate limit.
 vi.mock('./config.js', () => ({
   default: {
+    workerRole: 'article',
     zyteRateLimitPerMinute: 0,
     zyteRateLimitBurst: 0,
     zyteRateLimitMaxWaitMs: 200,
@@ -44,7 +45,7 @@ describe('awaitZyteToken', () => {
 
     await awaitZyteToken();
 
-    expect(acquire).toHaveBeenCalledWith('zyte:rate-limit', 600, 600);
+    expect(acquire).toHaveBeenCalledWith('zyte:rate-limit:article', 600, 600);
   });
 
   it('waits for a refill, then proceeds', async () => {

@@ -82,16 +82,31 @@ describe('worker config Pub/Sub flow control', () => {
 });
 
 describe('worker config Zyte rate limit', () => {
-  it('enables the limiter by default at the plan RPM', async () => {
-    const config = await loadConfig({});
+  it('defaults to the article share of the account limit', async () => {
+    const config = await loadConfig({ WORKER_ROLE: 'article' });
 
-    expect(config.zyteRateLimitPerMinute).toBe(2500);
+    expect(config.zyteRateLimitPerMinute).toBe(2200);
+  });
+
+  it('defaults to the smaller discovery share', async () => {
+    const config = await loadConfig({ WORKER_ROLE: 'discovery' });
+
+    expect(config.zyteRateLimitPerMinute).toBe(300);
+    // The two role shares sum to the per-account limit.
+    const article = await loadConfig({ WORKER_ROLE: 'article' });
+    expect(config.zyteRateLimitPerMinute + article.zyteRateLimitPerMinute).toBe(
+      2500,
+    );
   });
 
   it('reads ZYTE_RATE_LIMIT_PER_MINUTE when set, including 0 to disable', async () => {
     expect(
-      (await loadConfig({ ZYTE_RATE_LIMIT_PER_MINUTE: '600' }))
-        .zyteRateLimitPerMinute,
+      (
+        await loadConfig({
+          WORKER_ROLE: 'discovery',
+          ZYTE_RATE_LIMIT_PER_MINUTE: '600',
+        })
+      ).zyteRateLimitPerMinute,
     ).toBe(600);
     expect(
       (await loadConfig({ ZYTE_RATE_LIMIT_PER_MINUTE: '0' }))

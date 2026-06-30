@@ -2,10 +2,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { acquireRateLimitToken } from 'crawl-common';
 import config from './config.js';
 
-// One bucket shared by both worker roles, since the Zyte rate limit
-// is per API account. Redis is per-environment, so the key is not
+// Each worker role gets its own bucket. The two per-role rates sum to
+// the per-account Zyte limit, so the roles neither contend on one bucket
+// nor starve each other. Redis is per-environment, so the key is not
 // env-prefixed.
-const RATE_LIMIT_KEY = 'zyte:rate-limit';
+const RATE_LIMIT_KEY = `zyte:rate-limit:${config.workerRole}`;
 
 /**
  * Wait for a shared Zyte rate-limit token, retrying as the bucket

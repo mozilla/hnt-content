@@ -56,12 +56,27 @@ if (pubsubMaxMessages <= 0) {
   throw new Error(`PUBSUB_MAX_MESSAGES must be > 0, got ${pubsubMaxMessages}`);
 }
 
+const workerRole = process.env.WORKER_ROLE ?? '';
+
+// Split the per-account Zyte rate limit between the two worker roles in
+// proportion to their measured request mix (about 7.6 to 1 article vs
+// articleList, HNT-2086): the article worker fetches one article per job
+// while the discovery worker lists many articles per page, so article
+// dominates. Each role runs its own Redis bucket and the two rates sum to
+// the account limit, so the roles neither contend on one bucket nor
+// starve each other. ZYTE_RATE_LIMIT_PER_MINUTE overrides per env; 0
+// disables the limiter (e.g. local/test).
+const zyteRateLimitPerMinute = numberEnv(
+  process.env.ZYTE_RATE_LIMIT_PER_MINUTE,
+  workerRole === 'discovery' ? 300 : 2200,
+);
+
 export default {
   service: 'crawl-worker',
   // Which worker this pod runs as, set per deployment by the Helm
   // chart (required, no default). Tags errors in Sentry; a later task
   // uses it to pick which consumer to start (article vs discovery).
-  workerRole: process.env.WORKER_ROLE ?? '',
+  workerRole,
   port: numberEnv(process.env.PORT, 8080),
   // TEMPORARY (HNT-2086): PROJECT_ID and REDIS_HOST fall back to
   // per-environment defaults (keyed on ENVIRONMENT) until the chart
@@ -112,15 +127,10 @@ export default {
   redisHost: process.env.REDIS_HOST ?? deployedRedisHost(environment),
   redisPort: numberEnv(process.env.REDIS_PORT, 6379),
   zyteApiKey: process.env.ZYTE_API_KEY ?? '',
-  // Distributed Zyte rate limit shared across replicas via Redis. The
-  // default enables the limiter at the Zyte plan's RPM; 0 disables it
-  // (set per env, e.g. local/test). Burst defaults to one minute of
-  // tokens; the wait caps how long a handler blocks for a token before
-  // nacking to shed load.
-  zyteRateLimitPerMinute: numberEnv(
-    process.env.ZYTE_RATE_LIMIT_PER_MINUTE,
-    2500,
-  ),
+  // Per-role share of the distributed Zyte rate limit (see the split
+  // above). Burst defaults to one minute of tokens; the wait caps how
+  // long a handler blocks for a token before nacking to shed load.
+  zyteRateLimitPerMinute,
   zyteRateLimitBurst: numberEnv(process.env.ZYTE_RATE_LIMIT_BURST, 0),
   zyteRateLimitMaxWaitMs: numberEnv(
     process.env.ZYTE_RATE_LIMIT_MAX_WAIT_MS,

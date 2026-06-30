@@ -260,7 +260,7 @@ scripts/generate-publishers.py converts the legacy crawl pages (the curated
 publisher Google Sheet exported as a Python PAGES list) into the agent's
 publisher list. The legacy entries are {url, targets:[{locale, topics[]}]}; the
 script flattens each to one discovery context per (locale, topic). A locale
-maps to a New Tab scheduled surface as NEW_TAB_<LOCALE> (en_US to NEW_TAB_EN_US),
+maps to a New Tab scheduled surface as NEW*TAB*<LOCALE> (en_US to NEW_TAB_EN_US),
 which is the surface id format the rest of the content system uses; all twelve
 legacy locales have a matching surface. The topic is lowercased to match the
 discovery context convention in publishers.example.json (the curated subtopic
@@ -831,3 +831,25 @@ it set the var. Changed the default to 2500 RPM so the limiter is on
 everywhere by default; the env var still overrides per env and 0 disables it.
 Burst is left at 0 because awaitZyteToken falls back to the per-minute rate, so
 the burst becomes 2500 automatically.
+
+## Split the 2500 Zyte RPM per worker role (2026-06-30)
+
+A single shared bucket caps the combined rate at 2500 but lets a burst on one
+role consume the whole budget and starve the other. Split it instead: each role
+runs its own Redis bucket (key zyte:rate-limit:{role}) with its own share, and
+the two shares sum to the per-account 2500 limit, so the account total is still
+respected while neither role starves. The shares are set in application config
+(config.ts derives the default from WORKER_ROLE) rather than infra env vars, per
+the preference to keep this in app config; ZYTE_RATE_LIMIT_PER_MINUTE still
+overrides per env.
+
+The split is article 2200 / discovery 300, from the measured request mix. The
+Zyte Stats API (org 612928) is shared with the legacy crawler, whose ratio is
+inverted (articleList dominates), so org-wide windows are misleading. Isolating
+the new crawler by subtracting the pre-deploy baseline from the post-deploy
+steady state gives about 7.6:1 article:articleList, which is structurally sane
+(one page lists many articles, so article extraction dominates). 300 rounds the
+discovery share up slightly over the ~289 estimate because the articleList delta
+is the noisier signal. Re-measure once the crawler runs at full steady state for
+a few days; cleaner isolation needs a distinct Zyte tag or apikey_label on the
+worker requests (the workers currently send only extractFrom, no tags).
