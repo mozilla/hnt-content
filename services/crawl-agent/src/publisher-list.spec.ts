@@ -107,15 +107,29 @@ describe('limitPages', () => {
     expect(limitPages(list, 10)).toBe(list);
   });
 
-  it('samples down to the limit with an even stride across the list', () => {
-    // 10 pages to 3: stride ceil(10/3)=4, picks indices 0,4,8.
+  it('samples exactly the limit, evenly spaced across the list', () => {
+    // 10 pages to 3: slots map to floor(i*10/3) = indices 0, 3, 6.
     const result = limitPages(listOf(10), 3);
 
     expect(result.pages.map((p) => p.url)).toEqual([
       'https://example.com/p0',
-      'https://example.com/p4',
-      'https://example.com/p8',
+      'https://example.com/p3',
+      'https://example.com/p6',
     ]);
+  });
+
+  it('returns exactly the limit for non-divisor sizes, without duplicates', () => {
+    // A fixed ceil-stride would undershoot (e.g. 100/33 -> 25 pages); the
+    // index mapping returns exactly the configured count, evenly spaced.
+    for (const [n, limit] of [
+      [100, 33],
+      [3399, 34],
+      [50, 7],
+    ] as const) {
+      const urls = limitPages(listOf(n), limit).pages.map((p) => p.url);
+      expect(urls).toHaveLength(limit);
+      expect(new Set(urls).size).toBe(limit);
+    }
   });
 });
 

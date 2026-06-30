@@ -22,15 +22,22 @@ export async function loadPublisherList(path: string): Promise<PublisherList> {
 }
 
 /**
- * Sample the pages down to the configured limit with an even stride, so
- * a dev deployment can run a representative subset at lower load without
- * collapsing to one corner of the alphabetically sorted list. Returns
- * the list unchanged when no limit is set or it already fits.
+ * Sample the pages down to exactly the configured limit, evenly spaced
+ * across the list, so a dev deployment runs a representative subset at
+ * lower load without collapsing to one corner of the alphabetically
+ * sorted list. Returns the list unchanged when no limit is set or it
+ * already fits.
  */
 export function limitPages(list: PublisherList, limit: number): PublisherList {
   if (limit <= 0 || list.pages.length <= limit) return list;
-  const stride = Math.ceil(list.pages.length / limit);
-  const pages = list.pages.filter((_, i) => i % stride === 0).slice(0, limit);
+  const total = list.pages.length;
+  // Map each output slot to an evenly spaced source index. A fixed
+  // integer stride (ceil(total/limit)) over-strides and returns fewer
+  // than limit pages when limit does not divide total.
+  const pages = Array.from(
+    { length: limit },
+    (_, i) => list.pages[Math.floor((i * total) / limit)],
+  );
   return { ...list, pages };
 }
 
