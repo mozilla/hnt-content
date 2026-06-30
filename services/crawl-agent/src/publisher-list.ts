@@ -54,17 +54,20 @@ export async function fetchLiveArticles(): Promise<LiveArticle[]> {
   const seen = new Set<string>();
   const liveArticles: LiveArticle[] = [];
   let skipped = 0;
-  for (const guid of config.scheduledSurfaceGuids) {
-    for (const article of await getScheduledSectionItems(guid)) {
-      if (seen.has(article.url)) continue;
-      seen.add(article.url);
-      try {
-        liveArticles.push(validateLiveArticle(article));
-      } catch (err) {
-        skipped++;
-        const reason = err instanceof Error ? err.message : String(err);
-        console.warn(`Skipping live article ${article.url}: ${reason}`);
-      }
+  // Fetch every surface concurrently; Promise.all preserves order so the
+  // cross-surface dedup below still keeps the first occurrence of a URL.
+  const perSurface = await Promise.all(
+    config.scheduledSurfaceGuids.map((guid) => getScheduledSectionItems(guid)),
+  );
+  for (const article of perSurface.flat()) {
+    if (seen.has(article.url)) continue;
+    seen.add(article.url);
+    try {
+      liveArticles.push(validateLiveArticle(article));
+    } catch (err) {
+      skipped++;
+      const reason = err instanceof Error ? err.message : String(err);
+      console.warn(`Skipping live article ${article.url}: ${reason}`);
     }
   }
   if (skipped > 0) {
