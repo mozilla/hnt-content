@@ -673,3 +673,26 @@ limiter (HNT-2441) lands. 16 is a deliberately conservative starting point: it
 keeps peak memory well under 512Mi while still giving Pub/Sub enough in-flight
 work to keep the single replica busy, and the deployed value can be tuned up
 from the dashboard.
+
+## Dev deploy chain: timing and the sync-wedge failure mode (2026-06-30)
+
+Characterized the dev deploy chain end to end. A push to hnt-content main triggers
+a GAR image build, then argocd-image-updater commits the new digest into
+webservices-infra's .argocd-source-hnt-dev-us-west1-hnt.yaml, then ArgoCD auto-sync
+applies it. Measured happy-path timing: push to digest committed about 1m50s, sync
+applied to all pods healthy about 52s, roughly 3 minutes total. A long-horizon loop
+should poll the deployed digest and pod health every ~30s and expect health in
+about 3 minutes rather than blanket waiting.
+
+The real risk is not latency but sync wedging. Two failure modes were observed: a
+sync operation pinned to a stale revision keeps waiting for the healthy state of the
+old unhealthy image and blocks new syncs ("another operation is already in
+progress"), and the repo-server intermittently returns ComparisonError
+DeadlineExceeded, leaving ArgoCD comparing against a stale main. Recovery required a
+manual terminate-op, hard refresh, and sync to HEAD in the UI. Clearing these
+programmatically needs ArgoCD API access (the argocd-iap-access SA needs
+roles/iap.httpsResourceAccessor on the webservices IAP backend, which currently
+returns 403), so a fully hands-off loop depends on that grant or on auto-sync not
+wedging. Read-only cluster access for diagnosis is documented in CLAUDE.local.md
+(shared cluster webservices-high-nonprod, namespace hnt-dev, via gcloud
+get-credentials --dns-endpoint).
