@@ -170,9 +170,19 @@ async function run() {
 
 /**
  * Initialize the Pub/Sub and Redis clients, load the publisher list,
- * then start the tick loop. Any failure here aborts startup.
+ * then start the tick loop. Any failure here aborts startup. When
+ * crawling is disabled (the dev sandbox) it serves health checks only.
  */
 async function start() {
+  // The agent is the sole origin of crawl jobs, so skipping the tick
+  // loop here stops the whole pipeline at the source without touching
+  // the workers (they idle with nothing to consume).
+  if (!config.crawlEnabled) {
+    console.log(
+      'crawl-agent: scheduled crawling disabled, serving health only',
+    );
+    return;
+  }
   initPubSubClient({
     projectId: config.projectId,
     apiEndpoint: config.pubsubEmulatorHost,

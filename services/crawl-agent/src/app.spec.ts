@@ -47,4 +47,16 @@ describe('crawl-agent healthcheck', () => {
     expect(res.status).toBe(500);
     expect(res.text).toBe('no tick yet');
   });
+
+  it('GET /healthz returns 200 when crawling is disabled despite no tick', async () => {
+    // The dev sandbox never ticks, so health must not depend on one.
+    config.crawlEnabled = false;
+    try {
+      const res = await request(app).get('/healthz');
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/crawl disabled/);
+    } finally {
+      config.crawlEnabled = true;
+    }
+  });
 });

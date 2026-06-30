@@ -47,6 +47,12 @@ export default {
     process.env.STALE_TICK_THRESHOLD_MINUTES,
     10,
   ),
+  // The dev environment is a sandbox where developers wire a locally run
+  // service to real GCP resources, so it must not crawl on a schedule:
+  // the agent serves health checks but skips the tick loop there. Every
+  // other environment crawls; a developer running locally sets
+  // ENVIRONMENT=local to enable it.
+  crawlEnabled: environment !== 'dev',
   // TEMPORARY (HNT-2086): PROJECT_ID and REDIS_HOST fall back to
   // per-environment defaults (keyed on ENVIRONMENT) until the chart
   // injects them; see crawl-common deployed-defaults. The env var always

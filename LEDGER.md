@@ -854,23 +854,40 @@ is the noisier signal. Re-measure once the crawler runs at full steady state for
 a few days; cleaner isolation needs a distinct Zyte tag or apikey_label on the
 worker requests (the workers currently send only extractFrom, no tags).
 
-## Throttle the dev deployment to spare the shared Zyte account (2026-06-30)
+## Per-environment crawl scaling (2026-06-30)
 
-Dev runs the same Zyte account (org 612928) as the legacy system, so the new
-crawler running the full 3399-page list on 20-minute intervals competes with
-production for Zyte rate and cost. Dedup is confirmed working in dev (each exact
-page crawls once per interval), so the load is the list size, not re-crawling.
-To keep exercising the pipeline at low cost and low interference, dev runs a
-subset and a low rate cap, set per env (not in app defaults) so stage/prod are
-unaffected. The full list stays the committed source of truth.
+The Zyte account allows 10,000 RPM and is shared with the legacy system during
+shadow mode. Each environment crawls at a scale that fits its purpose, set as
+deployment policy in the per-env Helm values (not app defaults) so the
+environments stay independent.
+
+- Prod crawls the full page list at ~6,000 RPM (article 5,300, discovery 700,
+  the ~7.6:1 measured split). That is ~4-5x the measured full-load steady-state
+  demand for backlog catch-up, while leaving headroom for legacy during shadow
+  mode.
+- Stage crawls 1% of pages (PUBLISHER_PAGE_LIMIT 34) at 1% of the prod rate
+  (~60 RPM: article 53, discovery 7), a cheap end-to-end smoke of the same code
+  path at the same load intensity per page.
+- Dev does not crawl on a schedule. It is a sandbox where a developer wires a
+  locally run service to real dev GCP resources, so a scheduled crawl from the
+  deployed pods would only compete and add cost.
+
+Dev is disabled by ENVIRONMENT rather than a separate flag (crawlEnabled =
+ENVIRONMENT != 'dev'): the agent serves health checks but skips the tick loop,
+and /healthz reports healthy without a tick so the pod does not crash-loop. A
+developer enables crawling locally by setting ENVIRONMENT=local. Disabling only
+the agent is sufficient because it is the sole origin of crawl jobs; the workers
+stay reactive and idle with nothing to consume, and remain available to process
+anything a developer publishes.
 
 PUBLISHER_PAGE_LIMIT caps how many pages the agent crawls, applied after loading
 and validating the full list. The sample is an even stride across the list (not
-the first N) so a subset keeps publisher and language variety. 0 means no limit,
-so stage/prod load the whole list unchanged. Dev sets 100.
+the first N) so a subset keeps publisher and language variety. 0 (default) means
+no limit, so prod loads the whole list; stage sets 34. The full list stays the
+committed source of truth.
 
-Dev also sets a low per-role Zyte cap via the existing env override
-(ZYTE_RATE_LIMIT_PER_MINUTE): article 130, discovery 20, about 150 total, a
-small slice of the account that bounds interference regardless of list size.
-This is interim while a higher account RPM is negotiated. Both knobs live in the
-dev Helm values, not app config, because they are deployment policy for one env.
+The per-role Zyte rate is set per env via the ZYTE_RATE_LIMIT_PER_MINUTE
+override; the app-config default (article 2200, discovery 300) is only a local
+fallback. Re-measure the 7.6:1 split once the crawler runs at full steady state
+for a few days; cleaner isolation needs a distinct Zyte tag or apikey_label on
+the worker requests (they currently send only extractFrom, no tags).

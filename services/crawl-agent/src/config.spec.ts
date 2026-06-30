@@ -59,3 +59,15 @@ describe('agent Corpus config', () => {
     expect(config.scheduledSurfaceGuids).toEqual([]);
   });
 });
+
+describe('agent crawl toggle', () => {
+  it('disables scheduled crawling on dev', async () => {
+    expect((await loadConfig({ ENVIRONMENT: 'dev' })).crawlEnabled).toBe(false);
+  });
+
+  it('enables crawling on every other environment', async () => {
+    for (const env of ['stage', 'prod', 'local']) {
+      expect((await loadConfig({ ENVIRONMENT: env })).crawlEnabled).toBe(true);
+    }
+  });
+});
