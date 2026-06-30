@@ -28,7 +28,7 @@ vi.mock('sentry', () => ({
 }));
 
 vi.mock('./process-discovery.js', () => ({
-  processDiscovery: vi.fn(),
+  processDiscovery: vi.fn(async () => ({ outcome: 'processed' })),
 }));
 
 import {
@@ -57,7 +57,7 @@ describe('discovery consumer', () => {
     expect(startSubscriber).toHaveBeenCalledTimes(1);
     const opts = vi.mocked(startSubscriber).mock.calls[0]![0];
     expect(opts.subscriptionName).toBe('test-crawl-article-discovery');
-    expect(opts.maxExtensionSeconds).toBe(570);
+    expect(opts.maxExtensionSeconds).toBe(270);
     // Flow-control cap that bounds concurrent Zyte fetches and memory.
     expect(opts.maxMessages).toBe(64);
     expect(opts.validate).toBe(validateCrawlArticleDiscoveryMessage);
