@@ -2,6 +2,7 @@ import { getRegistrableDomain } from 'crawl-common';
 import { extractArticleList } from 'zyte';
 import { time } from 'metrics';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
+import { resolveExtractFrom } from '../zyte-extraction-mode.js';
 import type {
   ArticleDiscoveryEvent,
   CrawlArticleDiscoveryMessage,
@@ -38,7 +39,10 @@ export async function handleArticleDiscovery(
 ): Promise<DiscoveryResult> {
   const { data: items } = await time(
     'crawl.zyte.duration_ms',
-    () => extractArticleList(message.url, { extractFrom: 'httpResponseBody' }),
+    () =>
+      extractArticleList(message.url, {
+        extractFrom: resolveExtractFrom(message.url, 'articleList'),
+      }),
     { extraction: 'articleList' },
   );
 

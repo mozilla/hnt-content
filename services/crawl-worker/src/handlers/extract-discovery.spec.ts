@@ -31,11 +31,12 @@ describe('handleArticleDiscovery', () => {
     vi.clearAllMocks();
   });
 
-  it('calls extractArticleList with the page URL and httpResponseBody', async () => {
+  it('calls extractArticleList with the page URL and per-domain mode', async () => {
     await handleArticleDiscovery(DISCOVERY_MESSAGE);
 
+    // example.com is not on the cheap list, so it uses browserHtml.
     expect(extractListMock).toHaveBeenCalledWith(DISCOVERY_MESSAGE.url, {
-      extractFrom: 'httpResponseBody',
+      extractFrom: 'browserHtml',
     });
   });
 

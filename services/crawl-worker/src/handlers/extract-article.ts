@@ -2,6 +2,7 @@ import { updateApprovedCorpusItem, normalizeText } from 'crawl-common';
 import { extractArticle } from 'zyte';
 import { time } from 'metrics';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
+import { resolveExtractFrom } from '../zyte-extraction-mode.js';
 import type {
   CrawlArticleMessage,
   ArticleEvent,
@@ -23,7 +24,10 @@ export async function handleArticleExtraction(
 ): Promise<ArticleEvent> {
   const { data: article, url } = await time(
     'crawl.zyte.duration_ms',
-    () => extractArticle(message.url, { extractFrom: 'httpResponseBody' }),
+    () =>
+      extractArticle(message.url, {
+        extractFrom: resolveExtractFrom(message.url, 'article'),
+      }),
     { extraction: 'article' },
   );
 

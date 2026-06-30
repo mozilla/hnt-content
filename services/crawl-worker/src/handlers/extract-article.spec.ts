@@ -78,11 +78,12 @@ describe('handleArticleExtraction', () => {
       expect(Number.isNaN(Date.parse(event.extracted_at))).toBe(false);
     });
 
-    it('calls extractArticle with httpResponseBody', async () => {
+    it('calls extractArticle with the per-domain extraction mode', async () => {
       await handleArticleExtraction(BASE_MESSAGE);
 
+      // example.com is not on the cheap list, so it uses browserHtml.
       expect(extractArticleMock).toHaveBeenCalledWith(BASE_MESSAGE.url, {
-        extractFrom: 'httpResponseBody',
+        extractFrom: 'browserHtml',
       });
     });
 
