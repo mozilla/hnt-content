@@ -44,10 +44,10 @@ describe('worker config lock TTL', () => {
 });
 
 describe('worker config Pub/Sub flow control', () => {
-  it('defaults the outstanding-message cap to 16', async () => {
+  it('defaults the outstanding-message cap to 64', async () => {
     const config = await loadConfig({});
 
-    expect(config.pubsubMaxMessages).toBe(16);
+    expect(config.pubsubMaxMessages).toBe(64);
   });
 
   it('reads PUBSUB_MAX_MESSAGES when set', async () => {

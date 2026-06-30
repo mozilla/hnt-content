@@ -730,3 +730,19 @@ known-200 request. Removing the customHttpRequestHeaders special-casing (reverti
 zyteOptionsForUrl helper) leaves both crawl paths on a plain httpResponseBody request,
 which the eval proves works. No geolocation or ipType is needed: a geo block would fail
 both fetch modes identically, and it does not.
+
+## Article worker throughput: raise flow-control cap; HPA is the real fix (2026-06-30)
+
+The dev-crawl-article backlog grew unboundedly (253k to 395k over 90 min): discovery
+waves add 60-90k crawl-article jobs every ~20-40 min while the article worker drained
+only ~350/min. The binding constraint is concurrency, not memory or the Zyte rate
+limiter: article pods used only ~90Mi of their 512Mi limit at maxMessages=16, and the
+Zyte rate limiter is disabled in dev (ZYTE_RATE_LIMIT_PER_MINUTE defaults to 0). So
+throughput was capped at maxMessages(16) x 3 replicas = 48 concurrent Zyte fetches. The
+HPA cannot relieve this: it scales on CPU (sitting at 15% of a 50% target) but the
+workers are I/O-bound on Zyte, so CPU stays low and the HPA pins at its max of 3
+replicas. Code change here: raise the flow-control cap default 16 -> 64, a 4x throughput
+increase that stays well within the memory budget. This is a stopgap. The proper fix is
+infra in webservices-infra: scale the worker HPA on Pub/Sub queue depth
+(num_undelivered) instead of CPU and raise max replicas, since an I/O-bound worker never
+drives CPU high enough to autoscale. Flagged for the human; not deployable from this repo.

@@ -59,7 +59,7 @@ export const SHUTDOWN_TIMEOUT_SECONDS = 25;
 // bound. The SDK default of 1000 is far too high for the worker's
 // memory limit: under a backlog it leases ~1000 messages, runs that
 // many concurrent fetches, and OOM-kills the pod.
-export const DEFAULT_MAX_MESSAGES = 16;
+export const DEFAULT_MAX_MESSAGES = 64;
 
 // Module-level state.
 let pubsub: PubSub | undefined;

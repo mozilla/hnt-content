@@ -35,7 +35,7 @@ if (ackDeadlineSeconds <= 30) {
 }
 
 // Cap on outstanding Pub/Sub messages: see pubsubMaxMessages below.
-const pubsubMaxMessages = numberEnv(process.env.PUBSUB_MAX_MESSAGES, 16);
+const pubsubMaxMessages = numberEnv(process.env.PUBSUB_MAX_MESSAGES, 64);
 if (pubsubMaxMessages <= 0) {
   throw new Error(`PUBSUB_MAX_MESSAGES must be > 0, got ${pubsubMaxMessages}`);
 }
