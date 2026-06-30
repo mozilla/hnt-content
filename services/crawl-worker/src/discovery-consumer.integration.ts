@@ -19,16 +19,17 @@ import {
   vi,
 } from 'vitest';
 import {
-  flushTopics,
-  initPubSubClient,
-  initRedisClient,
-  initZyteClient,
-  publishMessage,
-  shutdownPubSub,
-  shutdownRedis,
   type ArticleDiscoveryEvent,
   type CrawlArticleMessage,
 } from 'crawl-common';
+import {
+  flushTopics,
+  initPubSubClient,
+  publishMessage,
+  shutdownPubSub,
+} from 'pubsub';
+import { initRedisClient, shutdownRedis } from 'redis-state';
+import { initZyteClient } from 'zyte';
 import {
   DISCOVERY_MESSAGE,
   waitFor,

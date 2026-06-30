@@ -1,16 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import {
-  acquireLock,
   articleFetchKey,
   pageFetchKey,
   pageLockKey,
-  publishMessage,
-  releaseLock,
-  setTimestamp,
   type ArticleDiscoveryEvent,
   type CrawlArticleDiscoveryMessage,
   type CrawlArticleMessage,
 } from 'crawl-common';
+import { publishMessage } from 'pubsub';
+import { acquireLock, releaseLock, setTimestamp } from 'redis-state';
 import config from './config.js';
 import { handleArticleDiscovery } from './handlers/extract-discovery.js';
 import type { HandlerResult } from './message-metrics.js';

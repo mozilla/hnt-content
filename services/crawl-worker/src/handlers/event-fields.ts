@@ -1,4 +1,4 @@
-import type { ZyteAuthor } from 'crawl-common';
+import type { ZyteAuthor } from 'zyte';
 
 /**
  * Map Zyte authors to the BigQuery event author shape, dropping any

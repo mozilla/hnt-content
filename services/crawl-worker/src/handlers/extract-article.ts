@@ -1,8 +1,5 @@
-import {
-  extractArticle,
-  updateApprovedCorpusItem,
-  normalizeText,
-} from 'crawl-common';
+import { updateApprovedCorpusItem, normalizeText } from 'crawl-common';
+import { extractArticle } from 'zyte';
 import { time } from 'metrics';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 import type {
@@ -10,8 +7,8 @@ import type {
   ArticleEvent,
   CorpusItem,
   UpdateApprovedCorpusItemInput,
-  ZyteArticle,
 } from 'crawl-common';
+import type { ZyteArticle } from 'zyte';
 
 const BODY_TRUNCATE_LENGTH = 2_000;
 const EXCERPT_COMPARE_LENGTH = 255;

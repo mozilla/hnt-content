@@ -79,7 +79,12 @@ hnt-content/
 │   ├── crawl-agent/      # Scheduler: enqueues crawl jobs on configured intervals
 │   └── crawl-worker/     # Worker: discovers articles and extracts content
 ├── packages/
-│   └── crawl-common/     # Shared types, utilities, Zyte client
+│   ├── crawl-common/     # Crawl-domain types, validation, Corpus API, utils
+│   ├── pubsub/           # Generic Pub/Sub consumer/publisher client
+│   ├── redis-state/      # Generic Redis state client (timestamps, locks, tokens)
+│   ├── zyte/             # Generic Zyte extraction API client
+│   ├── metrics/          # StatsD metrics client
+│   └── sentry/           # Sentry error reporting client
 ├── Dockerfile            # Multi-stage build with turbo prune + pnpm deploy
 ├── turbo.json
 └── pnpm-workspace.yaml

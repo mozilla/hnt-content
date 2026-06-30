@@ -1,5 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import { acquireRateLimitToken } from 'crawl-common';
+import { acquireRateLimitToken } from 'redis-state';
 import config from './config.js';
 
 // Each worker role gets its own bucket. The two per-role rates sum to

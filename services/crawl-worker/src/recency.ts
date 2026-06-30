@@ -1,4 +1,4 @@
-import { getTimestamp } from 'crawl-common';
+import { getTimestamp } from 'redis-state';
 
 /**
  * Return whether the fetch/crawl marker at key was set within the last

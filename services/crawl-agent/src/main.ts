@@ -1,16 +1,10 @@
 // Initialize Sentry and metrics first to capture from other modules.
 import './sentry-init.js';
 import './metrics-init.js';
-
 import { setTimeout as delay } from 'node:timers/promises';
-import {
-  initCorpusApiClient,
-  initPubSubClient,
-  initRedisClient,
-  shutdownPubSub,
-  shutdownRedis,
-  type PublisherList,
-} from 'crawl-common';
+import { initCorpusApiClient, type PublisherList } from 'crawl-common';
+import { initPubSubClient, shutdownPubSub } from 'pubsub';
+import { initRedisClient, shutdownRedis } from 'redis-state';
 import { count, shutdownMetrics, timing } from 'metrics';
 import { shutdownSentry, withSentryHandler } from 'sentry';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';

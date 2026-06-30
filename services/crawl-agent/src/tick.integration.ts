@@ -10,15 +10,12 @@ import {
 } from 'testcontainers';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
-  flushTopics,
-  initPubSubClient,
-  initRedisClient,
-  shutdownPubSub,
-  shutdownRedis,
   type CrawlArticleDiscoveryMessage,
   type CrawlArticleMessage,
   type PublisherList,
 } from 'crawl-common';
+import { flushTopics, initPubSubClient, shutdownPubSub } from 'pubsub';
+import { initRedisClient, shutdownRedis } from 'redis-state';
 
 // Topic names the agent publishes to; set before importing config.
 const PROJECT_ID = 'test-project';

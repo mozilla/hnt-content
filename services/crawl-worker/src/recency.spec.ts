@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('crawl-common', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('crawl-common')>();
-  return { ...actual, getTimestamp: vi.fn() };
+vi.mock('redis-state', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('redis-state')>();
+  return {
+    ...actual,
+    getTimestamp: vi.fn(),
+  };
 });
 
-import { getTimestamp } from 'crawl-common';
+import { getTimestamp } from 'redis-state';
 import { withinMinutes } from './recency.js';
 
 describe('withinMinutes', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ZyteAuthor } from 'crawl-common';
+import type { ZyteAuthor } from 'zyte';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 
 describe('toEventAuthors', () => {

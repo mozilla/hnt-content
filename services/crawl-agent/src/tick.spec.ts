@@ -1,17 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PublisherList } from 'crawl-common';
 
-vi.mock('crawl-common', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('crawl-common')>();
+vi.mock('pubsub', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('pubsub')>();
   return {
     ...actual,
     publishMessage: vi.fn(),
+  };
+});
+vi.mock('redis-state', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('redis-state')>();
+  return {
+    ...actual,
     getTimestamp: vi.fn(),
     setTimestamp: vi.fn(),
   };
 });
 
-import { getTimestamp, publishMessage, setTimestamp } from 'crawl-common';
+import { publishMessage } from 'pubsub';
+import { getTimestamp, setTimestamp } from 'redis-state';
 import config from './config.js';
 import { runTick } from './tick.js';
 

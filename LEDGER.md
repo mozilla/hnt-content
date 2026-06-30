@@ -891,3 +891,36 @@ override; the app-config default (article 2200, discovery 300) is only a local
 fallback. Re-measure the 7.6:1 split once the crawler runs at full steady state
 for a few days; cleaner isolation needs a distinct Zyte tag or apikey_label on
 the worker requests (they currently send only extractFrom, no tags).
+
+## HNT-2682: split crawl-common into reusable packages
+
+crawl-common had become a grab-bag of generic infrastructure clients and
+crawl-domain logic. The generic, reusable clients moved into their own
+workspace packages mirroring the existing sentry and metrics packages: pubsub
+(the Pub/Sub consumer/publisher and its Sentry error handler), redis-state (the
+ioredis state client: timestamps, locks, the token-bucket rate limiter), and
+zyte (the Zyte extraction client). crawl-common keeps only what is specific to
+the article-crawl domain: the BigQuery event and message types, the message
+validators, the Corpus API client, the utils (normalize, domain,
+deployed-defaults), and the Redis key builders.
+
+The Redis split is the one non-obvious call. The ioredis wrapper in client.ts is
+fully generic and moved to redis-state, but the key builders in keys.ts
+(pageFetchKey, articleFetchKey, and the rest) encode the crawl keyspace, so they
+stay in crawl-common. keys.ts never imported client.ts, so the split is clean:
+no coupling had to be broken. The package is named redis-state rather than redis
+because it wraps ioredis with state-oriented helpers rather than re-exporting the
+driver. pubsub depends on @sentry/node directly (the error handler is generic to
+any subscriber), not on the workspace sentry package, matching how crawl-common
+referenced it before.
+
+The crawl-common barrel no longer re-exports the moved modules. Per the
+greenfield, pre-production stance every call site was updated to import directly
+from the owning package instead of keeping a re-export shim, so the dependency
+edges are explicit: crawl-agent depends on pubsub and redis-state (it makes no
+Zyte calls); crawl-worker depends on all three. No new shared base config was
+introduced because sentry and metrics already share the root tsconfig.json and
+each carry a tiny per-package tsup and vitest config; the three new packages copy
+that exact layout rather than diverge from it. The Dockerfile and turbo.json need
+no change: turbo prune follows the workspace dependency graph and pulls the new
+packages in automatically once the services declare them.

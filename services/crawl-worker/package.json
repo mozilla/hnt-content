@@ -14,8 +14,11 @@
   "dependencies": {
     "crawl-common": "workspace:*",
     "express": "^5.1.0",
+    "metrics": "workspace:*",
+    "pubsub": "workspace:*",
+    "redis-state": "workspace:*",
     "sentry": "workspace:*",
-    "metrics": "workspace:*"
+    "zyte": "workspace:*"
   },
   "devDependencies": {
     "@google-cloud/pubsub": "^5.3.0",

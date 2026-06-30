@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BASE_MESSAGE, CORPUS_ITEM } from './handlers/test-helpers.js';
 
-vi.mock('crawl-common', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('crawl-common')>();
+vi.mock('pubsub', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('pubsub')>();
   return {
     ...actual,
     startSubscriber: vi.fn(),
@@ -31,11 +31,8 @@ vi.mock('./process-article.js', () => ({
   processArticle: vi.fn(async () => ({ outcome: 'processed' })),
 }));
 
-import {
-  sentryPubSubErrorHandler,
-  startSubscriber,
-  validateCrawlArticleMessage,
-} from 'crawl-common';
+import { validateCrawlArticleMessage } from 'crawl-common';
+import { sentryPubSubErrorHandler, startSubscriber } from 'pubsub';
 import { processArticle } from './process-article.js';
 import { startArticleConsumer } from './article-consumer.js';
 

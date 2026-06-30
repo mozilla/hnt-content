@@ -1,17 +1,19 @@
 import { createHash } from 'node:crypto';
 import {
-  acquireLock,
   articleContentKey,
   articleFetchKey,
   articleLockKey,
-  getString,
-  publishMessage,
-  releaseLock,
-  setString,
-  setTimestamp,
   type ArticleEvent,
   type CrawlArticleMessage,
 } from 'crawl-common';
+import { publishMessage } from 'pubsub';
+import {
+  acquireLock,
+  getString,
+  releaseLock,
+  setString,
+  setTimestamp,
+} from 'redis-state';
 import config from './config.js';
 import { handleArticleExtraction } from './handlers/extract-article.js';
 import type { HandlerResult } from './message-metrics.js';

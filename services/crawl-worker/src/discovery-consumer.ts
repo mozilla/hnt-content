@@ -1,9 +1,8 @@
 import {
-  sentryPubSubErrorHandler,
-  startSubscriber,
   validateCrawlArticleDiscoveryMessage,
   type CrawlArticleDiscoveryMessage,
 } from 'crawl-common';
+import { sentryPubSubErrorHandler, startSubscriber } from 'pubsub';
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
 import { withMessageMetrics } from './message-metrics.js';

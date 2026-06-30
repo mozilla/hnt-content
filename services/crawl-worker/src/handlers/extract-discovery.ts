@@ -1,12 +1,13 @@
-import { extractArticleList, getRegistrableDomain } from 'crawl-common';
+import { getRegistrableDomain } from 'crawl-common';
+import { extractArticleList } from 'zyte';
 import { time } from 'metrics';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 import type {
   ArticleDiscoveryEvent,
   CrawlArticleDiscoveryMessage,
   DiscoveryContext,
-  ZyteArticleListItem,
 } from 'crawl-common';
+import type { ZyteArticleListItem } from 'zyte';
 
 /**
  * Output of the discovery handler: one article-discoveries event

@@ -1,15 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import {
   articleEnqueuedKey,
-  getTimestamp,
   pageEnqueuedKey,
-  publishMessage,
-  setTimestamp,
   type CrawlArticleDiscoveryMessage,
   type CrawlArticleMessage,
   type LiveArticle,
   type PublisherList,
 } from 'crawl-common';
+import { publishMessage } from 'pubsub';
+import { getTimestamp, setTimestamp } from 'redis-state';
 import config from './config.js';
 
 /** Number of jobs enqueued in a tick, for logging. */

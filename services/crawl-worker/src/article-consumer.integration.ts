@@ -18,16 +18,15 @@ import {
   it,
   vi,
 } from 'vitest';
+import { type ArticleEvent } from 'crawl-common';
 import {
   flushTopics,
   initPubSubClient,
-  initRedisClient,
-  initZyteClient,
   publishMessage,
   shutdownPubSub,
-  shutdownRedis,
-  type ArticleEvent,
-} from 'crawl-common';
+} from 'pubsub';
+import { initRedisClient, shutdownRedis } from 'redis-state';
+import { initZyteClient } from 'zyte';
 import {
   BASE_MESSAGE,
   waitFor,

@@ -1,15 +1,10 @@
 // Initialize Sentry and metrics first to capture from other modules.
 import './sentry-init.js';
 import './metrics-init.js';
-
-import {
-  initCorpusApiClient,
-  initPubSubClient,
-  initRedisClient,
-  initZyteClient,
-  shutdownPubSub,
-  shutdownRedis,
-} from 'crawl-common';
+import { initCorpusApiClient } from 'crawl-common';
+import { initPubSubClient, shutdownPubSub } from 'pubsub';
+import { initRedisClient, shutdownRedis } from 'redis-state';
+import { initZyteClient } from 'zyte';
 import { incr, shutdownMetrics } from 'metrics';
 import { shutdownSentry } from 'sentry';
 import { startArticleConsumer } from './article-consumer.js';

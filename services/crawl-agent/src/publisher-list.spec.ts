@@ -6,7 +6,10 @@ vi.mock('node:fs/promises', () => ({ readFile: vi.fn() }));
 // Keep the real validators; only stub the Corpus read.
 vi.mock('crawl-common', async (importOriginal) => {
   const actual = await importOriginal<typeof import('crawl-common')>();
-  return { ...actual, getScheduledSectionItems: vi.fn() };
+  return {
+    ...actual,
+    getScheduledSectionItems: vi.fn(),
+  };
 });
 
 // Mutable config so tests can toggle the JWK and the surfaces.

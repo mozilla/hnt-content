@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ZyteArticleListItem, ZyteResponse } from 'crawl-common';
+import type { ZyteArticleListItem, ZyteResponse } from 'zyte';
 
-vi.mock('crawl-common', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('crawl-common')>();
+vi.mock('zyte', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('zyte')>();
   return {
     ...actual,
     extractArticleList: vi.fn(),
   };
 });
 
-import { extractArticleList } from 'crawl-common';
+import { extractArticleList } from 'zyte';
 import { handleArticleDiscovery } from './extract-discovery.js';
 import { DISCOVERY_MESSAGE, ZYTE_LIST_ITEM } from './test-helpers.js';
 

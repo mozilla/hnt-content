@@ -2,10 +2,8 @@ import type {
   CorpusItem,
   CrawlArticleDiscoveryMessage,
   CrawlArticleMessage,
-  ZyteArticle,
-  ZyteArticleListItem,
-  ZyteResponse,
 } from 'crawl-common';
+import type { ZyteArticle, ZyteArticleListItem, ZyteResponse } from 'zyte';
 
 export const TEST_URL = 'https://example.com/article';
 export const TEST_SOURCE_URL = 'https://example.com/news';

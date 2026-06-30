@@ -1,8 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ArticleEvent, CrawlArticleMessage } from 'crawl-common';
 
-vi.mock('crawl-common', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('crawl-common')>();
+vi.mock('pubsub', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('pubsub')>();
+  return {
+    ...actual,
+    publishMessage: vi.fn(),
+  };
+});
+vi.mock('redis-state', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('redis-state')>();
   return {
     ...actual,
     acquireLock: vi.fn(),
@@ -11,7 +18,6 @@ vi.mock('crawl-common', async (importOriginal) => {
     setTimestamp: vi.fn(),
     getString: vi.fn(),
     setString: vi.fn(),
-    publishMessage: vi.fn(),
   };
 });
 
@@ -19,15 +25,15 @@ vi.mock('./handlers/extract-article.js', () => ({
   handleArticleExtraction: vi.fn(),
 }));
 
+import { publishMessage } from 'pubsub';
 import {
   acquireLock,
   getString,
   getTimestamp,
-  publishMessage,
   releaseLock,
   setString,
   setTimestamp,
-} from 'crawl-common';
+} from 'redis-state';
 import { handleArticleExtraction } from './handlers/extract-article.js';
 import { processArticle } from './process-article.js';
 import { BASE_MESSAGE, CORPUS_ITEM } from './handlers/test-helpers.js';

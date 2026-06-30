@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('crawl-common', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('crawl-common')>();
-  return { ...actual, acquireRateLimitToken: vi.fn() };
+vi.mock('redis-state', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('redis-state')>();
+  return {
+    ...actual,
+    acquireRateLimitToken: vi.fn(),
+  };
 });
 
 // Mutable config so each test can toggle the rate limit.
@@ -15,7 +18,7 @@ vi.mock('./config.js', () => ({
   },
 }));
 
-import { acquireRateLimitToken } from 'crawl-common';
+import { acquireRateLimitToken } from 'redis-state';
 import config from './config.js';
 import { awaitZyteToken } from './zyte-rate-limit.js';
 
