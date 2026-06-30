@@ -83,16 +83,6 @@ export async function extractArticle(
       `Zyte API returned ${statusCode} but no article data for ${url}`,
     );
   }
-  // Drop large response fields the article event never uses. Up to
-  // PUBSUB_MAX_MESSAGES of these responses are held concurrently, so
-  // retaining multi-MB articleBodyHtml (and image/video/audio arrays)
-  // spikes memory and OOM-kills the worker under burst load. The mapping
-  // reads only headline, description, authors, mainImage, a truncated
-  // articleBody, datePublished, breadcrumbs, and inLanguage.
-  delete article.articleBodyHtml;
-  delete article.images;
-  delete article.videos;
-  delete article.audios;
   return {
     data: article,
     url: data.url as string,
@@ -140,12 +130,12 @@ function buildRequestBody(
   if (opts?.extractFrom) {
     const optionsKey =
       type === 'article' ? 'articleOptions' : 'articleListOptions';
+    // extractFrom selects the fetch source (httpResponseBody = plain HTTP
+    // fetch, no browser rendering). We deliberately do NOT also set the
+    // top-level httpResponseBody flag: that makes Zyte return the full raw
+    // page body (base64), a large field we never read, which inflates the
+    // response transfer and parse memory across many concurrent handlers.
     body[optionsKey] = { extractFrom: opts.extractFrom };
-    // Explicitly request the raw HTTP response body so Zyte
-    // uses HTTP fetching instead of browser rendering.
-    if (opts.extractFrom === 'httpResponseBody') {
-      body.httpResponseBody = true;
-    }
   }
 
   if (opts?.customHttpRequestHeaders) {

@@ -764,18 +764,23 @@ is non-live only, mirroring the pre-lock gate; live articles always resync). Thi
 redundant Zyte calls and BigQuery rows and reduces crawl-article backlog amplification,
 since each duplicate discovery would otherwise re-enqueue the page's articles.
 
-## Article worker memory: drop unused Zyte response fields (2026-06-30)
+## Article worker memory: stop requesting the raw Zyte page body (2026-06-30)
 
 The article worker OOM-spiked under burst load (peak ~475Mi in dev; reproduced ~1GB
-RSS at 64 concurrent x 2MB bodies) because each in-flight message retained the full
-Zyte response, dominated by articleBodyHtml (full article HTML, hundreds of KB to
-several MB) which the article event never uses, multiplied by up to
-flowControl.maxMessages (64) concurrent handlers. The 512Mi limit is crossed between
-500KB and 2MB bodies at 64 concurrent. The memory is a load-correlated spike, not a
-leak: it returns to ~125Mi baseline when idle and tracks the ack rate. Fix:
-extractArticle drops the large unused fields (articleBodyHtml, images, videos, audios)
-immediately after parsing, before returning, so concurrent responses no longer pile
-multi-MB HTML into memory; mapToArticleEvent reads none of them. maxMessages stays 64
-so the worker still auto-catches-up on backlogs. The transient response.json parse
-double-buffer remains (requesting fewer fields from Zyte would also cut that), but the
-dominant retained-memory driver is removed.
+RSS at 64 concurrent x 2MB responses) because each in-flight message held the full Zyte
+response across up to flowControl.maxMessages (64) concurrent handlers. The memory is a
+load-correlated spike, not a leak: it returns to ~125Mi baseline when idle and tracks
+the ack rate. The dominant field was the raw page body: buildRequestBody set the
+top-level httpResponseBody flag whenever extractFrom was httpResponseBody, on the wrong
+belief that the flag was needed for HTTP-mode (non-browser) extraction. It is not:
+articleOptions.extractFrom alone drives the HTTP fetch; the top-level flag only makes
+Zyte also return the entire raw page HTML (base64), which we never read. A live curl
+A/B confirmed it: the same request without the flag returns a byte-identical article and
+omits the raw body, e.g. an apnews hub page dropped from 1.93MB to 1.4KB and a Wikipedia
+article from 473KB to 136KB. Fix: do not set the top-level httpResponseBody flag;
+request only extractFrom. This removes the multi-MB-per-response driver at the source
+(no transfer, no parse), for both article and discovery calls, and keeps Guardian
+working since extractFrom (not the flag) selects HTTP mode. maxMessages stays 64 so the
+worker still auto-catches-up on backlogs. Chose not requesting the large field over
+dropping it after parse (an earlier attempt) since not requesting also avoids the
+transfer and the response.json parse spike.

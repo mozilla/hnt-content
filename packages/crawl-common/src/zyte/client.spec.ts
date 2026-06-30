@@ -153,20 +153,18 @@ describe('extractArticle', () => {
       );
     });
 
-    it.each([
-      ['httpResponseBody', true],
-      ['browserHtml', undefined],
-      ['browserHtmlOnly', undefined],
-    ] as const)(
+    it.each(['httpResponseBody', 'browserHtml', 'browserHtmlOnly'] as const)(
       'includes extractFrom with %s',
-      async (extractFrom, expectedHttpResponseBody) => {
+      async (extractFrom) => {
         fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
         await extractArticle('https://example.com/a', { extractFrom });
 
         const body = lastRequestBody();
         expect(body.articleOptions).toEqual({ extractFrom });
-        expect(body.httpResponseBody).toBe(expectedHttpResponseBody);
+        // Never request the raw page body: extractFrom alone drives the
+        // HTTP fetch, and the top-level flag would return the full page.
+        expect(body.httpResponseBody).toBeUndefined();
       },
     );
 
@@ -205,32 +203,6 @@ describe('extractArticle', () => {
       expect(result.data.metadata.probability).toBe(0.95);
       expect(result.url).toBe('https://example.com/article');
       expect(result.statusCode).toBe(200);
-    });
-
-    it('drops large fields the article event never uses', async () => {
-      fetchMock.mockResolvedValueOnce(
-        mockResponse({
-          ...ARTICLE_RESPONSE,
-          article: {
-            ...ARTICLE_RESPONSE.article,
-            articleBodyHtml: '<p>x</p>'.repeat(1000),
-            images: [{ url: 'https://example.com/a.jpg' }],
-            videos: [{ url: 'https://example.com/v.mp4' }],
-            audios: [{ url: 'https://example.com/a.mp3' }],
-          },
-        }),
-      );
-
-      const result = await extractArticle('https://example.com/article');
-
-      // Stripped to bound worker memory under concurrency.
-      expect(result.data.articleBodyHtml).toBeUndefined();
-      expect(result.data.images).toBeUndefined();
-      expect(result.data.videos).toBeUndefined();
-      expect(result.data.audios).toBeUndefined();
-      // Fields the mapping uses are preserved.
-      expect(result.data.headline).toBe('Breaking News');
-      expect(result.data.articleBody).toBe('Full article text here.');
     });
 
     it('returns redirect URL from envelope', async () => {
@@ -335,7 +307,8 @@ describe('extractArticleList', () => {
       expect(body.articleListOptions).toEqual({
         extractFrom: 'httpResponseBody',
       });
-      expect(body.httpResponseBody).toBe(true);
+      // The raw page body is never requested; extractFrom drives the fetch.
+      expect(body.httpResponseBody).toBeUndefined();
     });
   });
 
