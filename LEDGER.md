@@ -696,3 +696,21 @@ returns 403), so a fully hands-off loop depends on that grant or on auto-sync no
 wedging. Read-only cluster access for diagnosis is documented in CLAUDE.local.md
 (shared cluster webservices-high-nonprod, namespace hnt-dev, via gcloud
 get-credentials --dns-endpoint).
+
+## Live articles: tolerate a blank publisher from the Corpus API (2026-06-30)
+
+Observed in dev that the agent skipped 100% of live articles (179 of 179) with
+"corpus_item.publisher must be a non-empty string", leaving the live-article path
+fully dead. A schema check against content-monorepo confirmed publisher is a stored
+scalar (ApprovedItem.publisher String, NOT NULL, no default) that the Corpus DB
+legitimately holds as an empty string for these dev items, and getSectionsWithSectionItems
+reads the full approvedItem row, so a blank is real data rather than a missing field
+selection. The update mutation requires the key but accepts an empty string and writes
+it verbatim with no re-derivation, and the legacy HydrateSectionItems flow round-tripped
+publisher as-is without requiring it. Requiring non-empty publisher was therefore wrong:
+it rejected every dev item for no schema-backed reason. Fix: validateCorpusItem now
+allows an empty publisher (allowEmpty), the same treatment excerpt already gets. This
+fixes both the agent enqueue and the worker's inbound message validation, which would
+otherwise nack every live-article message. The worker still echoes publisher back to
+updateApprovedCorpusItem verbatim, so a blank can never overwrite a real stored value,
+which is the only data-corruption vector.

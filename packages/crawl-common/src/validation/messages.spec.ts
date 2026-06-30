@@ -57,6 +57,16 @@ describe('validateCrawlArticleMessage', () => {
     expect(validateCrawlArticleMessage(message).corpus_item?.excerpt).toBe('');
   });
 
+  it('keeps a blank publisher, which the Corpus DB may store empty', () => {
+    const message = {
+      ...VALID_ARTICLE,
+      corpus_item: { ...VALID_CORPUS_ITEM, publisher: '' },
+    };
+    expect(validateCrawlArticleMessage(message).corpus_item?.publisher).toBe(
+      '',
+    );
+  });
+
   it.each([null, undefined, 42, 'string', []])(
     'rejects a non-object payload (%s)',
     (raw) => {

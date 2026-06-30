@@ -127,7 +127,11 @@ function validateCorpusItem(value: unknown): CorpusItem {
     // exact value rather than rejecting newly added languages.
     status: requireString(obj, 'status', label) as CorpusItem['status'],
     language: requireString(obj, 'language', label) as CorpusItem['language'],
-    publisher: requireString(obj, 'publisher', label),
+    // The Corpus DB legitimately stores empty publishers, so allow a
+    // blank rather than rejecting the whole item. It is an opaque
+    // pass-through: the worker echoes it back to updateApprovedCorpusItem
+    // unchanged, so a blank never overwrites a real stored value.
+    publisher: requireString(obj, 'publisher', label, true),
     image_url: requireString(obj, 'image_url', label),
     topic: requireString(obj, 'topic', label),
     is_time_sensitive: requireBoolean(obj, 'is_time_sensitive', label),

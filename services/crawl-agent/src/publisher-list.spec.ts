@@ -127,7 +127,7 @@ describe('fetchLiveArticles', () => {
     ]);
   });
 
-  it('skips malformed corpus items and keeps the valid ones', async () => {
+  it('keeps blank-publisher items but skips truly malformed ones', async () => {
     const good = live('https://x/1', 'e1');
     const blankPublisher = live('https://x/2', 'e2');
     blankPublisher.corpus_item.publisher = '';
@@ -141,9 +141,10 @@ describe('fetchLiveArticles', () => {
 
     const result = await fetchLiveArticles();
 
-    // A single curated item with a blank required field must not crash
-    // the agent; the bad items are dropped and the good one survives.
-    expect(result.map((a) => a.url)).toEqual(['https://x/1']);
+    // A blank publisher is legitimate (the Corpus DB stores empty
+    // publishers), so that item is kept; only the item missing a truly
+    // required field (title) is dropped, and it must not crash the agent.
+    expect(result.map((a) => a.url)).toEqual(['https://x/1', 'https://x/2']);
   });
 
   it('propagates a Corpus client error so startup fails fast', async () => {
