@@ -80,10 +80,10 @@ export interface SubscriberOptions<T> {
   maxMessages?: number;
   /**
    * Called on the Pub/Sub library's own internal errors
-   * (stream-error, close-error, parse-error). Defaults to
-   * console.error. Callers should pass `sentryPubSubErrorHandler(name)`
-   * from `crawl-common` to report them to Sentry, optionally composed
-   * with metrics or healthz hooks.
+   * (stream-error, close-error, parse-error, validation-error).
+   * Defaults to console.error. Callers should pass
+   * `sentryPubSubErrorHandler(name)` from `pubsub` to report them to
+   * Sentry, optionally composed with metrics or healthz hooks.
    */
   onError?: (err: Error, ctx: SubscriberErrorContext) => void;
 }
