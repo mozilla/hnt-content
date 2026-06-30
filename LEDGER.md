@@ -784,3 +784,40 @@ working since extractFrom (not the flag) selects HTTP mode. maxMessages stays 64
 worker still auto-catches-up on backlogs. Chose not requesting the large field over
 dropping it after parse (an earlier attempt) since not requesting also avoids the
 transfer and the response.json parse spike.
+
+## Dedup: claim the freshness marker before the work, plus three guardrails (2026-06-30)
+
+The TOCTOU re-check (above) closed the concurrent-burst gap but not the sequential one:
+the freshness marker was still written only after the Zyte call and the publish fan-out,
+so any partial failure (a failed publish, ack-deadline expiry under load, or a crash
+mid-handler) left no durable record and the redelivery re-ran Zyte and re-published,
+looping until one delivery completed fault-free. Fix: move setTimestamp to a claim,
+written inside the lock right after the in-lock re-check and before the Zyte call and
+all publishes, in both processDiscovery and processArticle. A redelivery after a partial
+failure now hits the freshness check and skips, so Zyte is not re-paid and the fan-out
+is not re-emitted. The accepted tradeoff is the 99.9% target: a claim-then-fail drops
+that one interval's update for that URL, which self-heals on the next scheduled crawl;
+we rank repeated Zyte cost above rare, self-healing under-emission. A publish failure
+still nacks, but the redelivery skips rather than republishing.
+
+Live articles previously bypassed the article:fetch check so they resynced every agent
+tick, which left them exposed to the same redelivery storm. Replaced the bypass with a
+per-message refresh window: the agent and discovery worker now set
+refresh_interval_minutes on each crawl-article message (the live interval and the
+article fetch TTL respectively), and the worker gates and claims on that value for all
+articles. Live articles now dedup on their own interval; the Corpus sync still runs
+whenever the article is actually fetched, so curated metadata stays fresh on content,
+title, or excerpt changes. The field is optional on the message and the worker falls
+back to the configured fetch TTL, so a rolling deploy does not reject messages enqueued
+before the field existed.
+
+Three smaller reliability guardrails shipped in the same batch. (1) Capped
+maxExtensionSeconds at the lock TTL (ackDeadlineSeconds - 30) with a fail-fast startup
+assertion: a lease longer than the lock let a slow handler keep the message after its
+lock had expired, so a redelivery could acquire the lock and run the same URL
+concurrently. The default dropped from 570 to the lock TTL. (2) Added a 5s commandTimeout
+and a bounded maxRetriesPerRequest on the Redis client so a slow or unresponsive Redis
+fails the command fast (handler throws, message nacks, Pub/Sub redelivers) instead of
+hanging the handler and starving throughput while holding the lease. (3) Added a reason
+tag to the skipped message metric (recent for a fetch marker within the interval,
+lock_busy for a held lock) so the dashboard can tell dedup skips from lock contention.
