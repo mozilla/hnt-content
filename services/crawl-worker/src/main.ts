@@ -84,9 +84,10 @@ start().catch((err) => {
   process.exit(1);
 });
 
-// Allows the Pub/Sub drain (crawl-common's 25s SHUTDOWN_TIMEOUT_SECONDS)
-// plus topic flush, client close, and Sentry flush to finish within
-// K8s's 30s grace period. Keep this above that drain timeout.
+// Bounds total shutdown: the Pub/Sub drain (the pubsub package's 25s
+// SHUTDOWN_TIMEOUT_SECONDS), the Sentry and metrics flush, and the Redis
+// and server close, within K8s's 30s grace period. Keep this above the
+// drain timeout.
 const SHUTDOWN_TIMEOUT_MS = 28_000;
 
 let shuttingDown = false;
@@ -120,7 +121,13 @@ async function shutdown() {
     console.error('Error draining Pub/Sub:', err);
     exitCode = 1;
   }
-  // Close Redis after the Pub/Sub drain, since in-flight handlers use it.
+  // Flush metrics and Sentry right after the drain, before closing Redis.
+  // The errors worth reporting are the handler failures captured during
+  // the drain; a slow Redis quit must not sit between the drain and the
+  // flush and let the force-exit kill it.
+  await Promise.all([shutdownMetrics(), shutdownSentry()]);
+  // Close Redis after the drain, since in-flight handlers used it. Errors
+  // here are logged only, so they need no further flush.
   try {
     await shutdownRedis();
   } catch (err) {
@@ -135,7 +142,6 @@ async function shutdown() {
   );
   server.closeAllConnections();
   await serverClosed;
-  await Promise.all([shutdownMetrics(), shutdownSentry()]);
   process.exit(exitCode);
 }
 
