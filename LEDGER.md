@@ -861,10 +861,10 @@ shadow mode. Each environment crawls at a scale that fits its purpose, set as
 deployment policy in the per-env Helm values (not app defaults) so the
 environments stay independent.
 
-- Prod crawls the full page list at ~6,000 RPM (article 5,300, discovery 700,
-  the ~7.6:1 measured split). That is ~4-5x the measured full-load steady-state
-  demand for backlog catch-up, while leaving headroom for legacy during shadow
-  mode.
+- Prod crawls the full page list at ~6,000 RPM (article 5,300, discovery 700),
+  leaving headroom on the 10,000 RPM account for legacy during shadow mode. The
+  article-to-discovery split (~7.6:1) is the ratio of article to article-list
+  extraction requests the Zyte stats API reported on 2026-06-30.
 - Stage crawls 1% of pages (PUBLISHER_PAGE_LIMIT 34) at 1% of the prod rate
   (~60 RPM: article 53, discovery 7), a cheap end-to-end smoke of the same code
   path at the same load intensity per page.
