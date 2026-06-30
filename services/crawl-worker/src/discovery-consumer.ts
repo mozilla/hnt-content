@@ -20,6 +20,10 @@ const handleMessage = withSentryHandler<CrawlArticleDiscoveryMessage>(
       url: message.url,
       interval_minutes: message.interval_minutes,
       context_count: message.contexts.length,
+      // Spec 5.7 wants surface_id/topic when present; a discovery job
+      // carries one per context, so report the distinct values.
+      surface_ids: [...new Set(message.contexts.map((c) => c.surface_id))],
+      topics: [...new Set(message.contexts.map((c) => c.topic))],
     },
   }),
   withMessageMetrics(processDiscovery),

@@ -69,7 +69,7 @@ describe('discovery consumer', () => {
     expect(processDiscovery).toHaveBeenCalledWith(DISCOVERY_MESSAGE);
   });
 
-  it('reports the page url and context count to Sentry', () => {
+  it('reports the page url, context count, surfaces, and topics to Sentry', () => {
     const metadata = captured.extractMetadata!(DISCOVERY_MESSAGE);
     expect(metadata).toEqual({
       // worker_role is 'article' here because vitest.config sets
@@ -79,6 +79,8 @@ describe('discovery consumer', () => {
         url: DISCOVERY_MESSAGE.url,
         interval_minutes: DISCOVERY_MESSAGE.interval_minutes,
         context_count: DISCOVERY_MESSAGE.contexts.length,
+        surface_ids: ['NEW_TAB_EN_US', 'NEW_TAB_DE_DE'],
+        topics: ['technology', 'technologie'],
       },
     });
   });
