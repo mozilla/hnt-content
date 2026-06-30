@@ -29,11 +29,12 @@ export type MessageHandler<T> = (message: T) => Promise<void>;
 
 /**
  * Extra context passed to `onError` describing which internal failure
- * mode produced the error. `messageId` is only populated for
- * parse-error. The SDK error doesn't contain these fields.
+ * mode produced the error. `messageId` is populated for the per-message
+ * kinds (parse-error, validation-error). The SDK error doesn't contain
+ * these fields.
  */
 export type SubscriberErrorContext = {
-  kind: 'stream-error' | 'close-error' | 'parse-error';
+  kind: 'stream-error' | 'close-error' | 'parse-error' | 'validation-error';
   messageId?: string;
 };
 
@@ -43,22 +44,40 @@ export interface SubscriberOptions<T> {
   subscriptionName: string;
   handler: MessageHandler<T>;
   /**
-   * Cap on how long the SDK will keep extending a message's ack
-   * deadline while the handler runs. Effectively the maximum
-   * time a single message can be processed before being
-   * redelivered. Independent of the subscription's
-   * ack_deadline_seconds, which only sets the initial deadline.
-   * The SDK default of 1 hour is far longer than article
-   * extraction needs (well under 2 min even on slow sites).
-   * Setting this too high means a stuck handler keeps its
-   * message for the full window before another worker can retry.
-   * Must match the TTL of any per-message lock the handler
-   * takes, so the lock can't outlive the SDK's lease extensions.
-   * Will be sourced from a shared config module so this and the
-   * Redis lock TTL stay linked; for now each caller passes the
-   * value explicitly, e.g. 180 for a 3-minute budget per message.
+   * Validate the JSON-parsed payload at the consumer boundary
+   * before the handler runs. Return the typed message or throw
+   * to reject a malformed payload; the subscriber nacks it and
+   * reports a `validation-error`. Omit to pass the parsed JSON
+   * through unchecked (an unchecked cast to T).
+   */
+  validate?: (raw: unknown) => T;
+  /**
+   * Cap on how long the SDK will keep extending a healthy
+   * message's ack deadline while the handler runs. Effectively
+   * the maximum time a single message can be processed before
+   * being redelivered. Independent of the subscription's
+   * ack_deadline_seconds, which sets the lease granularity and
+   * is what a crashed worker's message redelivers around. The
+   * SDK default of 1 hour is far longer than article extraction
+   * needs (well under 2 min even on slow sites). Setting this too
+   * high means a stuck handler keeps its message for the full
+   * window before another worker can retry. The handler's
+   * per-message lock TTL is derived from the ack deadline, not
+   * this value, so the lock clears around redelivery time.
    */
   maxExtensionSeconds: number;
+  /**
+   * Cap on outstanding (leased but unacked) messages, mapped to
+   * the SDK's flowControl.maxMessages. This bounds how many
+   * handlers run at once, which for the article worker bounds the
+   * concurrent Zyte fetches and the response bodies held in
+   * memory. The workers have no in-process concurrency cap by
+   * design, so this is the intended bound. The SDK default of 1000
+   * is far too high for the worker's memory limit: under a backlog
+   * it leases ~1000 messages and OOM-kills the pod. Omit to fall
+   * back to DEFAULT_MAX_MESSAGES.
+   */
+  maxMessages?: number;
   /**
    * Called on the Pub/Sub library's own internal errors
    * (stream-error, close-error, parse-error). Defaults to

@@ -33,6 +33,12 @@ export function isRetryable(error: unknown): boolean {
   if (error instanceof ZyteError) {
     return RETRYABLE_STATUS_CODES.includes(error.status);
   }
+  // A per-request timeout (AbortSignal.timeout) rejects with a
+  // DOMException named TimeoutError, which is transient and worth a
+  // retry rather than an immediate fail.
+  if (error instanceof DOMException && error.name === 'TimeoutError') {
+    return true;
+  }
   return isNetworkError(error);
 }
 
@@ -40,6 +46,8 @@ let apiKey: string | undefined;
 let apiUrl = DEFAULT_API_URL;
 let timeout = DEFAULT_TIMEOUT_MS;
 let maxRetries = DEFAULT_MAX_RETRIES;
+let beforeRequest: (() => Promise<void>) | undefined;
+let onRetry: (() => void) | undefined;
 
 /**
  * Initialize the Zyte API client. Must be called once before
@@ -53,6 +61,8 @@ export function initZyteClient(opts: ZyteClientOptions): void {
   apiUrl = opts.apiUrl ?? DEFAULT_API_URL;
   timeout = opts.timeout ?? DEFAULT_TIMEOUT_MS;
   maxRetries = opts.maxRetries ?? DEFAULT_MAX_RETRIES;
+  beforeRequest = opts.beforeRequest;
+  onRetry = opts.onRetry;
 }
 
 /**
@@ -120,12 +130,12 @@ function buildRequestBody(
   if (opts?.extractFrom) {
     const optionsKey =
       type === 'article' ? 'articleOptions' : 'articleListOptions';
+    // extractFrom selects the fetch source (httpResponseBody = plain HTTP
+    // fetch, no browser rendering). We deliberately do NOT also set the
+    // top-level httpResponseBody flag: that makes Zyte return the full raw
+    // page body (base64), a large field we never read, which inflates the
+    // response transfer and parse memory across many concurrent handlers.
     body[optionsKey] = { extractFrom: opts.extractFrom };
-    // Explicitly request the raw HTTP response body so Zyte
-    // uses HTTP fetching instead of browser rendering.
-    if (opts.extractFrom === 'httpResponseBody') {
-      body.httpResponseBody = true;
-    }
   }
 
   if (opts?.customHttpRequestHeaders) {
@@ -155,6 +165,9 @@ async function zyteRequest(
 
   return pRetry(
     async () => {
+      // Gate each attempt (including retries) so a distributed rate
+      // limiter can throttle Zyte calls across replicas.
+      if (beforeRequest) await beforeRequest();
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -195,6 +208,14 @@ async function zyteRequest(
       factor: 2,
       shouldRetry({ error }) {
         return isRetryable(error);
+      },
+      onFailedAttempt({ error, retriesLeft }) {
+        // Count an attempt that will be retried (transient, attempts
+        // left). The final failed attempt has retriesLeft 0. p-retry
+        // passes a context object, so destructure the error out of it.
+        if (onRetry && retriesLeft > 0 && isRetryable(error)) {
+          onRetry();
+        }
       },
     },
   );

@@ -47,6 +47,7 @@ vi.mock('@google-cloud/pubsub', () => ({
 
 import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
 import {
+  DEFAULT_MAX_MESSAGES,
   flushTopics,
   initPubSubClient,
   publishMessage,
@@ -194,6 +195,65 @@ describe('startSubscriber', () => {
     expect(errorSpy.mock.calls[0][0]).toMatch(/pubsub:parse-error/);
   });
 
+  it('runs validate and passes the validated message to the handler', async () => {
+    const handler = vi.fn(async () => {});
+    const validate = vi.fn((raw: unknown) => ({
+      ...(raw as TestPayload),
+      crawl_id: 'validated',
+    }));
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, validate, handler });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage(TEST_PAYLOAD);
+    sub.emit('message', message);
+    await message.settled;
+
+    expect(validate).toHaveBeenCalledWith(TEST_PAYLOAD);
+    expect(handler).toHaveBeenCalledWith({
+      ...TEST_PAYLOAD,
+      crawl_id: 'validated',
+    });
+    expect(message.ack).toHaveBeenCalledOnce();
+  });
+
+  it('nacks and routes validation-error when validate throws', async () => {
+    const onError = vi.fn();
+    const handler = vi.fn(async () => {});
+    const validate = vi.fn(() => {
+      throw new Error('bad shape');
+    });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, validate, handler, onError });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage({ not: 'valid' }, 'bad-2');
+    sub.emit('message', message);
+    await message.settled;
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(message.nack).toHaveBeenCalledOnce();
+    expect(message.ack).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), {
+      kind: 'validation-error',
+      messageId: 'bad-2',
+    });
+  });
+
+  it('logs pubsub:validation-error by default when validate throws', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const validate = vi.fn(() => {
+      throw new Error('bad shape');
+    });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, validate });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage(TEST_PAYLOAD);
+    sub.emit('message', message);
+    await message.settled;
+
+    expect(message.nack).toHaveBeenCalledOnce();
+    expect(errorSpy.mock.calls[0][0]).toMatch(/pubsub:validation-error/);
+  });
+
   it("logs subscription 'error' events without stopping the subscriber", async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
@@ -258,6 +318,7 @@ describe('startSubscriber', () => {
       string,
       {
         maxExtensionTime: { seconds: number };
+        flowControl: { maxMessages: number; allowExcessMessages: boolean };
         closeOptions: { behavior: string; timeout: { seconds: number } };
       },
     ];
@@ -267,6 +328,27 @@ describe('startSubscriber', () => {
       SubscriptionCloseBehaviors.WaitForProcessing,
     );
     expect(opts.closeOptions.timeout.seconds).toBe(SHUTDOWN_TIMEOUT_SECONDS);
+  });
+
+  it('caps outstanding messages via flowControl', () => {
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, maxMessages: 4 });
+
+    const [, opts] = mockPubSub.subscription.mock.calls[0] as [
+      string,
+      { flowControl: { maxMessages: number; allowExcessMessages: boolean } },
+    ];
+    expect(opts.flowControl.maxMessages).toBe(4);
+    expect(opts.flowControl.allowExcessMessages).toBe(false);
+  });
+
+  it('defaults maxMessages to DEFAULT_MAX_MESSAGES when omitted', () => {
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
+
+    const [, opts] = mockPubSub.subscription.mock.calls[0] as [
+      string,
+      { flowControl: { maxMessages: number } },
+    ];
+    expect(opts.flowControl.maxMessages).toBe(DEFAULT_MAX_MESSAGES);
   });
 
   it('stop() calls subscription.close()', async () => {

@@ -3,6 +3,8 @@ import {
   updateApprovedCorpusItem,
   normalizeText,
 } from 'crawl-common';
+import { time } from 'metrics';
+import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 import type {
   CrawlArticleMessage,
   ArticleEvent,
@@ -22,9 +24,11 @@ const EXCERPT_COMPARE_LENGTH = 255;
 export async function handleArticleExtraction(
   message: CrawlArticleMessage,
 ): Promise<ArticleEvent> {
-  const { data: article, url } = await extractArticle(message.url, {
-    extractFrom: 'httpResponseBody',
-  });
+  const { data: article, url } = await time(
+    'crawl.zyte.duration_ms',
+    () => extractArticle(message.url, { extractFrom: 'httpResponseBody' }),
+    { extraction: 'article' },
+  );
 
   const event = mapToArticleEvent(article, url);
 
@@ -42,10 +46,10 @@ function mapToArticleEvent(article: ZyteArticle, url: string): ArticleEvent {
     extracted_at: new Date().toISOString(),
     headline: article.headline ?? undefined,
     description: article.description ?? undefined,
-    authors: article.authors?.map((a) => ({ name: a.name })),
+    authors: toEventAuthors(article.authors),
     main_image_url: article.mainImage?.url ?? undefined,
     body_truncated: article.articleBody?.slice(0, BODY_TRUNCATE_LENGTH),
-    published_at: article.datePublished ?? undefined,
+    published_at: toEventTimestamp(article.datePublished),
     breadcrumbs: article.breadcrumbs?.map((b) => ({
       name: b.name,
       url: b.url,
@@ -114,17 +118,16 @@ function buildUpdateInput(
   corpusItem: CorpusItem,
   changed: { title?: string; excerpt?: string },
 ): UpdateApprovedCorpusItemInput {
-  // Prefer extracted authors, fall back to corpus item.
+  // Prefer extracted authors that have a name, else fall back to the
+  // corpus item. Zyte may return authors with only nameRaw, which the
+  // Corpus mutation should not receive as a blank name.
+  const extracted = (article.authors ?? []).filter(
+    (a) => typeof a.name === 'string' && a.name.trim() !== '',
+  );
   const authors =
-    article.authors && article.authors.length > 0
-      ? article.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }))
-      : corpusItem.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }));
+    extracted.length > 0
+      ? extracted.map((a, i) => ({ name: a.name, sortOrder: i }))
+      : corpusItem.authors.map((a, i) => ({ name: a.name, sortOrder: i }));
 
   return {
     externalId: corpusItem.external_id,

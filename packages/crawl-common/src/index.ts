@@ -19,10 +19,33 @@ export type {
   ZyteArticleListItemMetadata,
   ZyteResponse,
 } from './zyte/index.js';
-export { normalizeText } from './utils/index.js';
+export { normalizeText, getRegistrableDomain } from './utils/index.js';
+// TEMPORARY (HNT-2086): remove with the deployed-defaults module.
+export { deployedRedisHost, deployedProjectId } from './utils/index.js';
+export {
+  initRedisClient,
+  shutdownRedis,
+  setTimestamp,
+  getTimestamp,
+  setString,
+  getString,
+  acquireLock,
+  releaseLock,
+  acquireRateLimitToken,
+  DEFAULT_TTL_SECONDS,
+  pageFetchKey,
+  pageLockKey,
+  pageEnqueuedKey,
+  articleEnqueuedKey,
+  articleFetchKey,
+  articleLockKey,
+  articleContentKey,
+} from './redis/index.js';
+export type { RedisClientOptions, RateLimitResult } from './redis/index.js';
 export {
   initCorpusApiClient,
   updateApprovedCorpusItem,
+  getScheduledSectionItems,
   CorpusApiError,
 } from './corpus-api/index.js';
 export type {
@@ -48,7 +71,19 @@ export type {
 export type {
   CorpusItem,
   CrawlArticleMessage,
+  DiscoveryContext,
+  CrawlArticleDiscoveryMessage,
   ArticleAuthor,
   ArticleBreadcrumb,
   ArticleEvent,
+  ArticleDiscoveryEvent,
+  LiveArticle,
+  PublisherList,
 } from './types/index.js';
+export {
+  MessageValidationError,
+  validateCrawlArticleMessage,
+  validateCrawlArticleDiscoveryMessage,
+  validateLiveArticle,
+  validatePublisherList,
+} from './validation/index.js';

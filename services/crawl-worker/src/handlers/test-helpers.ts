@@ -1,7 +1,9 @@
 import type {
   CorpusItem,
+  CrawlArticleDiscoveryMessage,
   CrawlArticleMessage,
   ZyteArticle,
+  ZyteArticleListItem,
   ZyteResponse,
 } from 'crawl-common';
 
@@ -53,6 +55,41 @@ export const CORPUS_ITEM: CorpusItem = {
   topic: 'TECHNOLOGY',
   is_time_sensitive: false,
 };
+
+/** A Zyte article list item on the same domain as TEST_SOURCE_URL. */
+export const ZYTE_LIST_ITEM: ZyteArticleListItem = {
+  url: 'https://example.com/news/article-1',
+  headline: 'First Article',
+  authors: [{ name: 'Jane Doe' }],
+  datePublished: '2025-06-01T10:00:00Z',
+  description: 'Summary of the first article.',
+  inLanguage: 'en',
+  metadata: { probability: 0.95, url: TEST_SOURCE_URL },
+};
+
+/** Discovery message for TEST_SOURCE_URL with two contexts. */
+export const DISCOVERY_MESSAGE: CrawlArticleDiscoveryMessage = {
+  url: TEST_SOURCE_URL,
+  interval_minutes: 20,
+  contexts: [
+    { surface_id: 'NEW_TAB_EN_US', topic: 'technology' },
+    { surface_id: 'NEW_TAB_DE_DE', topic: 'technologie' },
+  ],
+};
+
+/** Poll until the predicate returns true, or reject on timeout. */
+export async function waitFor(
+  predicate: () => boolean,
+  timeoutMs: number,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() > deadline) {
+      throw new Error(`waitFor timed out after ${timeoutMs}ms`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
 
 /**
  * Generated 2048-bit RSA JWK used by integration tests that

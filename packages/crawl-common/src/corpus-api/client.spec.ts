@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   initCorpusApiClient,
   updateApprovedCorpusItem,
+  getScheduledSectionItems,
   CorpusApiError,
 } from './client.js';
 import {
@@ -9,6 +10,8 @@ import {
   CLIENT_OPTS,
   UPDATE_APPROVED_CORPUS_ITEM_INPUT,
   UPDATE_APPROVED_CORPUS_ITEM_SUCCESS_BODY,
+  SCHEDULED_SURFACE_GUID,
+  SECTION_ITEMS_SUCCESS_BODY,
   mockResponse,
 } from './test-helpers.js';
 
@@ -98,6 +101,70 @@ describe('corpus-api client', () => {
         expect(fetchMock).toHaveBeenCalledOnce();
       },
     );
+  });
+
+  describe('getScheduledSectionItems', () => {
+    it('sends the sections query with the surface variable and JWT auth', async () => {
+      fetchMock.mockResolvedValueOnce(mockResponse(SECTION_ITEMS_SUCCESS_BODY));
+
+      await getScheduledSectionItems(SCHEDULED_SURFACE_GUID);
+
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe(CLIENT_OPTS.endpoint);
+      const body = JSON.parse(init.body as string);
+      expect(body.query).toContain('getSectionsWithSectionItems');
+      expect(body.variables.scheduledSurfaceGuid).toBe(SCHEDULED_SURFACE_GUID);
+      const headers = init.headers as Record<string, string>;
+      expect(headers.authorization).toMatch(/^Bearer eyJ/);
+    });
+
+    it('maps items to LiveArticle, de-duplicates by URL, and skips non-live sections', async () => {
+      fetchMock.mockResolvedValueOnce(mockResponse(SECTION_ITEMS_SUCCESS_BODY));
+
+      const result = await getScheduledSectionItems(SCHEDULED_SURFACE_GUID);
+
+      // live-1 appears in two LIVE sections (deduped); the DISABLED and
+      // SCHEDULED sections are skipped; so three unique live articles
+      // remain.
+      expect(result.map((a) => a.url)).toEqual([
+        'https://example.com/live-1',
+        'https://example.com/live-2',
+        'https://example.com/live-3',
+      ]);
+      expect(result[0].corpus_item).toMatchObject({
+        external_id: 'ext-1',
+        title: 'Live One',
+        excerpt: 'Excerpt one.',
+        authors: [{ name: 'Jane Doe' }],
+        status: 'CORPUS',
+        language: 'EN',
+        publisher: 'Example News',
+        image_url: 'https://s3.amazonaws.com/live-1.jpg',
+        topic: 'TECHNOLOGY',
+        is_time_sensitive: false,
+      });
+    });
+
+    it('returns an empty list when no sections are scheduled', async () => {
+      fetchMock.mockResolvedValueOnce(
+        mockResponse({ data: { getSectionsWithSectionItems: [] } }),
+      );
+
+      expect(await getScheduledSectionItems(SCHEDULED_SURFACE_GUID)).toEqual(
+        [],
+      );
+    });
+
+    it('throws CorpusApiError on a GraphQL error without retrying', async () => {
+      fetchMock.mockResolvedValueOnce(
+        mockResponse({ errors: [{ message: 'forbidden' }] }),
+      );
+
+      await expect(
+        getScheduledSectionItems(SCHEDULED_SURFACE_GUID),
+      ).rejects.toThrow(CorpusApiError);
+      expect(fetchMock).toHaveBeenCalledOnce();
+    });
   });
 
   describe('jwt', () => {
