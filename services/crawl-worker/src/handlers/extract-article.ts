@@ -118,12 +118,10 @@ function buildUpdateInput(
   corpusItem: CorpusItem,
   changed: { title?: string; excerpt?: string },
 ): UpdateApprovedCorpusItemInput {
-  // Prefer extracted authors that have a name, else fall back to the
-  // corpus item. Zyte may return authors with only nameRaw, which the
-  // Corpus mutation should not receive as a blank name.
-  const extracted = (article.authors ?? []).filter(
-    (a) => typeof a.name === 'string' && a.name.trim() !== '',
-  );
+  // Prefer extracted authors that have a name (toEventAuthors drops the
+  // nameRaw-only ones the Corpus mutation must not receive as a blank
+  // name), else fall back to the corpus item.
+  const extracted = toEventAuthors(article.authors) ?? [];
   const authors =
     extracted.length > 0
       ? extracted.map((a, i) => ({ name: a.name, sortOrder: i }))

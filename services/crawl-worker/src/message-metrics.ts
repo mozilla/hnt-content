@@ -25,22 +25,22 @@ export function withMessageMetrics<T>(
   return async (message) => {
     const start = Date.now();
     try {
-      record(start, await handler(message));
+      const result = await handler(message);
+      record(
+        start,
+        result.outcome === 'skipped'
+          ? { outcome: 'skipped', reason: result.reason }
+          : { outcome: 'processed' },
+      );
     } catch (err) {
-      record(start, 'error');
+      record(start, { outcome: 'error' });
       throw err;
     }
   };
 }
 
-/** Emit the duration timer and processed counter tagged by outcome. */
-function record(start: number, result: HandlerResult | 'error'): void {
-  const tags: Record<string, string> =
-    result === 'error'
-      ? { outcome: 'error' }
-      : result.outcome === 'skipped'
-        ? { outcome: 'skipped', reason: result.reason }
-        : { outcome: 'processed' };
+/** Emit the duration timer and processed counter with the given tags. */
+function record(start: number, tags: Record<string, string>): void {
   timing('crawl.message.duration_ms', Date.now() - start, tags);
   incr('crawl.message.processed', tags);
 }
