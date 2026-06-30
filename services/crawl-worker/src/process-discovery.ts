@@ -36,6 +36,13 @@ export async function processDiscovery(
   const token = await acquireLock(lockKey, config.lockTtlSeconds);
   if (token === null) return 'skipped';
   try {
+    // Re-check page:fetch inside the lock. Concurrent duplicate jobs all
+    // pass the pre-lock freshness check, then serialize through the lock;
+    // without re-reading the marker here each would re-crawl the page. The
+    // first crawl sets page:fetch, so the rest now skip.
+    if (await withinMinutes(fetchKey, message.interval_minutes)) {
+      return 'skipped';
+    }
     const { events, articleUrls } = await handleArticleDiscovery(message);
     // Discovery events and crawl-article jobs are independent, so
     // publish them together to keep the page lock held briefly. The

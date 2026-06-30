@@ -49,6 +49,16 @@ export async function processArticle(
   const token = await acquireLock(lockKey, config.lockTtlSeconds);
   if (token === null) return 'skipped';
   try {
+    // Re-check article:fetch inside the lock. Concurrent duplicate jobs all
+    // pass the pre-lock freshness check, then serialize through the lock;
+    // without re-reading the marker here each would re-extract. The first
+    // sets article:fetch, so the rest skip. Live articles always resync.
+    if (
+      !isLive &&
+      (await withinMinutes(fetchKey, config.articleFetchTtlMinutes))
+    ) {
+      return 'skipped';
+    }
     const event = await handleArticleExtraction(message);
     await publishIfChanged(url, event);
     await setTimestamp(fetchKey);

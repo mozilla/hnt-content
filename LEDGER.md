@@ -746,3 +746,20 @@ increase that stays well within the memory budget. This is a stopgap. The proper
 infra in webservices-infra: scale the worker HPA on Pub/Sub queue depth
 (num_undelivered) instead of CPU and raise max replicas, since an I/O-bound worker never
 drives CPU high enough to autoscale. Flagged for the human; not deployable from this repo.
+
+## Dedup: re-check the freshness marker under the lock (TOCTOU) (2026-06-30)
+
+Dev showed the same page crawled 12 times within one minute (article_discoveries had a
+single url+surface with 12 rows, 12 distinct crawled_at, span 0 min). Root cause is a
+check-then-act race in processDiscovery, and the same shape in processArticle: the
+page:fetch (article:fetch) freshness gate is checked only before acquiring the lock and
+the marker is written only after the crawl, so the whole crawl duration is a window in
+which concurrent duplicate jobs all pass the pre-lock check, then serialize through the
+SET NX lock one by one and each re-crawl. The lock gives mutual exclusion but not
+deduplication, because the dedup signal is never re-read inside the critical section.
+Fix: re-read the freshness marker immediately after acquiring the lock (double-checked
+locking) so the first job crawls and sets the marker and the rest skip; releaseLock
+still runs in finally on the early return. Applied to both workers (the article re-check
+is non-live only, mirroring the pre-lock gate; live articles always resync). This cuts
+redundant Zyte calls and BigQuery rows and reduces crawl-article backlog amplification,
+since each duplicate discovery would otherwise re-enqueue the page's articles.

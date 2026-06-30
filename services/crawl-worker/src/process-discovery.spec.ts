@@ -81,6 +81,21 @@ describe('processDiscovery', () => {
     expect(releaseLock).not.toHaveBeenCalled();
   });
 
+  it('re-checks page:fetch under the lock and skips a concurrent duplicate', async () => {
+    // The pre-lock check sees no marker, but a concurrent job that won
+    // the lock first crawled and set page:fetch; the post-lock re-check
+    // must catch that and skip instead of re-crawling.
+    vi.mocked(getTimestamp)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(Date.now());
+
+    expect(await processDiscovery(DISCOVERY_MESSAGE)).toBe('skipped');
+
+    expect(acquireLock).toHaveBeenCalled();
+    expect(handleArticleDiscovery).not.toHaveBeenCalled();
+    expect(releaseLock).toHaveBeenCalled();
+  });
+
   it('publishes every discovery event and enqueues unfetched articles, then marks the page', async () => {
     await processDiscovery(DISCOVERY_MESSAGE);
 

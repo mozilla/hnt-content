@@ -88,6 +88,20 @@ describe('processArticle', () => {
     expect(handleArticleExtraction).toHaveBeenCalledWith(LIVE_MESSAGE);
   });
 
+  it('re-checks article:fetch under the lock and skips a concurrent duplicate', async () => {
+    // Pre-lock check sees no marker, but a concurrent job set article:fetch
+    // after winning the lock first; the post-lock re-check must skip rather
+    // than re-extract a non-live article.
+    vi.mocked(getTimestamp)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(Date.now());
+
+    expect(await processArticle(BASE_MESSAGE)).toBe('skipped');
+
+    expect(acquireLock).toHaveBeenCalled();
+    expect(handleArticleExtraction).not.toHaveBeenCalled();
+  });
+
   it('skips when another worker holds the lock', async () => {
     vi.mocked(acquireLock).mockResolvedValue(null);
 
