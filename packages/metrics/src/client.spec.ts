@@ -22,7 +22,14 @@ vi.mock('./config.js', () => ({
 }));
 
 import config from './config.js';
-import { count, incr, initMetrics, shutdownMetrics, timing } from './client.js';
+import {
+  count,
+  incr,
+  initMetrics,
+  shutdownMetrics,
+  time,
+  timing,
+} from './client.js';
 
 describe('metrics client', () => {
   beforeEach(() => {
@@ -83,6 +90,34 @@ describe('metrics client', () => {
       'crawl.message.duration_ms',
       42,
       { outcome: 'success' },
+    );
+  });
+
+  it('records timing when the wrapped fn resolves and when it rejects', async () => {
+    initMetrics({ service: 'crawl-worker' });
+
+    const value = await time(
+      'crawl.zyte.duration_ms',
+      () => Promise.resolve(7),
+      {
+        extraction: 'article',
+      },
+    );
+    expect(value).toBe(7);
+
+    await expect(
+      time('crawl.zyte.duration_ms', () => Promise.reject(new Error('boom')), {
+        extraction: 'article',
+      }),
+    ).rejects.toThrow('boom');
+
+    // The reject path is the regression guard: a timing() moved out of the
+    // finally would stop recording latency for failed Zyte calls.
+    expect(mockClient.timing).toHaveBeenCalledTimes(2);
+    expect(mockClient.timing).toHaveBeenCalledWith(
+      'crawl.zyte.duration_ms',
+      expect.any(Number),
+      { extraction: 'article' },
     );
   });
 
