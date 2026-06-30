@@ -89,6 +89,12 @@ export function initRedisClient(opts: RedisClientOptions): void {
     // container host can otherwise resolve to IPv6 ::1 (which Docker
     // Desktop on macOS does not listen on), hanging the connection.
     family: 4,
+    // Fail a slow or unresponsive Redis fast rather than letting a command
+    // hang indefinitely: a stalled command blocks the handler, holds the
+    // Pub/Sub lease, and starves throughput. A rejected command throws,
+    // the handler nacks, and Pub/Sub redelivers.
+    commandTimeout: 5_000,
+    maxRetriesPerRequest: 2,
     ...(opts.keyPrefix && { keyPrefix: opts.keyPrefix }),
   });
   // Surface background connection errors. ioredis reconnects on its
