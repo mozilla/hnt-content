@@ -83,6 +83,16 @@ export async function extractArticle(
       `Zyte API returned ${statusCode} but no article data for ${url}`,
     );
   }
+  // Drop large response fields the article event never uses. Up to
+  // PUBSUB_MAX_MESSAGES of these responses are held concurrently, so
+  // retaining multi-MB articleBodyHtml (and image/video/audio arrays)
+  // spikes memory and OOM-kills the worker under burst load. The mapping
+  // reads only headline, description, authors, mainImage, a truncated
+  // articleBody, datePublished, breadcrumbs, and inLanguage.
+  delete article.articleBodyHtml;
+  delete article.images;
+  delete article.videos;
+  delete article.audios;
   return {
     data: article,
     url: data.url as string,

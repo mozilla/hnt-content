@@ -763,3 +763,19 @@ still runs in finally on the early return. Applied to both workers (the article 
 is non-live only, mirroring the pre-lock gate; live articles always resync). This cuts
 redundant Zyte calls and BigQuery rows and reduces crawl-article backlog amplification,
 since each duplicate discovery would otherwise re-enqueue the page's articles.
+
+## Article worker memory: drop unused Zyte response fields (2026-06-30)
+
+The article worker OOM-spiked under burst load (peak ~475Mi in dev; reproduced ~1GB
+RSS at 64 concurrent x 2MB bodies) because each in-flight message retained the full
+Zyte response, dominated by articleBodyHtml (full article HTML, hundreds of KB to
+several MB) which the article event never uses, multiplied by up to
+flowControl.maxMessages (64) concurrent handlers. The 512Mi limit is crossed between
+500KB and 2MB bodies at 64 concurrent. The memory is a load-correlated spike, not a
+leak: it returns to ~125Mi baseline when idle and tracks the ack rate. Fix:
+extractArticle drops the large unused fields (articleBodyHtml, images, videos, audios)
+immediately after parsing, before returning, so concurrent responses no longer pile
+multi-MB HTML into memory; mapToArticleEvent reads none of them. maxMessages stays 64
+so the worker still auto-catches-up on backlogs. The transient response.json parse
+double-buffer remains (requesting fewer fields from Zyte would also cut that), but the
+dominant retained-memory driver is removed.

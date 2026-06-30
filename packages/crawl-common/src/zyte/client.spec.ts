@@ -207,6 +207,32 @@ describe('extractArticle', () => {
       expect(result.statusCode).toBe(200);
     });
 
+    it('drops large fields the article event never uses', async () => {
+      fetchMock.mockResolvedValueOnce(
+        mockResponse({
+          ...ARTICLE_RESPONSE,
+          article: {
+            ...ARTICLE_RESPONSE.article,
+            articleBodyHtml: '<p>x</p>'.repeat(1000),
+            images: [{ url: 'https://example.com/a.jpg' }],
+            videos: [{ url: 'https://example.com/v.mp4' }],
+            audios: [{ url: 'https://example.com/a.mp3' }],
+          },
+        }),
+      );
+
+      const result = await extractArticle('https://example.com/article');
+
+      // Stripped to bound worker memory under concurrency.
+      expect(result.data.articleBodyHtml).toBeUndefined();
+      expect(result.data.images).toBeUndefined();
+      expect(result.data.videos).toBeUndefined();
+      expect(result.data.audios).toBeUndefined();
+      // Fields the mapping uses are preserved.
+      expect(result.data.headline).toBe('Breaking News');
+      expect(result.data.articleBody).toBe('Full article text here.');
+    });
+
     it('returns redirect URL from envelope', async () => {
       const redirected = {
         ...ARTICLE_RESPONSE,
