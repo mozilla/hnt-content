@@ -95,6 +95,9 @@ function mapToDiscoveryEvent(
     published_at: toEventTimestamp(item.datePublished),
     headline: item.headline ?? undefined,
     authors: toEventAuthors(item.authors),
+    // The list-page description (dek), not articleBody: Zyte's articleList
+    // product reliably returns description but rarely a full body, so it
+    // is the better summary source for discovery rows.
     summary: item.description ?? undefined,
     language: item.inLanguage ?? undefined,
     topic: context.topic,
