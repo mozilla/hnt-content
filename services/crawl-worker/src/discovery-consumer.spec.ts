@@ -58,6 +58,8 @@ describe('discovery consumer', () => {
     const opts = vi.mocked(startSubscriber).mock.calls[0]![0];
     expect(opts.subscriptionName).toBe('test-crawl-article-discovery');
     expect(opts.maxExtensionSeconds).toBe(570);
+    // Flow-control cap that bounds concurrent Zyte fetches and memory.
+    expect(opts.maxMessages).toBe(16);
     expect(opts.validate).toBe(validateCrawlArticleDiscoveryMessage);
     expect(sentryPubSubErrorHandler).toHaveBeenCalledWith(
       'test-crawl-article-discovery',

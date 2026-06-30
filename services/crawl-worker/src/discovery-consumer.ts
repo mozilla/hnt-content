@@ -31,6 +31,7 @@ export function startDiscoveryConsumer(): void {
   startSubscriber<CrawlArticleDiscoveryMessage>({
     subscriptionName: config.crawlArticleDiscoverySubscription,
     maxExtensionSeconds: config.maxExtensionSeconds,
+    maxMessages: config.pubsubMaxMessages,
     validate: validateCrawlArticleDiscoveryMessage,
     handler: handleMessage,
     onError: sentryPubSubErrorHandler(config.crawlArticleDiscoverySubscription),

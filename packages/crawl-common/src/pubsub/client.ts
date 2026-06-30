@@ -51,6 +51,16 @@ import type {
 // K8s docs: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
 export const SHUTDOWN_TIMEOUT_SECONDS = 25;
 
+// Default cap on outstanding (leased but unacked) messages, used
+// when a subscriber omits maxMessages. This bounds concurrent
+// handlers, and for the article worker that bounds concurrent Zyte
+// fetches and the response bodies held in memory. The workers have
+// no in-process concurrency cap by design, so this is the intended
+// bound. The SDK default of 1000 is far too high for the worker's
+// memory limit: under a backlog it leases ~1000 messages, runs that
+// many concurrent fetches, and OOM-kills the pod.
+export const DEFAULT_MAX_MESSAGES = 16;
+
 // Module-level state.
 let pubsub: PubSub | undefined;
 let shutdownPromise: Promise<void> | undefined;
@@ -161,6 +171,14 @@ export function startSubscriber<T>(
     maxExtensionTime: Duration.from({
       seconds: opts.maxExtensionSeconds,
     }),
+    // Cap outstanding messages so the worker leases only a bounded
+    // number at once. allowExcessMessages: false makes the SDK stop
+    // pulling once the cap is reached rather than overshooting on a
+    // single streaming-pull response.
+    flowControl: {
+      maxMessages: opts.maxMessages ?? DEFAULT_MAX_MESSAGES,
+      allowExcessMessages: false,
+    },
     // WaitForProcessing lets in-flight handlers finish on
     // close() rather than immediately nacking them. The
     // timeout is an upper bound; close() resolves earlier

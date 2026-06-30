@@ -42,3 +42,23 @@ describe('worker config lock TTL', () => {
     );
   });
 });
+
+describe('worker config Pub/Sub flow control', () => {
+  it('defaults the outstanding-message cap to 16', async () => {
+    const config = await loadConfig({});
+
+    expect(config.pubsubMaxMessages).toBe(16);
+  });
+
+  it('reads PUBSUB_MAX_MESSAGES when set', async () => {
+    const config = await loadConfig({ PUBSUB_MAX_MESSAGES: '4' });
+
+    expect(config.pubsubMaxMessages).toBe(4);
+  });
+
+  it('throws on a non-positive cap', async () => {
+    await expect(loadConfig({ PUBSUB_MAX_MESSAGES: '0' })).rejects.toThrow(
+      'PUBSUB_MAX_MESSAGES',
+    );
+  });
+});

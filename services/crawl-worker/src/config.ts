@@ -34,6 +34,12 @@ if (ackDeadlineSeconds <= 30) {
   );
 }
 
+// Cap on outstanding Pub/Sub messages: see pubsubMaxMessages below.
+const pubsubMaxMessages = numberEnv(process.env.PUBSUB_MAX_MESSAGES, 16);
+if (pubsubMaxMessages <= 0) {
+  throw new Error(`PUBSUB_MAX_MESSAGES must be > 0, got ${pubsubMaxMessages}`);
+}
+
 export default {
   service: 'crawl-worker',
   // Which worker this pod runs as, set per deployment by the Helm
@@ -68,6 +74,13 @@ export default {
     process.env.CRAWL_ARTICLE_TOPIC ?? `${environment}-crawl-article`,
   maxExtensionSeconds,
   ackDeadlineSeconds,
+  // Cap on outstanding (leased but unacked) Pub/Sub messages, mapped
+  // to the SDK's flowControl.maxMessages. Bounds concurrent handlers,
+  // and so the concurrent Zyte fetches and response bodies held in
+  // memory. The SDK default of 1000 OOM-kills the worker under a
+  // backlog, so we cap it low. Raise once the pod has more memory or
+  // an in-process Zyte cap exists.
+  pubsubMaxMessages,
   // Distributed-lock TTL for a per-article or per-page fetch: the ack
   // deadline minus 30s (not the max extension), so the lock clears
   // just before redelivery. A healthy worker that runs past it still

@@ -47,6 +47,7 @@ vi.mock('@google-cloud/pubsub', () => ({
 
 import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
 import {
+  DEFAULT_MAX_MESSAGES,
   flushTopics,
   initPubSubClient,
   publishMessage,
@@ -317,6 +318,7 @@ describe('startSubscriber', () => {
       string,
       {
         maxExtensionTime: { seconds: number };
+        flowControl: { maxMessages: number; allowExcessMessages: boolean };
         closeOptions: { behavior: string; timeout: { seconds: number } };
       },
     ];
@@ -326,6 +328,27 @@ describe('startSubscriber', () => {
       SubscriptionCloseBehaviors.WaitForProcessing,
     );
     expect(opts.closeOptions.timeout.seconds).toBe(SHUTDOWN_TIMEOUT_SECONDS);
+  });
+
+  it('caps outstanding messages via flowControl', () => {
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, maxMessages: 4 });
+
+    const [, opts] = mockPubSub.subscription.mock.calls[0] as [
+      string,
+      { flowControl: { maxMessages: number; allowExcessMessages: boolean } },
+    ];
+    expect(opts.flowControl.maxMessages).toBe(4);
+    expect(opts.flowControl.allowExcessMessages).toBe(false);
+  });
+
+  it('defaults maxMessages to DEFAULT_MAX_MESSAGES when omitted', () => {
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS });
+
+    const [, opts] = mockPubSub.subscription.mock.calls[0] as [
+      string,
+      { flowControl: { maxMessages: number } },
+    ];
+    expect(opts.flowControl.maxMessages).toBe(DEFAULT_MAX_MESSAGES);
   });
 
   it('stop() calls subscription.close()', async () => {

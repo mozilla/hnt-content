@@ -38,6 +38,7 @@ export function startArticleConsumer(): void {
   startSubscriber<CrawlArticleMessage>({
     subscriptionName: config.crawlArticleSubscription,
     maxExtensionSeconds: config.maxExtensionSeconds,
+    maxMessages: config.pubsubMaxMessages,
     validate: validateCrawlArticleMessage,
     handler: handleMessage,
     onError: sentryPubSubErrorHandler(config.crawlArticleSubscription),

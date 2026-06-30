@@ -67,6 +67,18 @@ export interface SubscriberOptions<T> {
    */
   maxExtensionSeconds: number;
   /**
+   * Cap on outstanding (leased but unacked) messages, mapped to
+   * the SDK's flowControl.maxMessages. This bounds how many
+   * handlers run at once, which for the article worker bounds the
+   * concurrent Zyte fetches and the response bodies held in
+   * memory. The workers have no in-process concurrency cap by
+   * design, so this is the intended bound. The SDK default of 1000
+   * is far too high for the worker's memory limit: under a backlog
+   * it leases ~1000 messages and OOM-kills the pod. Omit to fall
+   * back to DEFAULT_MAX_MESSAGES.
+   */
+  maxMessages?: number;
+  /**
    * Called on the Pub/Sub library's own internal errors
    * (stream-error, close-error, parse-error). Defaults to
    * console.error. Callers should pass `sentryPubSubErrorHandler(name)`

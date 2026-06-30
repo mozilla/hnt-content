@@ -651,3 +651,25 @@ as not our bug: Zyte 520s are transient and already retried, and the Corpus
 "could not generate an S3 URL" failures come from the Corpus API rejecting a few
 curated items' source images on update, not from our payload (we pass the item's
 existing imageUrl back unchanged, as the mutation requires).
+
+## Cap Pub/Sub flow control so the article worker stops OOM-killing itself
+
+The dev article-worker pods entered a crashloop: OOMKilled (exit 137) about 31
+seconds after start, against the 512Mi container limit, while
+dev-crawl-article carried a backlog of over 250,000 messages. The cause was in
+the crawl-common Pub/Sub consumer, which set maxExtensionTime but never set
+flowControl.maxMessages, so the @google-cloud/pubsub SDK applied its default of
+1000 outstanding messages. Under a backlog the worker immediately leased about
+1000 messages and ran that many concurrent Zyte fetches, each holding a large
+response body in memory, which pegged CPU and exhausted 512Mi long before any
+handler finished. By design the workers carry no in-process Zyte concurrency
+cap, so the Pub/Sub flow-control limit is the intended bound and leaving it
+unset was the bug. Fix: the consumer now sets flowControl with a configurable
+maxMessages (default 16, with allowExcessMessages false so the SDK stops pulling
+at the cap rather than overshooting on a single streaming-pull response). The
+worker threads it through config as PUBSUB_MAX_MESSAGES so the cap can be raised
+without a code change once the pod has more memory or a distributed Zyte rate
+limiter (HNT-2441) lands. 16 is a deliberately conservative starting point: it
+keeps peak memory well under 512Mi while still giving Pub/Sub enough in-flight
+work to keep the single replica busy, and the deployed value can be tuned up
+from the dashboard.
