@@ -151,6 +151,18 @@ export function validateCrawlArticleMessage(raw: unknown): CrawlArticleMessage {
     crawl_id: requireString(obj, 'crawl_id', label),
     enqueued_at: requireString(obj, 'enqueued_at', label),
   };
+  // Optional so messages enqueued before this field existed still validate
+  // during a rolling deploy; when present it must be a positive number
+  // because the worker gates re-fetch on it.
+  if (obj.refresh_interval_minutes != null) {
+    const refresh = requireNumber(obj, 'refresh_interval_minutes', label);
+    if (refresh <= 0) {
+      throw new MessageValidationError(
+        `${label}.refresh_interval_minutes must be a positive number`,
+      );
+    }
+    message.refresh_interval_minutes = refresh;
+  }
   if (obj.corpus_item != null) {
     message.corpus_item = validateCorpusItem(obj.corpus_item);
   }

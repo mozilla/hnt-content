@@ -27,6 +27,12 @@ export interface CrawlArticleMessage {
   source_url: string;
   crawl_id: string;
   enqueued_at: string;
+  // Refresh window for this article, set by the producer: discovery uses
+  // the article fetch TTL, the agent uses the live-article interval. The
+  // worker gates re-fetch and writes its fetch claim against this value.
+  // Optional so a rolling deploy does not reject messages enqueued before
+  // the field existed; the worker falls back to the configured fetch TTL.
+  refresh_interval_minutes?: number;
   corpus_item?: CorpusItem;
 }
 

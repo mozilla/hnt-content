@@ -69,6 +69,9 @@ async function enqueueLiveArticleIfDue(article: LiveArticle): Promise<boolean> {
     source_url: article.url,
     crawl_id: randomUUID(),
     enqueued_at: new Date().toISOString(),
+    // The worker dedups the article against this window, so it matches
+    // the agent's live-article interval rather than the worker default.
+    refresh_interval_minutes: config.liveArticleIntervalMinutes,
     corpus_item: article.corpus_item,
   };
   await publishMessage<CrawlArticleMessage>(config.crawlArticleTopic, message);

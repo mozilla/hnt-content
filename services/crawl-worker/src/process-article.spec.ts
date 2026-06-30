@@ -69,34 +69,73 @@ describe('processArticle', () => {
     expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
   });
 
-  it('skips a recently fetched discovered article without extracting', async () => {
+  it('claims the fetch marker before the Zyte call and publish', async () => {
+    await processArticle(BASE_MESSAGE);
+
+    // The marker is a claim, so it must be written before the handler runs
+    // and before publishing, not after them.
+    const claimOrder = vi.mocked(setTimestamp).mock.invocationCallOrder[0]!;
+    const extractOrder = vi.mocked(handleArticleExtraction).mock
+      .invocationCallOrder[0]!;
+    const publishOrder = vi.mocked(publishMessage).mock.invocationCallOrder[0]!;
+    expect(claimOrder).toBeLessThan(extractOrder);
+    expect(claimOrder).toBeLessThan(publishOrder);
+  });
+
+  it('skips a recently fetched article without extracting', async () => {
     vi.mocked(getTimestamp).mockResolvedValue(Date.now());
 
-    await processArticle(BASE_MESSAGE);
+    expect(await processArticle(BASE_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'recent',
+    });
 
     expect(acquireLock).not.toHaveBeenCalled();
     expect(handleArticleExtraction).not.toHaveBeenCalled();
     expect(publishMessage).not.toHaveBeenCalled();
   });
 
-  it('fetches a live article even when recently fetched', async () => {
+  it('dedups a live article within its refresh window', async () => {
+    // Live articles no longer bypass the fetch check; they dedup on the
+    // refresh interval carried on the message (default TTL when absent).
     vi.mocked(getTimestamp).mockResolvedValue(Date.now());
 
-    await processArticle(LIVE_MESSAGE);
+    expect(await processArticle(LIVE_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'recent',
+    });
+    expect(acquireLock).not.toHaveBeenCalled();
+    expect(handleArticleExtraction).not.toHaveBeenCalled();
+  });
 
-    expect(acquireLock).toHaveBeenCalledOnce();
-    expect(handleArticleExtraction).toHaveBeenCalledWith(LIVE_MESSAGE);
+  it('honors the per-message refresh interval when deduping', async () => {
+    const tenMinutesAgo = Date.now() - 10 * 60_000;
+    vi.mocked(getTimestamp).mockResolvedValue(tenMinutesAgo);
+
+    // A 5-minute window: a 10-minute-old marker is stale, so it processes.
+    expect(
+      (await processArticle({ ...LIVE_MESSAGE, refresh_interval_minutes: 5 }))
+        .outcome,
+    ).toBe('processed');
+
+    // A 60-minute window: the same marker is fresh, so it skips.
+    expect(
+      await processArticle({ ...LIVE_MESSAGE, refresh_interval_minutes: 60 }),
+    ).toEqual({ outcome: 'skipped', reason: 'recent' });
   });
 
   it('re-checks article:fetch under the lock and skips a concurrent duplicate', async () => {
     // Pre-lock check sees no marker, but a concurrent job set article:fetch
     // after winning the lock first; the post-lock re-check must skip rather
-    // than re-extract a non-live article.
+    // than re-extract.
     vi.mocked(getTimestamp)
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(Date.now());
 
-    expect(await processArticle(BASE_MESSAGE)).toBe('skipped');
+    expect(await processArticle(BASE_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'recent',
+    });
 
     expect(acquireLock).toHaveBeenCalled();
     expect(handleArticleExtraction).not.toHaveBeenCalled();
@@ -105,7 +144,10 @@ describe('processArticle', () => {
   it('skips when another worker holds the lock', async () => {
     vi.mocked(acquireLock).mockResolvedValue(null);
 
-    await processArticle(BASE_MESSAGE);
+    expect(await processArticle(BASE_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'lock_busy',
+    });
 
     expect(handleArticleExtraction).not.toHaveBeenCalled();
     expect(publishMessage).not.toHaveBeenCalled();
@@ -156,14 +198,35 @@ describe('processArticle', () => {
     expect(publishMessage).not.toHaveBeenCalled();
   });
 
-  it('does not record the fetch marker when publishing throws', async () => {
+  it('keeps the fetch claim when extraction throws, so a redelivery skips without re-fetching', async () => {
+    vi.mocked(handleArticleExtraction).mockRejectedValueOnce(
+      new Error('zyte failed'),
+    );
+
+    await expect(processArticle(BASE_MESSAGE)).rejects.toThrow('zyte failed');
+    // The claim was written before the failing Zyte call.
+    expect(setTimestamp).toHaveBeenCalledOnce();
+
+    // Redelivery: the marker now exists, so the second delivery skips and
+    // does not call Zyte again (the convergence property).
+    vi.mocked(getTimestamp).mockResolvedValue(Date.now());
+    expect(await processArticle(BASE_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'recent',
+    });
+    expect(handleArticleExtraction).toHaveBeenCalledTimes(1);
+  });
+
+  it('records the fetch claim before publishing, so a redelivery skips even when publishing throws', async () => {
     vi.mocked(publishMessage).mockRejectedValue(new Error('publish failed'));
 
     await expect(processArticle(BASE_MESSAGE)).rejects.toThrow(
       'publish failed',
     );
-    // Skipping setTimestamp lets the message redeliver and retry.
-    expect(setTimestamp).not.toHaveBeenCalled();
+    // The claim is written before the publish, so it survives a publish
+    // failure: the message nacks but the redelivery skips rather than
+    // re-paying for Zyte (the accepted 99.9% under-emission tradeoff).
+    expect(setTimestamp).toHaveBeenCalledOnce();
     expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
   });
 
@@ -172,15 +235,22 @@ describe('processArticle', () => {
 
     // A release failure in finally must not turn a successful publish
     // into a throw (which would nack and redeliver the message).
-    expect(await processArticle(BASE_MESSAGE)).toBe('processed');
+    expect(await processArticle(BASE_MESSAGE)).toEqual({
+      outcome: 'processed',
+    });
     expect(publishMessage).toHaveBeenCalledOnce();
     expect(setTimestamp).toHaveBeenCalledOnce();
   });
 
   it('returns processed on extraction and skipped when deduped', async () => {
-    expect(await processArticle(BASE_MESSAGE)).toBe('processed');
+    expect(await processArticle(BASE_MESSAGE)).toEqual({
+      outcome: 'processed',
+    });
 
     vi.mocked(getTimestamp).mockResolvedValue(Date.now());
-    expect(await processArticle(BASE_MESSAGE)).toBe('skipped');
+    expect(await processArticle(BASE_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'recent',
+    });
   });
 });

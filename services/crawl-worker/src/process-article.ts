@@ -14,55 +14,60 @@ import {
 } from 'crawl-common';
 import config from './config.js';
 import { handleArticleExtraction } from './handlers/extract-article.js';
-import type { MessageOutcome } from './message-metrics.js';
+import type { HandlerResult } from './message-metrics.js';
 import { withinMinutes } from './recency.js';
 
 /**
  * Extract an article and publish it, guarded by Redis so the same
  * article is not fetched or published redundantly:
- * - Discovered articles skip extraction if fetched recently. Live
- *   articles bypass that check so they resync on the agent's cadence.
+ * - Skip extraction if the article was fetched within its refresh
+ *   window. Live articles carry their own interval on the message and
+ *   so dedup on the agent's cadence; discovered articles use the
+ *   default fetch TTL.
  * - A per-article lock prevents two workers fetching the same URL at
  *   once; a held lock means another worker has it, so we skip.
+ * - The fetch marker is written as a claim, before the Zyte call and
+ *   publish, so a partial failure (failed publish, ack-deadline expiry,
+ *   crash mid-handler) redelivers into a skip instead of re-paying for
+ *   Zyte and re-publishing. A publish failure still nacks, but the
+ *   redelivery now skips: that interval's update is dropped and
+ *   self-heals on the next crawl, the accepted 99.9% tradeoff.
  * - The article is published only when its content changed since the
  *   last fetch. The Corpus sync for live articles runs inside the
- *   handler regardless, so curated metadata stays in sync even when
- *   the body is unchanged.
+ *   handler, so curated metadata stays in sync whenever the article is
+ *   actually fetched.
  *
  * Skips ack the message (the work is done or owned elsewhere); only a
  * thrown error nacks for redelivery.
  */
 export async function processArticle(
   message: CrawlArticleMessage,
-): Promise<MessageOutcome> {
+): Promise<HandlerResult> {
   const { url } = message;
   const fetchKey = articleFetchKey(url);
-  const isLive = message.corpus_item != null;
-  if (
-    !isLive &&
-    (await withinMinutes(fetchKey, config.articleFetchTtlMinutes))
-  ) {
-    return 'skipped';
+  const intervalMinutes =
+    message.refresh_interval_minutes ?? config.articleFetchTtlMinutes;
+  if (await withinMinutes(fetchKey, intervalMinutes)) {
+    return { outcome: 'skipped', reason: 'recent' };
   }
 
   const lockKey = articleLockKey(url);
   const token = await acquireLock(lockKey, config.lockTtlSeconds);
-  if (token === null) return 'skipped';
+  if (token === null) return { outcome: 'skipped', reason: 'lock_busy' };
   try {
     // Re-check article:fetch inside the lock. Concurrent duplicate jobs all
     // pass the pre-lock freshness check, then serialize through the lock;
     // without re-reading the marker here each would re-extract. The first
-    // sets article:fetch, so the rest skip. Live articles always resync.
-    if (
-      !isLive &&
-      (await withinMinutes(fetchKey, config.articleFetchTtlMinutes))
-    ) {
-      return 'skipped';
+    // claims article:fetch, so the rest skip.
+    if (await withinMinutes(fetchKey, intervalMinutes)) {
+      return { outcome: 'skipped', reason: 'recent' };
     }
+    // Claim the interval before the Zyte call and publish so a partial
+    // failure redelivers into a skip (see the doc block).
+    await setTimestamp(fetchKey);
     const event = await handleArticleExtraction(message);
     await publishIfChanged(url, event);
-    await setTimestamp(fetchKey);
-    return 'processed';
+    return { outcome: 'processed' };
   } finally {
     // Best-effort: the lock self-expires on its TTL, so a release
     // failure must not propagate out of finally and mask the handler's

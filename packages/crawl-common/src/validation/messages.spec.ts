@@ -121,6 +121,37 @@ describe('validateCrawlArticleMessage', () => {
       }),
     ).toThrow(/authors\[0\].name/);
   });
+
+  it('accepts and preserves a positive refresh_interval_minutes', () => {
+    const message = { ...VALID_ARTICLE, refresh_interval_minutes: 20 };
+    expect(validateCrawlArticleMessage(message)).toEqual(message);
+  });
+
+  it('omits refresh_interval_minutes when absent (older messages)', () => {
+    const result = validateCrawlArticleMessage(VALID_ARTICLE);
+    expect(result.refresh_interval_minutes).toBeUndefined();
+  });
+
+  it('rejects a non-numeric refresh_interval_minutes', () => {
+    expect(() =>
+      validateCrawlArticleMessage({
+        ...VALID_ARTICLE,
+        refresh_interval_minutes: '20',
+      }),
+    ).toThrow(/refresh_interval_minutes/);
+  });
+
+  it.each([0, -5])(
+    'rejects a non-positive refresh_interval_minutes (%s)',
+    (value) => {
+      expect(() =>
+        validateCrawlArticleMessage({
+          ...VALID_ARTICLE,
+          refresh_interval_minutes: value,
+        }),
+      ).toThrow(/refresh_interval_minutes must be a positive number/);
+    },
+  );
 });
 
 describe('validateCrawlArticleDiscoveryMessage', () => {
