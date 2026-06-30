@@ -25,7 +25,7 @@ export const TOKEN_REFRESH_WINDOW_MS =
   JWT_TTL_SECONDS * JWT_REFRESH_BUFFER * 1000;
 
 // 4 retries (5 attempts total) with exponential backoff
-// designed to complete well within the 600s Pub/Sub ack
+// designed to complete well within the 300s Pub/Sub ack
 // deadline: ~2s + ~4s + ~8s + ~16s = ~30s worst case.
 const MAX_RETRIES = 4;
 const RETRY_MIN_TIMEOUT_MS = 2_000;
@@ -316,7 +316,10 @@ function toLiveArticle(item: ApiApprovedCorpusItem): LiveArticle {
       external_id: item.externalId,
       title: item.title,
       excerpt: item.excerpt,
-      authors: item.authors.map((a) => ({ name: a.name })),
+      // Tolerate a missing authors array: this mapping runs before
+      // validateLiveArticle can drop a malformed item, and an unguarded
+      // throw here would crash-loop the agent at startup.
+      authors: (item.authors ?? []).map((a) => ({ name: a.name })),
       status: item.status as CorpusItem['status'],
       language: item.language as CorpusItem['language'],
       publisher: item.publisher,

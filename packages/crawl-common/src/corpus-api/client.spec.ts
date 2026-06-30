@@ -155,6 +155,41 @@ describe('corpus-api client', () => {
       );
     });
 
+    it('tolerates a section item with a missing authors array', async () => {
+      fetchMock.mockResolvedValueOnce(
+        mockResponse({
+          data: {
+            getSectionsWithSectionItems: [
+              {
+                status: 'LIVE',
+                sectionItems: [
+                  {
+                    approvedItem: {
+                      externalId: 'ext-na',
+                      url: 'https://example.com/no-authors',
+                      title: 'No Authors',
+                      excerpt: 'Missing authors array.',
+                      status: 'CORPUS',
+                      language: 'EN',
+                      publisher: 'Example',
+                      imageUrl: 'https://s3.amazonaws.com/na.jpg',
+                      topic: 'NEWS',
+                      isTimeSensitive: false,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+      );
+
+      const result = await getScheduledSectionItems(SCHEDULED_SURFACE_GUID);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].corpus_item.authors).toEqual([]);
+    });
+
     it('throws CorpusApiError on a GraphQL error without retrying', async () => {
       fetchMock.mockResolvedValueOnce(
         mockResponse({ errors: [{ message: 'forbidden' }] }),
