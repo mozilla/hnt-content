@@ -5,9 +5,14 @@ import { deployedProjectId, deployedRedisHost } from 'crawl-common';
 // below, mirroring how Terraform names resources.
 const environment = process.env.ENVIRONMENT;
 
-/** Parse a numeric env var, failing fast at load on a non-finite value. */
+/**
+ * Parse a numeric env var. A blank or unset value uses the fallback; a
+ * non-numeric value fails fast at load. Blank counts as unset so a
+ * templated-but-empty env var (e.g. from Helm) does not coerce to 0.
+ */
 function numberEnv(value: string | undefined, fallback: number): number {
-  const parsed = Number(value ?? fallback);
+  const trimmed = value?.trim();
+  const parsed = trimmed ? Number(trimmed) : fallback;
   if (!Number.isFinite(parsed)) {
     throw new Error(`Expected a numeric env value, got: ${value}`);
   }

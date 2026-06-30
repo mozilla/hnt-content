@@ -114,3 +114,23 @@ describe('worker config Zyte rate limit', () => {
     ).toBe(0);
   });
 });
+
+describe('worker config blank numeric env vars', () => {
+  it('treats a blank numeric env var as unset and uses the fallback', async () => {
+    const config = await loadConfig({
+      PORT: '',
+      ARTICLE_FETCH_TTL_MINUTES: '  ',
+      REDIS_PORT: '',
+    });
+
+    expect(config.port).toBe(8080);
+    expect(config.articleFetchTtlMinutes).toBe(60);
+    expect(config.redisPort).toBe(6379);
+  });
+
+  it('uses the fallback for a blank guarded var instead of crashing', async () => {
+    const config = await loadConfig({ PUBSUB_MAX_MESSAGES: '' });
+
+    expect(config.pubsubMaxMessages).toBe(64);
+  });
+});

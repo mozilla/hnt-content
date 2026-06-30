@@ -71,3 +71,17 @@ describe('agent crawl toggle', () => {
     }
   });
 });
+
+describe('agent config blank numeric env vars', () => {
+  it('treats a blank numeric env var as unset and uses the fallback', async () => {
+    const config = await loadConfig({
+      PORT: '',
+      TICK_INTERVAL_MS: '  ',
+      STALE_TICK_THRESHOLD_MINUTES: '',
+    });
+
+    expect(config.port).toBe(8080);
+    expect(config.tickIntervalMs).toBe(60000);
+    expect(config.staleTickThresholdMinutes).toBe(10);
+  });
+});
