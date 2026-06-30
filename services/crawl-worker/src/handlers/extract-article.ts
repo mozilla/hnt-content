@@ -5,7 +5,6 @@ import {
 } from 'crawl-common';
 import { time } from 'metrics';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
-import { zyteOptionsForUrl } from './zyte-request-options.js';
 import type {
   CrawlArticleMessage,
   ArticleEvent,
@@ -27,7 +26,7 @@ export async function handleArticleExtraction(
 ): Promise<ArticleEvent> {
   const { data: article, url } = await time(
     'crawl.zyte.duration_ms',
-    () => extractArticle(message.url, zyteOptionsForUrl(message.url)),
+    () => extractArticle(message.url, { extractFrom: 'httpResponseBody' }),
     { extraction: 'article' },
   );
 

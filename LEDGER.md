@@ -714,3 +714,19 @@ fixes both the agent enqueue and the worker's inbound message validation, which 
 otherwise nack every live-article message. The worker still echoes publisher back to
 updateApprovedCorpusItem verbatim, so a blank can never overwrite a real stored value,
 which is the only data-corruption vector.
+
+## Guardian 451: drop the custom User-Agent; httpResponseBody alone is the fix (2026-06-30)
+
+The earlier Guardian UA fix did not clear the 451 in dev: theguardian.com section-page
+articleList requests kept dead-lettering (DLQ peek showed 25 of 25 were guardian, +45
+per crawl cycle). A cached real-Zyte eval in content-ml-services
+(jobs/offline_eval/zyte-http-vs-browser/.../theguardian.com.json) is decisive: guardian
+articleList returns 45 of 45 success in httpResponseBody mode and 45 of 45 HTTP 451 in
+browserHtml mode, with no custom User-Agent in either case. So the 451 is the Guardian
+WAF blocking Zyte's headless-browser fingerprint, not a geolocation, IP, or UA gate; the
+UA was a red herring carried over from the legacy config and, paired with
+Zyte-Override-Headers, was the only difference between our 451 request and the eval's
+known-200 request. Removing the customHttpRequestHeaders special-casing (reverting the
+zyteOptionsForUrl helper) leaves both crawl paths on a plain httpResponseBody request,
+which the eval proves works. No geolocation or ipType is needed: a geo block would fail
+both fetch modes identically, and it does not.
