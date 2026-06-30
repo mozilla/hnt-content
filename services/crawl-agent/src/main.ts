@@ -198,8 +198,7 @@ async function start() {
     });
     // First load fails fast: a misconfigured or unauthorized Corpus
     // client should abort startup, not run a degraded agent.
-    publisherList.live_articles = await fetchLiveArticles();
-    lastCorpusRefreshAt = Date.now();
+    await refreshLiveArticles();
   }
   const liveSource = useCorpus
     ? `Corpus: ${config.scheduledSurfaceGuids.join(', ')}`
