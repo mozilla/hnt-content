@@ -40,7 +40,12 @@ export async function handleArticleExtraction(
 function mapToArticleEvent(article: ZyteArticle, url: string): ArticleEvent {
   return {
     url,
-    extracted_at: new Date().toISOString(),
+    // Prefer Zyte's own download time (the genuine extraction moment and
+    // what the BigQuery column documents); fall back to now when Zyte
+    // returns an unparseable or empty timestamp.
+    extracted_at:
+      toEventTimestamp(article.metadata.dateDownloaded) ??
+      new Date().toISOString(),
     headline: article.headline ?? undefined,
     description: article.description ?? undefined,
     authors: toEventAuthors(article.authors),

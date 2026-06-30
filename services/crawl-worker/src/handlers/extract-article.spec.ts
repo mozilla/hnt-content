@@ -60,7 +60,22 @@ describe('handleArticleExtraction', () => {
       expect(event.published_at).toBe(ZYTE_ARTICLE.datePublished);
       expect(event.breadcrumbs).toEqual(ZYTE_ARTICLE.breadcrumbs);
       expect(event.language).toBe(ZYTE_ARTICLE.inLanguage);
-      expect(event.extracted_at).toBeDefined();
+      expect(event.extracted_at).toBe(ZYTE_ARTICLE.metadata.dateDownloaded);
+    });
+
+    it('falls back to the current time when Zyte omits dateDownloaded', async () => {
+      extractArticleMock.mockResolvedValueOnce({
+        ...ZYTE_RESPONSE,
+        data: {
+          ...ZYTE_ARTICLE,
+          metadata: { ...ZYTE_ARTICLE.metadata, dateDownloaded: '' },
+        },
+      });
+
+      const event = await handleArticleExtraction(BASE_MESSAGE);
+
+      expect(event.extracted_at).not.toBe('');
+      expect(Number.isNaN(Date.parse(event.extracted_at))).toBe(false);
     });
 
     it('calls extractArticle with httpResponseBody', async () => {
