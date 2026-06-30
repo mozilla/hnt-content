@@ -924,3 +924,28 @@ each carry a tiny per-package tsup and vitest config; the three new packages cop
 that exact layout rather than diverge from it. The Dockerfile and turbo.json need
 no change: turbo prune follows the workspace dependency graph and pulls the new
 packages in automatically once the services declare them.
+
+## HNT-2086: per-domain Zyte extraction mode (browserHtml default)
+
+The workers no longer hardcode the cheap `httpResponseBody` Zyte extraction mode
+for every domain. They now default to `browserHtml`, which renders JavaScript so
+a JS-heavy publisher still yields a full article, and use `httpResponseBody` only
+for the registrable domains the legacy crawler's offline quality gates cleared.
+Those allowlists (article and articleList differ) are ported from the legacy
+`zyte_domains.py` into `services/crawl-worker/src/zyte-cheap-domains.ts` and
+resolved per request by `resolveExtractFrom(url, product)`, matching on the
+eTLD+1 so subdomains collapse and an unparseable URL falls back to browserHtml.
+
+The data lives in a TypeScript module rather than a JSON file because the worker
+builds with `tsc`, which compiles a `.ts` into `dist` (so it ships as code) but
+would not copy a `.json`; this avoids any prune or runtime path concern.
+`theguardian.com` is in both cheap lists: it returns HTTP 451 under browserHtml,
+and the new client clears that with httpResponseBody alone, so the legacy custom
+User-Agent is no longer needed. Switching the default to browserHtml changes only
+Zyte's fetch source, not the response payload, so it does not regress the worker
+memory bound (the client never requests the raw page body).
+
+This is a deliberate fidelity-over-cost tradeoff: most crawled domains, mainly
+international publishers the legacy gates never evaluated, now use the more
+expensive browserHtml path at the same request rate. Move a domain to the cheap
+list as it clears quality.
