@@ -17,7 +17,21 @@ import config from './config.js';
  */
 export async function loadPublisherList(path: string): Promise<PublisherList> {
   const contents = await readFile(path, 'utf8');
-  return validatePublisherList(JSON.parse(contents));
+  const list = validatePublisherList(JSON.parse(contents));
+  return limitPages(list, config.publisherPageLimit);
+}
+
+/**
+ * Sample the pages down to the configured limit with an even stride, so
+ * a dev deployment can run a representative subset at lower load without
+ * collapsing to one corner of the alphabetically sorted list. Returns
+ * the list unchanged when no limit is set or it already fits.
+ */
+export function limitPages(list: PublisherList, limit: number): PublisherList {
+  if (limit <= 0 || list.pages.length <= limit) return list;
+  const stride = Math.ceil(list.pages.length / limit);
+  const pages = list.pages.filter((_, i) => i % stride === 0).slice(0, limit);
+  return { ...list, pages };
 }
 
 /** Whether the agent sources live articles from the Corpus API. */

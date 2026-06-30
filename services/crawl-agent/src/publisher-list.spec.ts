@@ -15,6 +15,7 @@ vi.mock('./config.js', () => ({
     corpusApi: { jwkJson: '', endpoint: '', issuer: '', audience: '' },
     scheduledSurfaceGuids: ['NEW_TAB_EN_US'],
     corpusRefreshMinutes: 15,
+    publisherPageLimit: 0,
   },
 }));
 
@@ -24,8 +25,21 @@ import config from './config.js';
 import {
   corpusSourceEnabled,
   fetchLiveArticles,
+  limitPages,
   loadPublisherList,
 } from './publisher-list.js';
+
+/** Build a publisher list with n pages on distinct URLs. */
+function listOf(n: number) {
+  return {
+    pages: Array.from({ length: n }, (_, i) => ({
+      url: `https://example.com/p${i}`,
+      interval_minutes: 20,
+      contexts: [{ surface_id: 'NEW_TAB_EN_US', topic: 'tech' }],
+    })),
+    live_articles: [],
+  };
+}
 
 const EMPTY_LIST = { pages: [], live_articles: [] };
 
@@ -79,6 +93,26 @@ describe('loadPublisherList', () => {
     vi.mocked(readFile).mockRejectedValue(new Error('ENOENT'));
 
     await expect(loadPublisherList('missing.json')).rejects.toThrow('ENOENT');
+  });
+});
+
+describe('limitPages', () => {
+  it('returns the list unchanged when no limit or it already fits', () => {
+    const list = listOf(5);
+    expect(limitPages(list, 0)).toBe(list);
+    expect(limitPages(list, 5)).toBe(list);
+    expect(limitPages(list, 10)).toBe(list);
+  });
+
+  it('samples down to the limit with an even stride across the list', () => {
+    // 10 pages to 3: stride ceil(10/3)=4, picks indices 0,4,8.
+    const result = limitPages(listOf(10), 3);
+
+    expect(result.pages.map((p) => p.url)).toEqual([
+      'https://example.com/p0',
+      'https://example.com/p4',
+      'https://example.com/p8',
+    ]);
   });
 });
 

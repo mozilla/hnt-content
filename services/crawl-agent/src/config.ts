@@ -70,6 +70,12 @@ export default {
   publisherListPath: fileURLToPath(
     new URL('../publishers.json', import.meta.url),
   ),
+  // Optional cap on how many pages to crawl, applied after loading the
+  // full list. 0 means no limit. Set per env (e.g. dev) to run a
+  // representative subset at lower load on the Zyte account shared with
+  // the legacy system; the sample is an even stride across the list to
+  // keep publisher and language variety.
+  publisherPageLimit: numberEnv(process.env.PUBLISHER_PAGE_LIMIT, 0),
   // Corpus Admin API source for live (curated) articles, mirroring the
   // crawl-worker client. The endpoint, issuer, and audience have app
   // defaults (nonprod admin-api outside prod); only the JWK is a secret.

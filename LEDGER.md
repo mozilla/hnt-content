@@ -853,3 +853,24 @@ discovery share up slightly over the ~289 estimate because the articleList delta
 is the noisier signal. Re-measure once the crawler runs at full steady state for
 a few days; cleaner isolation needs a distinct Zyte tag or apikey_label on the
 worker requests (the workers currently send only extractFrom, no tags).
+
+## Throttle the dev deployment to spare the shared Zyte account (2026-06-30)
+
+Dev runs the same Zyte account (org 612928) as the legacy system, so the new
+crawler running the full 3399-page list on 20-minute intervals competes with
+production for Zyte rate and cost. Dedup is confirmed working in dev (each exact
+page crawls once per interval), so the load is the list size, not re-crawling.
+To keep exercising the pipeline at low cost and low interference, dev runs a
+subset and a low rate cap, set per env (not in app defaults) so stage/prod are
+unaffected. The full list stays the committed source of truth.
+
+PUBLISHER_PAGE_LIMIT caps how many pages the agent crawls, applied after loading
+and validating the full list. The sample is an even stride across the list (not
+the first N) so a subset keeps publisher and language variety. 0 means no limit,
+so stage/prod load the whole list unchanged. Dev sets 100.
+
+Dev also sets a low per-role Zyte cap via the existing env override
+(ZYTE_RATE_LIMIT_PER_MINUTE): article 130, discovery 20, about 150 total, a
+small slice of the account that bounds interference regardless of list size.
+This is interim while a higher account RPM is negotiated. Both knobs live in the
+dev Helm values, not app config, because they are deployment policy for one env.
