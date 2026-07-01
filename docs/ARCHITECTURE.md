@@ -28,7 +28,7 @@ and the analytics that feed Firefox New Tab. This view shows who it talks to and
 why. The next section looks inside.
 
 ```mermaid
-flowchart LR
+flowchart TB
     editors["Editors<br/>via an editorial spreadsheet"]:::actor
     zyte["Zyte API<br/>fetches publisher websites"]:::external
     corpus["Curated Corpus API"]:::external
@@ -38,27 +38,29 @@ flowchart LR
     bq[("BigQuery<br/>crawl dataset")]:::store
     newtab["Firefox New Tab<br/>via ML ranking"]:::actor
 
-    editors -->|pages and curated articles to crawl, as committed JSON| crawler
-    crawler -->|extraction requests| zyte
-    crawler <-->|curated article metadata| corpus
+    editors -->|publisher pages to crawl, as committed JSON| crawler
     crawler -->|article and discovery data| bq
+    crawler <-->|curated articles| corpus
+    crawler -->|extraction requests| zyte
     bq -->|ranking and training data| newtab
+    bq ~~~ pad[" "]:::pad
 
     classDef system fill:#1a5276,stroke:#0b2e42,color:#eaf2f8,stroke-width:3px
     classDef external fill:#616a6b,stroke:#2c3232,color:#f2f4f4,stroke-width:1px
     classDef store fill:#0e6655,stroke:#073b31,color:#e8f8f5,stroke-width:1px
     classDef actor fill:#935116,stroke:#5b3410,color:#fdf2e9,stroke-width:1px
+    classDef pad fill:none,stroke:none,color:#ffffff
 ```
 
-Editors maintain the crawl list of publisher pages and curated articles in an
-editorial spreadsheet, which is exported to a committed JSON file that the agent
-reads on startup. The crawler drives the Zyte API to fetch and extract pages,
-since it never visits sites itself, and it streams the results into the BigQuery
-crawl dataset for the ranking pipeline. Its relationship with the Curated Corpus
-API runs both ways. Curated articles are the editorially approved items that New
-Tab serves, so the crawler reads their current editorial metadata from that API
-and writes any changed headline or excerpt back to keep the copy readers see
-accurate.
+Editors maintain the list of publisher pages to crawl in an editorial
+spreadsheet, which is exported to a committed JSON file that the agent reads on
+startup. The crawler drives the Zyte API to fetch and extract those pages and
+the articles found on them, since it never visits sites itself, and it streams
+the results into the BigQuery crawl dataset for the ranking pipeline. Its
+relationship with the Curated Corpus API runs both ways. Curated articles are
+the editorially approved items that New Tab serves, so the crawler reads the
+current set from that API to re-extract them and writes any changed headline or
+excerpt back to keep the copy readers see accurate.
 
 ## Components
 
@@ -67,7 +69,7 @@ the runtime behavior, and a set of shared packages provides the building blocks
 they share.
 
 ```mermaid
-flowchart LR
+flowchart TB
     agent["Crawl Agent<br/>single replica"]:::service
     qDisc(["crawl-article-discovery"]):::messaging
     disc["Discovery Worker"]:::service
@@ -114,10 +116,10 @@ rather than passing a message along the pipeline.
 ### Services
 
 The **Crawl Agent** is the scheduler. It runs as a single replica and wakes on a
-fixed interval of about a minute. On each tick it reads the crawl list of
-publisher pages and curated articles, decides which ones are due for a crawl,
-and publishes the corresponding jobs. It holds no queue itself and does no
-extraction.
+fixed interval of about a minute. On each tick it decides which publisher pages
+and curated articles are due for a crawl and publishes the corresponding jobs.
+It holds no queue itself and does no extraction. It takes its pages from the
+committed list and its curated articles from the Corpus API.
 
 The **Crawl Worker** is the workhorse, and it runs in two roles selected by the
 `WORKER_ROLE` environment variable. As a **Discovery Worker** it reads a page,
@@ -160,7 +162,7 @@ with a publisher page and ends with a row in BigQuery, and the sequence below
 traces a discovered article through both workers.
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'actorBkg':'#2c3e50','actorBorder':'#1a252f','actorTextColor':'#ecf0f1','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
+%%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#2c3e50','actorBorder':'#1a252f','actorTextColor':'#ecf0f1','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
 sequenceDiagram
     autonumber
     participant Agent as Crawl Agent
@@ -206,7 +208,7 @@ once and two workers can pick up the same URL at the same time. The workers make
 this harmless with a small amount of Redis state, as the sequence below shows.
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'actorBkg':'#2c3e50','actorBorder':'#1a252f','actorTextColor':'#ecf0f1','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
+%%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#2c3e50','actorBorder':'#1a252f','actorTextColor':'#ecf0f1','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
 sequenceDiagram
     autonumber
     participant Q as crawl-article
@@ -300,47 +302,29 @@ Kubernetes workload overrides the container command and, for the workers, sets
 running environment and what the workloads depend on once they are there.
 
 ```mermaid
-flowchart LR
+flowchart TB
     dev["Developer"]:::actor
-    repo["hnt-content<br/>source and Dockerfile"]:::platform
     ci["GitHub Actions<br/>build and push"]:::platform
     gar[("Artifact Registry<br/>container image")]:::store
-
-    subgraph delivery["Continuous delivery via GitOps"]
-        direction TB
-        iu["ArgoCD Image Updater<br/>tracks the image digest"]:::platform
-        argo["ArgoCD<br/>syncs the Helm chart"]:::platform
-        iu --> argo
-    end
+    argo["ArgoCD Image Updater<br/>deploys the new digest"]:::platform
 
     subgraph gke["GKE workloads, one namespace per environment"]
-        direction TB
         agent["crawl-agent<br/>single replica"]:::service
         artw["crawl-article-worker<br/>autoscaled"]:::service
         discw["crawl-discovery-worker<br/>autoscaled"]:::service
     end
 
-    subgraph gcp["Managed cloud services"]
-        direction TB
-        pubsub(["Pub/Sub"]):::messaging
-        redis[("Memorystore Redis")]:::store
-        bq[("BigQuery crawl dataset")]:::store
-        sm["Secret Manager"]:::secret
-    end
+    gcp["Managed cloud services<br/>Pub/Sub, Memorystore Redis,<br/>BigQuery, Secret Manager"]:::store
 
-    dev --> repo --> ci --> gar -->|new digest| iu
-    argo -->|deploy| gke
-    gke <-->|jobs, events, state, and secrets| gcp
+    dev --> ci --> gar -->|new digest| argo
+    argo -->|deploy| agent & artw & discw
+    agent & artw & discw --> gcp
 
     classDef service fill:#2c3e50,stroke:#1a252f,color:#ecf0f1,stroke-width:1px
-    classDef messaging fill:#7d3c98,stroke:#4a235a,color:#f4ecf7,stroke-width:1px
     classDef store fill:#0e6655,stroke:#073b31,color:#e8f8f5,stroke-width:1px
     classDef platform fill:#5d6d7e,stroke:#34495e,color:#f2f4f4,stroke-width:1px
     classDef actor fill:#935116,stroke:#5b3410,color:#fdf2e9,stroke-width:1px
-    classDef secret fill:#7b241c,stroke:#4a1410,color:#fdedec,stroke-width:1px
-    style delivery fill:#eaf2f8,stroke:#aed6f1,color:#1b2631
     style gke fill:#eafaf1,stroke:#a9dfbf,color:#1b2631
-    style gcp fill:#fef9e7,stroke:#f9e79f,color:#1b2631
 ```
 
 Deployment runs through GitOps rather than a direct push. Continuous integration
