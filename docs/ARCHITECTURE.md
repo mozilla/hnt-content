@@ -56,8 +56,8 @@ reads on startup. The crawler drives the Zyte API to fetch and extract pages,
 since it never visits sites itself, and it streams the results into the BigQuery
 crawl dataset for the ranking pipeline. Its relationship with the Curated Corpus
 API runs both ways. Curated articles are the editorially approved items that New
-Tab serves, so the agent can refresh the current set from that API, and the
-worker writes any changed headline or excerpt back to keep the copy readers see
+Tab serves, so the crawler reads their current editorial metadata from that API
+and writes any changed headline or excerpt back to keep the copy readers see
 accurate.
 
 ## Components
@@ -88,16 +88,14 @@ flowchart LR
     agent -->|page jobs| qDisc
     agent -->|curated article jobs| qArt
     qDisc --> disc
-    disc -->|one job per new article| qArt
+    disc -->|new article jobs| qArt
     qArt --> art
-    disc -->|one event per article and context| tDisc --> bqDisc
+    disc -->|discovery events| tDisc --> bqDisc
     art -->|event when content changed| tArt --> bqArt
 
     disc -.-> zyte
     art -.-> zyte
-    agent -.->|reads curated set| corpus
     art -.->|writes corrections| corpus
-    agent -.-> redis
     disc -.-> redis
     art -.-> redis
 
@@ -152,13 +150,12 @@ The shared packages keep the services thin and the responsibilities clear.
 | `metrics` | StatsD metrics client |
 | `sentry` | Error reporting with per-message context |
 
-The generic packages know nothing about the crawler. `crawl-common` adds the
-crawl specific types and Redis key names on top, and the two services combine it
-with the generic packages to do their work.
+The generic packages know nothing about the crawler. `crawl-common` layers the
+crawl specific domain on top, and the two services combine them to do their work.
 
 ## How an article flows through the system
 
-Here is how the pieces work together to move one article. The happy path starts
+The pieces work together to move one article as follows. The happy path starts
 with a publisher page and ends with a row in BigQuery, and the sequence below
 traces a discovered article through both workers.
 
@@ -188,15 +185,13 @@ sequenceDiagram
     Art->>ArtT: publish an article event when the content changed
 ```
 
-Reading the diagram top to bottom, the agent enqueues a page for discovery. The
-discovery worker asks Zyte for every article linked from that page, keeps only
-links that stay on the publisher's own domain, and removes duplicates. For each
-article it emits a discovery event, tagged with the surface and topic the page
-was crawled for. The same article is therefore recorded once per audience it
-serves. It then enqueues each newly seen article as its own extraction job. The
-article
-worker picks up that job, asks Zyte for the full content, and publishes an
-article event. Both kinds of event land in BigQuery through their subscriptions.
+The diagram compresses one subtlety. The discovery worker emits a separate
+discovery event for each surface and topic the page was crawled for, so a single
+article is recorded once per audience it serves. It keeps only links on the
+publisher's own domain and removes duplicates before that fan-out, then enqueues
+each new article for its own extraction. The article worker extracts the content
+and publishes an article event, and both kinds of event reach BigQuery through
+their subscriptions.
 
 Curated articles take a shorter path. The agent enqueues them straight onto the
 `crawl-article` queue with their editorial record attached. When the article
@@ -208,8 +203,7 @@ the article event. This keeps the editorial copy and the crawled copy in step.
 
 Pub/Sub delivers each message at least once, so the same job can arrive more than
 once and two workers can pick up the same URL at the same time. The workers make
-this harmless with three pieces of Redis state, a freshness timestamp, a
-short-lived lock, and a content hash, as the sequence below shows.
+this harmless with a small amount of Redis state, as the sequence below shows.
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'actorBkg':'#2c3e50','actorBorder':'#1a252f','actorTextColor':'#ecf0f1','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
@@ -246,19 +240,19 @@ sequenceDiagram
 
 Three mechanisms make this work. The **freshness check** skips any URL that was
 crawled within its interval, so the crawler does not re-fetch the same content
-on every delivery. The **lock** serializes concurrent workers on the same URL so
-only one calls Zyte while the others step aside. Recording the fetch time
-**before** the Zyte call means a crash partway through is skipped on redelivery
-within the freshness window, rather than charging Zyte twice. Finally, the
-**content hash** means an article
-event is published only when the content actually changed. This keeps unchanged
-articles from filling BigQuery with duplicates.
+on every delivery. The **lock** serializes concurrent workers on the same URL,
+so only one calls Zyte and the rest skip. Recording the fetch time **before** the
+Zyte call means that if a crash interrupts the fetch, the redelivered job is
+skipped within the freshness window instead of calling Zyte a second time.
+Finally, the **content hash** means an article event is published only when the
+content actually changed. This keeps unchanged articles from filling BigQuery
+with duplicates.
 
-The discovery worker follows the same shape against its own page keys, and it
+The discovery worker uses this pattern against its own page keys, and it
 checks each discovered article's freshness before enqueuing it, so an article
 already in flight is not queued again. The agent applies the same idea one step
-earlier. It records when it last enqueued each page and live article, so a slow
-crawl is not scheduled a second time.
+earlier. It records when it last enqueued each page and curated article, so a
+slow crawl is not scheduled a second time.
 
 Because delivery is at least once, some duplicate rows still reach BigQuery. Each
 table carries a timestamp, `extracted_at` for articles and `crawled_at` for
@@ -292,7 +286,7 @@ consumers validate them at the boundary and reject anything malformed.
 | `articles` event | Article Worker to BigQuery | `url`, `extracted_at` |
 
 A `crawl-article` job carries a `crawl_id` that identifies the crawl run, and
-for a live article it also carries an editorial record. Discovery events fan out
+for a curated article it also carries an editorial record. Discovery events fan out
 to one message per article and context, so every discovery job must name the
 surface and topic through a context. Events keep only a small required core and
 treat every extracted field as optional, since any given page may not supply all
