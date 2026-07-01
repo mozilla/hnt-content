@@ -1,0 +1,213 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ArticleDiscoveryEvent } from 'crawl-common';
+import { DISCOVERY_MESSAGE } from './handlers/test-helpers.js';
+
+vi.mock('pubsub', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('pubsub')>();
+  return {
+    ...actual,
+    publishMessage: vi.fn(),
+  };
+});
+vi.mock('redis-state', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('redis-state')>();
+  return {
+    ...actual,
+    acquireLock: vi.fn(),
+    releaseLock: vi.fn(),
+    getTimestamp: vi.fn(),
+    setTimestamp: vi.fn(),
+  };
+});
+
+vi.mock('./handlers/extract-discovery.js', () => ({
+  handleArticleDiscovery: vi.fn(),
+}));
+
+import { publishMessage } from 'pubsub';
+import {
+  acquireLock,
+  getTimestamp,
+  releaseLock,
+  setTimestamp,
+} from 'redis-state';
+import { handleArticleDiscovery } from './handlers/extract-discovery.js';
+import { processDiscovery } from './process-discovery.js';
+
+const EVENT: ArticleDiscoveryEvent = {
+  url: 'https://example.com/news/article-1',
+  source_url: DISCOVERY_MESSAGE.url,
+  crawled_at: '2025-06-01T12:00:00Z',
+  surface_id: 'NEW_TAB_EN_US',
+};
+
+/** Count publishes to a given topic. */
+function publishesTo(topic: string): unknown[] {
+  return vi
+    .mocked(publishMessage)
+    .mock.calls.filter(([t]) => t === topic)
+    .map(([, payload]) => payload);
+}
+
+describe('processDiscovery', () => {
+  beforeEach(() => {
+    // Page not crawled recently; lock free; articles not fetched.
+    vi.mocked(getTimestamp).mockResolvedValue(null);
+    vi.mocked(acquireLock).mockResolvedValue('lock-token');
+    vi.mocked(releaseLock).mockResolvedValue();
+    vi.mocked(publishMessage).mockResolvedValue('message-id');
+    vi.mocked(handleArticleDiscovery).mockResolvedValue({
+      events: [EVENT, { ...EVENT, surface_id: 'NEW_TAB_DE_DE' }],
+      articleUrls: [EVENT.url],
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('skips a page crawled within its interval', async () => {
+    vi.mocked(getTimestamp).mockResolvedValue(Date.now());
+
+    expect(await processDiscovery(DISCOVERY_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'recent',
+    });
+
+    expect(acquireLock).not.toHaveBeenCalled();
+    expect(handleArticleDiscovery).not.toHaveBeenCalled();
+    expect(publishMessage).not.toHaveBeenCalled();
+  });
+
+  it('skips when another worker holds the page lock', async () => {
+    vi.mocked(acquireLock).mockResolvedValue(null);
+
+    expect(await processDiscovery(DISCOVERY_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'lock_busy',
+    });
+
+    expect(handleArticleDiscovery).not.toHaveBeenCalled();
+    expect(publishMessage).not.toHaveBeenCalled();
+    expect(setTimestamp).not.toHaveBeenCalled();
+    expect(releaseLock).not.toHaveBeenCalled();
+  });
+
+  it('re-checks page:fetch under the lock and skips a concurrent duplicate', async () => {
+    // The pre-lock check sees no marker, but a concurrent job that won
+    // the lock first crawled and set page:fetch; the post-lock re-check
+    // must catch that and skip instead of re-crawling.
+    vi.mocked(getTimestamp)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(Date.now());
+
+    expect(await processDiscovery(DISCOVERY_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'recent',
+    });
+
+    expect(acquireLock).toHaveBeenCalled();
+    expect(handleArticleDiscovery).not.toHaveBeenCalled();
+    expect(releaseLock).toHaveBeenCalled();
+  });
+
+  it('claims the page marker before the Zyte call and publish fan-out', async () => {
+    await processDiscovery(DISCOVERY_MESSAGE);
+
+    // The marker is a claim, so it must be written before the handler runs
+    // and before the events and jobs are published.
+    const claimOrder = vi.mocked(setTimestamp).mock.invocationCallOrder[0]!;
+    const extractOrder = vi.mocked(handleArticleDiscovery).mock
+      .invocationCallOrder[0]!;
+    const publishOrder = vi.mocked(publishMessage).mock.invocationCallOrder[0]!;
+    expect(claimOrder).toBeLessThan(extractOrder);
+    expect(claimOrder).toBeLessThan(publishOrder);
+  });
+
+  it('publishes every discovery event and enqueues unfetched articles', async () => {
+    await processDiscovery(DISCOVERY_MESSAGE);
+
+    expect(publishesTo('test-article-discoveries')).toHaveLength(2);
+    const jobs = publishesTo('test-crawl-article');
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({
+      url: EVENT.url,
+      source_url: DISCOVERY_MESSAGE.url,
+      // Discovered articles carry the default fetch TTL as their window.
+      refresh_interval_minutes: expect.any(Number),
+    });
+    expect(setTimestamp).toHaveBeenCalledOnce();
+    expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
+  });
+
+  it('publishes discovery events but skips the job for a recently fetched article', async () => {
+    // Page not crawled recently, but the discovered article was fetched.
+    vi.mocked(getTimestamp).mockImplementation(async (key: string) =>
+      key.startsWith('page:fetch') ? null : Date.now(),
+    );
+
+    await processDiscovery(DISCOVERY_MESSAGE);
+
+    expect(publishesTo('test-article-discoveries')).toHaveLength(2);
+    expect(publishesTo('test-crawl-article')).toHaveLength(0);
+  });
+
+  it('enqueues one job per unique article URL with a distinct crawl_id', async () => {
+    const urls = ['https://example.com/a', 'https://example.com/b'];
+    vi.mocked(handleArticleDiscovery).mockResolvedValueOnce({
+      events: [],
+      articleUrls: urls,
+    });
+
+    await processDiscovery(DISCOVERY_MESSAGE);
+
+    const jobs = publishesTo('test-crawl-article') as {
+      url: string;
+      crawl_id: string;
+    }[];
+    expect(jobs.map((j) => j.url)).toEqual(urls);
+    expect(new Set(jobs.map((j) => j.crawl_id)).size).toBe(2);
+  });
+
+  it('releases the lock and propagates when extraction throws', async () => {
+    const err = new Error('zyte failed');
+    vi.mocked(handleArticleDiscovery).mockRejectedValue(err);
+
+    await expect(processDiscovery(DISCOVERY_MESSAGE)).rejects.toThrow(err);
+    expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
+  });
+
+  it('keeps the page claim across a partial failure, so a redelivery skips without re-crawling', async () => {
+    // A publish failure nacks the message after the claim is written.
+    vi.mocked(publishMessage).mockRejectedValueOnce(new Error('pubsub down'));
+
+    await expect(processDiscovery(DISCOVERY_MESSAGE)).rejects.toThrow(
+      'pubsub down',
+    );
+    // The claim is written before the publish fan-out, so it survives.
+    expect(setTimestamp).toHaveBeenCalledOnce();
+    expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
+
+    // Redelivery: the page marker now exists, so the second delivery skips
+    // and does not call Zyte again (the convergence property; the missing
+    // rows self-heal on the next interval's crawl).
+    vi.mocked(getTimestamp).mockResolvedValue(Date.now());
+    expect(await processDiscovery(DISCOVERY_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'recent',
+    });
+    expect(handleArticleDiscovery).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns processed on a crawl and skipped when the page is recent', async () => {
+    expect(await processDiscovery(DISCOVERY_MESSAGE)).toEqual({
+      outcome: 'processed',
+    });
+
+    vi.mocked(getTimestamp).mockResolvedValue(Date.now());
+    expect(await processDiscovery(DISCOVERY_MESSAGE)).toEqual({
+      outcome: 'skipped',
+      reason: 'recent',
+    });
+  });
+});

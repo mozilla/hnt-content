@@ -15,7 +15,25 @@ Run a service locally (no build step, uses tsx):
 
 ```sh
 pnpm --filter crawl-agent dev
-pnpm --filter crawl-worker dev
+pnpm --filter crawl-worker dev:article
+```
+
+The worker runs as one role per process: `dev:article` extracts
+articles and `dev:discovery` extracts article links from publisher
+pages. The discovery consumer is not built yet, so `dev:discovery`
+exits immediately until then.
+
+Each service reads its config from environment variables. For local
+runs, copy the service's `.env.example` to `.env` and fill in the
+blanks; the dev scripts load `.env` automatically. `.env` is
+gitignored, so keep real keys there and never commit them. In deployed
+environments these variables come from the Helm chart and Google
+Secret Manager, not from a file.
+
+```sh
+cp services/crawl-worker/.env.example services/crawl-worker/.env
+# edit .env: add your personal ZYTE_API_KEY
+pnpm --filter crawl-worker dev:article
 ```
 
 | Command | Description |
@@ -35,6 +53,24 @@ See the [Article Crawler Technical Spec](https://mozilla-hub.atlassian.net/wiki/
 - **Crawl Worker** consumes from two Pub/Sub queues: `crawl-article-discovery` (page crawling) and `crawl-article` (article extraction). Results stream to BigQuery via Pub/Sub subscriptions.
 - **Redis** (Memorystore) tracks crawl timestamps, prevents duplicate fetches, and provides distributed locking.
 
+### Crawl Worker
+
+The worker consumes the `crawl-article` subscription. Each job carries an
+article URL, and optionally a `corpus_item` for live articles managed by
+editors. The handler extracts the article via Zyte and, for live articles,
+syncs a changed title or excerpt back to the Curated Corpus API. It then
+publishes an event to the `articles` topic, which a BigQuery subscription
+writes to `crawl.articles`.
+
+A job is acked only after its event reaches the topic. Any failure throws,
+which nacks the message so Pub/Sub redelivers it. Delivery is at-least-once,
+so duplicate events are expected and resolved by "latest per URL" queries.
+On `SIGTERM` the worker drains in-flight messages before exit. Errors are
+reported to Sentry with the job's URL and crawl ID attached.
+
+Not yet wired: page discovery (the `crawl-article-discovery` subscription,
+Task 6.2) and Redis fetch deduplication (Milestone 8).
+
 ### Repository structure
 
 ```
@@ -43,7 +79,12 @@ hnt-content/
 │   ├── crawl-agent/      # Scheduler: enqueues crawl jobs on configured intervals
 │   └── crawl-worker/     # Worker: discovers articles and extracts content
 ├── packages/
-│   └── crawl-common/     # Shared types, utilities, Zyte client
+│   ├── crawl-common/     # Crawl-domain types, validation, Corpus API, utils
+│   ├── pubsub/           # Generic Pub/Sub consumer/publisher client
+│   ├── redis-state/      # Generic Redis state client (timestamps, locks, tokens)
+│   ├── zyte/             # Generic Zyte extraction API client
+│   ├── metrics/          # StatsD metrics client
+│   └── sentry/           # Sentry error reporting client
 ├── Dockerfile            # Multi-stage build with turbo prune + pnpm deploy
 ├── turbo.json
 └── pnpm-workspace.yaml

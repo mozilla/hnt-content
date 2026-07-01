@@ -39,7 +39,6 @@ import type {
   SubscriberController,
   SubscriberErrorContext,
   SubscriberOptions,
-  MessageHandler,
   PubSubClientOptions,
 } from './types.js';
 
@@ -51,6 +50,16 @@ import type {
 // Helm chart: https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/Chart.yaml
 // K8s docs: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
 export const SHUTDOWN_TIMEOUT_SECONDS = 25;
+
+// Default cap on outstanding (leased but unacked) messages, used
+// when a subscriber omits maxMessages. This bounds concurrent
+// handlers, and for the article worker that bounds concurrent Zyte
+// fetches and the response bodies held in memory. The workers have
+// no in-process concurrency cap by design, so this is the intended
+// bound. The SDK default of 1000 is far too high for the worker's
+// memory limit: under a backlog it leases ~1000 messages, runs that
+// many concurrent fetches, and OOM-kills the pod.
+export const DEFAULT_MAX_MESSAGES = 64;
 
 // Module-level state.
 let pubsub: PubSub | undefined;
@@ -162,6 +171,14 @@ export function startSubscriber<T>(
     maxExtensionTime: Duration.from({
       seconds: opts.maxExtensionSeconds,
     }),
+    // Cap outstanding messages so the worker leases only a bounded
+    // number at once. allowExcessMessages: false makes the SDK stop
+    // pulling once the cap is reached rather than overshooting on a
+    // single streaming-pull response.
+    flowControl: {
+      maxMessages: opts.maxMessages ?? DEFAULT_MAX_MESSAGES,
+      allowExcessMessages: false,
+    },
     // WaitForProcessing lets in-flight handlers finish on
     // close() rather than immediately nacking them. The
     // timeout is an upper bound; close() resolves earlier
@@ -193,12 +210,7 @@ export function startSubscriber<T>(
     // is safe because processMessage catches every error path and
     // signals completion through ack or nack on the message rather
     // than through this promise.
-    void processMessage(
-      opts.subscriptionName,
-      opts.handler,
-      message,
-      handleError,
-    );
+    void processMessage(opts, message, handleError);
   };
 
   subscription.on('message', onMessage);
@@ -230,23 +242,34 @@ export function startSubscriber<T>(
 }
 
 /**
- * Parse, dispatch, and ack/nack a single message. Both
- * parse and handler failures nack; distinct log prefixes
- * (pubsub:parse-error / pubsub:handler-error) let us tell
- * a poison payload from a transient handler failure.
+ * Parse, validate, dispatch, and ack/nack a single message.
+ * Parse, validation, and handler failures all nack; distinct
+ * log prefixes (pubsub:parse-error / pubsub:validation-error /
+ * pubsub:handler-error) let us tell a poison payload from a
+ * transient handler failure. Parse and validation errors are
+ * routed to onError so a malformed payload surfaces with the
+ * messageId; the handler owns reporting its own failures.
  */
 async function processMessage<T>(
-  subscriptionName: string,
-  handler: MessageHandler<T>,
+  opts: SubscriberOptions<T>,
   message: Message,
   onError: (err: Error, ctx: SubscriberErrorContext) => void,
 ): Promise<void> {
-  let parsed: T;
+  const { subscriptionName, handler, validate } = opts;
+  let raw: unknown;
   try {
-    parsed = JSON.parse(message.data.toString()) as T;
+    raw = JSON.parse(message.data.toString());
   } catch (err) {
     message.nack();
     onError(err as Error, { kind: 'parse-error', messageId: message.id });
+    return;
+  }
+  let parsed: T;
+  try {
+    parsed = validate ? validate(raw) : (raw as T);
+  } catch (err) {
+    message.nack();
+    onError(err as Error, { kind: 'validation-error', messageId: message.id });
     return;
   }
   try {

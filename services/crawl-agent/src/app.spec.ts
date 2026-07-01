@@ -4,7 +4,15 @@ import config from './config.js';
 
 describe('crawl-agent healthcheck', () => {
   beforeEach(() => {
+    // Freeze the clock (Date only, so HTTP I/O timers stay real) so the
+    // boundary tests are exact and never race the wall clock between
+    // setLastTickAt and the handler's Date.now() read.
+    vi.useFakeTimers({ toFake: ['Date'] });
     setLastTickAt(0);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('GET /healthz returns 200 when tick is recent', async () => {
@@ -22,18 +30,14 @@ describe('crawl-agent healthcheck', () => {
   });
 
   it('GET /healthz returns 200 when tick is just within threshold', async () => {
-    // Use 1s buffer to avoid timing races between setLastTickAt and the request
-    setLastTickAt(
-      Date.now() - config.staleTickThresholdMinutes * 60_000 + 1_000,
-    );
+    // Time is frozen, so 1ms inside the threshold is an exact boundary.
+    setLastTickAt(Date.now() - config.staleTickThresholdMinutes * 60_000 + 1);
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(200);
   });
 
   it('GET /healthz returns 500 when tick exceeds threshold', async () => {
-    setLastTickAt(
-      Date.now() - config.staleTickThresholdMinutes * 60_000 - 1_000,
-    );
+    setLastTickAt(Date.now() - config.staleTickThresholdMinutes * 60_000 - 1);
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(500);
   });
@@ -42,5 +46,17 @@ describe('crawl-agent healthcheck', () => {
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(500);
     expect(res.text).toBe('no tick yet');
+  });
+
+  it('GET /healthz returns 200 when crawling is disabled despite no tick', async () => {
+    // The dev sandbox never ticks, so health must not depend on one.
+    config.crawlEnabled = false;
+    try {
+      const res = await request(app).get('/healthz');
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/crawl disabled/);
+    } finally {
+      config.crawlEnabled = true;
+    }
   });
 });

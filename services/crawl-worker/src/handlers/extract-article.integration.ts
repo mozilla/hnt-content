@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  initCorpusApiClient,
-  initZyteClient,
-  type CrawlArticleMessage,
-} from 'crawl-common';
+import { initCorpusApiClient, type CrawlArticleMessage } from 'crawl-common';
+import { initZyteClient } from 'zyte';
 import { handleArticleExtraction } from './extract-article.js';
 import {
   BASE_MESSAGE,

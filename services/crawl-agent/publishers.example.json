@@ -1,0 +1,26 @@
+{
+  "pages": [
+    {
+      "url": "https://example.com/news",
+      "interval_minutes": 20,
+      "contexts": [{ "surface_id": "NEW_TAB_EN_US", "topic": "technology" }]
+    }
+  ],
+  "live_articles": [
+    {
+      "url": "https://example.com/news/curated-article",
+      "corpus_item": {
+        "external_id": "00000000-0000-0000-0000-000000000000",
+        "title": "Original Headline",
+        "excerpt": "Original excerpt text.",
+        "authors": [{ "name": "Jane Doe" }],
+        "status": "CORPUS",
+        "language": "EN",
+        "publisher": "Example News",
+        "image_url": "https://s3.amazonaws.com/example/image.jpg",
+        "topic": "TECHNOLOGY",
+        "is_time_sensitive": false
+      }
+    }
+  ]
+}

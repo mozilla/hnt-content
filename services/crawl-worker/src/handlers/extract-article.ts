@@ -1,15 +1,15 @@
-import {
-  extractArticle,
-  updateApprovedCorpusItem,
-  normalizeText,
-} from 'crawl-common';
+import { updateApprovedCorpusItem, normalizeText } from 'crawl-common';
+import { extractArticle } from 'zyte';
+import { time } from 'metrics';
+import { toEventAuthors, toEventTimestamp } from './event-fields.js';
+import { resolveExtractFrom } from '../zyte-extraction-mode.js';
 import type {
   CrawlArticleMessage,
   ArticleEvent,
   CorpusItem,
   UpdateApprovedCorpusItemInput,
-  ZyteArticle,
 } from 'crawl-common';
+import type { ZyteArticle } from 'zyte';
 
 const BODY_TRUNCATE_LENGTH = 2_000;
 const EXCERPT_COMPARE_LENGTH = 255;
@@ -22,9 +22,14 @@ const EXCERPT_COMPARE_LENGTH = 255;
 export async function handleArticleExtraction(
   message: CrawlArticleMessage,
 ): Promise<ArticleEvent> {
-  const { data: article, url } = await extractArticle(message.url, {
-    extractFrom: 'httpResponseBody',
-  });
+  const { data: article, url } = await time(
+    'crawl.zyte.duration_ms',
+    () =>
+      extractArticle(message.url, {
+        extractFrom: resolveExtractFrom(message.url, 'article'),
+      }),
+    { extraction: 'article' },
+  );
 
   const event = mapToArticleEvent(article, url);
 
@@ -39,13 +44,18 @@ export async function handleArticleExtraction(
 function mapToArticleEvent(article: ZyteArticle, url: string): ArticleEvent {
   return {
     url,
-    extracted_at: new Date().toISOString(),
+    // Prefer Zyte's own download time (the genuine extraction moment and
+    // what the BigQuery column documents); fall back to now when Zyte
+    // returns an unparseable or empty timestamp.
+    extracted_at:
+      toEventTimestamp(article.metadata.dateDownloaded) ??
+      new Date().toISOString(),
     headline: article.headline ?? undefined,
     description: article.description ?? undefined,
-    authors: article.authors?.map((a) => ({ name: a.name })),
+    authors: toEventAuthors(article.authors),
     main_image_url: article.mainImage?.url ?? undefined,
     body_truncated: article.articleBody?.slice(0, BODY_TRUNCATE_LENGTH),
-    published_at: article.datePublished ?? undefined,
+    published_at: toEventTimestamp(article.datePublished),
     breadcrumbs: article.breadcrumbs?.map((b) => ({
       name: b.name,
       url: b.url,
@@ -114,17 +124,14 @@ function buildUpdateInput(
   corpusItem: CorpusItem,
   changed: { title?: string; excerpt?: string },
 ): UpdateApprovedCorpusItemInput {
-  // Prefer extracted authors, fall back to corpus item.
+  // Prefer extracted authors that have a name (toEventAuthors drops the
+  // nameRaw-only ones the Corpus mutation must not receive as a blank
+  // name), else fall back to the corpus item.
+  const extracted = toEventAuthors(article.authors) ?? [];
   const authors =
-    article.authors && article.authors.length > 0
-      ? article.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }))
-      : corpusItem.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }));
+    extracted.length > 0
+      ? extracted.map((a, i) => ({ name: a.name, sortOrder: i }))
+      : corpusItem.authors.map((a, i) => ({ name: a.name, sortOrder: i }));
 
   return {
     externalId: corpusItem.external_id,

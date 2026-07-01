@@ -8,12 +8,19 @@ vi.mock('crawl-common', async (importOriginal) => {
   const actual = await importOriginal<typeof import('crawl-common')>();
   return {
     ...actual,
-    extractArticle: vi.fn(),
     updateApprovedCorpusItem: vi.fn(),
   };
 });
+vi.mock('zyte', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('zyte')>();
+  return {
+    ...actual,
+    extractArticle: vi.fn(),
+  };
+});
 
-import { extractArticle, updateApprovedCorpusItem } from 'crawl-common';
+import { updateApprovedCorpusItem } from 'crawl-common';
+import { extractArticle } from 'zyte';
 import { handleArticleExtraction } from './extract-article.js';
 import {
   BASE_MESSAGE,
@@ -53,14 +60,30 @@ describe('handleArticleExtraction', () => {
       expect(event.published_at).toBe(ZYTE_ARTICLE.datePublished);
       expect(event.breadcrumbs).toEqual(ZYTE_ARTICLE.breadcrumbs);
       expect(event.language).toBe(ZYTE_ARTICLE.inLanguage);
-      expect(event.extracted_at).toBeDefined();
+      expect(event.extracted_at).toBe(ZYTE_ARTICLE.metadata.dateDownloaded);
     });
 
-    it('calls extractArticle with httpResponseBody', async () => {
+    it('falls back to the current time when Zyte omits dateDownloaded', async () => {
+      extractArticleMock.mockResolvedValueOnce({
+        ...ZYTE_RESPONSE,
+        data: {
+          ...ZYTE_ARTICLE,
+          metadata: { ...ZYTE_ARTICLE.metadata, dateDownloaded: '' },
+        },
+      });
+
+      const event = await handleArticleExtraction(BASE_MESSAGE);
+
+      expect(event.extracted_at).not.toBe('');
+      expect(Number.isNaN(Date.parse(event.extracted_at))).toBe(false);
+    });
+
+    it('calls extractArticle with the per-domain extraction mode', async () => {
       await handleArticleExtraction(BASE_MESSAGE);
 
+      // example.com is not on the cheap list, so it uses browserHtml.
       expect(extractArticleMock).toHaveBeenCalledWith(BASE_MESSAGE.url, {
-        extractFrom: 'httpResponseBody',
+        extractFrom: 'browserHtml',
       });
     });
 
