@@ -39,9 +39,10 @@ flowchart TB
     newtab["Firefox New Tab<br/>via ML ranking"]:::actor
 
     editors -->|publisher pages to crawl, as committed JSON| crawler
-    crawler -->|article and discovery data| bq
+    zyte -->|extracted content| crawler
+    tpad[" "]:::pad ~~~ crawler
     crawler <-->|curated articles| corpus
-    crawler -->|extraction requests| zyte
+    crawler -->|article and discovery data| bq
     bq -->|ranking and training data| newtab
     bq ~~~ pad[" "]:::pad
 
@@ -52,11 +53,13 @@ flowchart TB
     classDef pad fill:none,stroke:none,color:#ffffff
 ```
 
-Editors maintain the list of publisher pages to crawl in an editorial
-spreadsheet, which is exported to a committed JSON file that the agent reads on
-startup. The crawler drives the Zyte API to fetch and extract those pages and
-the articles found on them, since it never visits sites itself, and it streams
-the results into the BigQuery crawl dataset for the ranking pipeline. Its
+Every arrow points in the direction that data flows. Editors maintain the list
+of publisher pages to crawl in an editorial spreadsheet, which is exported to a
+committed JSON file that the agent reads on startup. The crawler drives the Zyte
+API to fetch and extract those pages and the articles found on them, since it
+never visits sites itself, so the extracted content flows back from Zyte. The
+crawler streams its results into the BigQuery crawl dataset for the ranking
+pipeline. Its
 relationship with the Curated Corpus API runs both ways. Curated articles are
 the editorially approved items that New Tab serves, so the crawler reads the
 current set from that API to re-extract them and writes any changed headline or
