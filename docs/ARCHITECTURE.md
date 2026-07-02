@@ -108,43 +108,6 @@ flowchart TB
     style deps fill:#f4f6f7,stroke:#d5dbdb,color:#1b2631
 ```
 
-The same components drawn as a Mermaid `architecture-beta` diagram. Its icons
-stand in for the component type: a server for a service, a cloud for a Pub/Sub
-queue or topic, a globe for an external API, and a database for a data store.
-Its edges carry no message labels:
-
-```mermaid
-%%{init: {"architecture": {"iconSize": 60}}}%%
-architecture-beta
-    service agent(server)[Crawl Agent single replica]
-    service qdisc(cloud)["crawl-article-discovery"]
-    service disc(server)[Discovery Worker]
-    service tdisc(cloud)["article-discoveries"]
-    service bqdisc(database)["crawl.article_discoveries"]
-    service qart(cloud)["crawl-article"]
-    service art(server)[Article Worker]
-    service tart(cloud)[articles]
-    service bqart(database)["crawl.articles"]
-    group deps(database)[Dependencies shared by both workers]
-    service zyte(internet)[Zyte API] in deps
-    service redis(database)[Redis] in deps
-    service corpus(internet)[Curated Corpus API]
-    agent:R --> L:qdisc
-    qdisc:R --> L:disc
-    disc:R --> L:tdisc
-    tdisc:R --> L:bqdisc
-    disc:B --> T:qart
-    qart:B --> T:art
-    art:R --> L:tart
-    tart:R --> L:bqart
-    agent:B --> T:qart
-    art:B --> T:zyte
-    art:B --> T:redis
-    art:B --> T:corpus
-    disc:B --> T:zyte
-    disc:B --> T:redis
-```
-
 The flowcharts share one visual language. Rectangles are services, stadium
 shapes are Pub/Sub queues and topics, cylinders are data stores, gray boxes are
 third party systems, and dotted lines mark a service reaching a shared
