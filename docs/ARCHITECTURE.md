@@ -240,6 +240,39 @@ sequenceDiagram
     end
 ```
 
+The same logic as a flowchart, for comparison:
+
+```mermaid
+flowchart TD
+    START([crawl-article job delivered]):::worker --> FRESH{Fetched recently?}:::worker
+    FRESH -- Yes --> SKIP1[Acknowledge and skip]:::pub
+    FRESH -- No --> LOCK[Acquire the article lock in Redis]:::redis
+    LOCK --> HELD{Lock already held?}:::worker
+    HELD -- Yes --> SKIP2[Acknowledge and skip]:::pub
+    HELD -- No --> REC[Record fetch time in Redis before the Zyte call]:::redis
+    REC --> ZYTE[Call Zyte API to extract the article]:::zyte
+    ZYTE -- returns content --> HASH[Compare content hash with stored hash]:::redis
+    HASH --> CHANGED{Content changed?}:::worker
+    CHANGED -- Yes --> PUB[Publish article event to articles topic]:::pub
+    PUB --> STORE[Store the new content hash in Redis]:::redis
+    STORE --> RELEASE[Release the lock in Redis]:::redis
+    CHANGED -- No --> RELEASE
+    RELEASE --> ACK[Acknowledge the message]:::pub
+    ACK --> DONE([Done]):::done
+    SKIP1 --> DONE
+    SKIP2 --> DONE
+    DONE ~~~ SP1[ ]:::spacer
+    SP1 ~~~ SP2[ ]:::spacer
+    SP2 ~~~ SP3[ ]:::spacer
+
+    classDef spacer fill:none,stroke:none,color:none;
+    classDef worker fill:#2c3e50,stroke:#1a252f,color:#ecf0f1;
+    classDef redis fill:#0e6655,stroke:#073b31,color:#e8f8f5;
+    classDef zyte fill:#616a6b,stroke:#2c3232,color:#f2f4f4;
+    classDef pub fill:#7d3c98,stroke:#4a235a,color:#f4ecf7;
+    classDef done fill:#eaeded,stroke:#95a5a6,color:#2c3e50;
+```
+
 Three mechanisms make the workers idempotent:
 
 1. The **freshness check** skips any URL that was crawled within its interval, so
