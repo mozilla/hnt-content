@@ -1,11 +1,8 @@
-# Article Crawler Architecture
+# Crawl Architecture
 
-This document explains how the article crawler is put together and how content
-flows through it. It stays at the level of components and data flow rather than
-implementation detail. Read it to understand the main components and the path a
-page takes from a publisher's website into BigQuery. For the full product
-design, see the
-[Article Crawler Technical Spec](https://mozilla-hub.atlassian.net/wiki/spaces/FPS/pages/1737064449).
+This document explains the crawler's main components and how content
+flows from a publisher's website into BigQuery, staying at the level of data
+flow rather than implementation detail.
 
 ## What the system does
 
@@ -33,7 +30,7 @@ flowchart TB
     zyte["Zyte API<br/>fetches publisher websites"]:::external
     corpus["Curated Corpus API"]:::external
 
-    crawler["Article Crawler<br/>discovers and extracts articles"]:::system
+    crawler["Crawler<br/>discovers and extracts articles"]:::system
 
     bq[("BigQuery<br/>crawl dataset")]:::store
     newtab["Firefox New Tab<br/>via ML ranking"]:::actor
@@ -111,12 +108,50 @@ flowchart TB
     style deps fill:#f4f6f7,stroke:#d5dbdb,color:#1b2631
 ```
 
-The diagrams share one visual language. Rectangles are services, stadium shapes
-are Pub/Sub queues and topics, cylinders are data stores, gray boxes are third
-party systems, and dotted lines mark a service reaching a shared dependency
-rather than passing a message along the pipeline. In the sequence diagrams the
-same colors appear as a lane behind the queues, topics, stores, and third party
-systems, so a purple lane marks a Pub/Sub queue or topic.
+The same components drawn as a Mermaid `architecture-beta` diagram. Its icons
+stand in for the component type: a server for a service, a cloud for a Pub/Sub
+queue or topic, a globe for an external API, and a database for a data store.
+Its edges carry no message labels:
+
+```mermaid
+%%{init: {"architecture": {"iconSize": 60}}}%%
+architecture-beta
+    service agent(server)[Crawl Agent single replica]
+    service qdisc(cloud)["crawl-article-discovery"]
+    service disc(server)[Discovery Worker]
+    service tdisc(cloud)["article-discoveries"]
+    service bqdisc(database)["crawl.article_discoveries"]
+    service qart(cloud)["crawl-article"]
+    service art(server)[Article Worker]
+    service tart(cloud)[articles]
+    service bqart(database)["crawl.articles"]
+    group deps(database)[Dependencies shared by both workers]
+    service zyte(internet)[Zyte API] in deps
+    service redis(database)[Redis] in deps
+    service corpus(internet)[Curated Corpus API]
+    agent:R --> L:qdisc
+    qdisc:R --> L:disc
+    disc:R --> L:tdisc
+    tdisc:R --> L:bqdisc
+    disc:B --> T:qart
+    qart:B --> T:art
+    art:R --> L:tart
+    tart:R --> L:bqart
+    agent:B --> T:qart
+    art:B --> T:zyte
+    art:B --> T:redis
+    art:B --> T:corpus
+    disc:B --> T:zyte
+    disc:B --> T:redis
+```
+
+The flowcharts share one visual language. Rectangles are services, stadium
+shapes are Pub/Sub queues and topics, cylinders are data stores, gray boxes are
+third party systems, and dotted lines mark a service reaching a shared
+dependency rather than passing a message along the pipeline. The sequence
+diagrams show the same types through participant symbols instead: a queue symbol
+for Pub/Sub queues and topics, a database symbol for a store, and a boundary
+symbol for an external API.
 
 ### Services
 
@@ -167,39 +202,29 @@ with a publisher page and ends with a row in BigQuery, and the sequence below
 traces a discovered article through both workers.
 
 ```mermaid
-%%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#2c3e50','actorBorder':'#1a252f','actorTextColor':'#ecf0f1','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
+%%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#eef2f7','actorBorder':'#90a4ae','actorTextColor':'#1b2631','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
 sequenceDiagram
     autonumber
     participant Agent as Crawl Agent
-    box rgb(215,189,236)
-    participant DiscQ as crawl-article-discovery
-    end
+    participant DiscQ@{ "type": "queue" } as crawl-article-discovery
     participant Disc as Discovery Worker
-    box rgb(214,217,217)
-    participant Zyte as Zyte API
-    end
-    box rgb(215,189,236)
-    participant DiscT as article-discoveries topic
-    end
-    box rgb(215,189,236)
-    participant ArtQ as crawl-article
-    end
+    participant Zyte@{ "type": "boundary" } as Zyte API
+    participant DiscT@{ "type": "queue" } as article-discoveries topic
+    participant ArtQ@{ "type": "queue" } as crawl-article
     participant Art as Article Worker
-    box rgb(215,189,236)
-    participant ArtT as articles topic
-    end
+    participant ArtT@{ "type": "queue" } as articles topic
 
-    Agent->>DiscQ: publish page job with url and contexts
-    DiscQ->>Disc: deliver page job
+    Agent-)DiscQ: publish page job with url and contexts
+    DiscQ-)Disc: deliver page job
     Disc->>Zyte: extract the list of linked articles
     Zyte-->>Disc: article links
     Note over Disc: keep same domain links, drop duplicates
-    Disc->>DiscT: publish one discovery event per article and context
-    Disc->>ArtQ: publish one extraction job per new article
-    ArtQ->>Art: deliver article job
+    Disc-)DiscT: publish one discovery event per article and context
+    Disc-)ArtQ: publish one extraction job per new article
+    ArtQ-)Art: deliver article job
     Art->>Zyte: extract the article content
     Zyte-->>Art: headline, body, authors, and more
-    Art->>ArtT: publish an article event when the content changed
+    Art-)ArtT: publish an article event when the content changed
 ```
 
 The diagram compresses one subtlety. The discovery worker emits a separate
@@ -223,42 +248,34 @@ once and two workers can pick up the same URL at the same time. The workers make
 this harmless with a small amount of Redis state, as the sequence below shows.
 
 ```mermaid
-%%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#2c3e50','actorBorder':'#1a252f','actorTextColor':'#ecf0f1','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
+%%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#eef2f7','actorBorder':'#90a4ae','actorTextColor':'#1b2631','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
 sequenceDiagram
     autonumber
-    box rgb(215,189,236)
-    participant Q as crawl-article
-    end
+    participant Q@{ "type": "queue" } as crawl-article
     participant W as Article Worker
-    box rgb(208,236,231)
-    participant R as Redis
-    end
-    box rgb(214,217,217)
-    participant Z as Zyte API
-    end
-    box rgb(215,189,236)
-    participant T as articles topic
-    end
+    participant R@{ "type": "database" } as Redis
+    participant Z@{ "type": "boundary" } as Zyte API
+    participant T@{ "type": "queue" } as articles topic
 
-    Q->>W: deliver article job
+    Q-)W: deliver article job
     W->>R: fetched recently?
     alt within the freshness window
-        W-->>Q: acknowledge and skip
+        W--)Q: acknowledge and skip
     else due for a fetch
         W->>R: acquire the article lock
         alt lock already held
-            W-->>Q: acknowledge and skip
+            W--)Q: acknowledge and skip
         else lock acquired
             W->>R: record the fetch time before calling Zyte
             W->>Z: extract the article
             Z-->>W: article content
             W->>R: compare the content hash
             opt content changed
-                W->>T: publish the article event
+                W-)T: publish the article event
                 W->>R: store the new content hash
             end
             W->>R: release the lock
-            W-->>Q: acknowledge
+            W--)Q: acknowledge
         end
     end
 ```
