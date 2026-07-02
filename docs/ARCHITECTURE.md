@@ -208,47 +208,12 @@ once and two workers can pick up the same URL at the same time. The workers
 guard against this with a set of Redis keys.
 
 ```mermaid
-%%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#eef2f7','actorBorder':'#90a4ae','actorTextColor':'#1b2631','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
-sequenceDiagram
-    autonumber
-    participant Q@{ "type": "queue" } as crawl-article
-    participant W as Article Worker
-    participant R@{ "type": "database" } as Redis
-    participant Z@{ "type": "boundary" } as Zyte API
-    participant T@{ "type": "queue" } as articles topic
-
-    Q-)W: deliver article job
-    W->>R: fetched recently?
-    alt within the freshness window
-        W--)Q: acknowledge and skip
-    else due for a fetch
-        W->>R: acquire the article lock
-        alt lock already held
-            W--)Q: acknowledge and skip
-        else lock acquired
-            W->>R: record the fetch time before calling Zyte
-            W->>Z: extract the article
-            Z-->>W: article content
-            W->>R: compare the content hash
-            opt content changed
-                W-)T: publish the article event
-                W->>R: store the new content hash
-            end
-            W->>R: release the lock
-            W--)Q: acknowledge
-        end
-    end
-```
-
-The same logic as a flowchart, for comparison:
-
-```mermaid
 flowchart TD
     START([crawl-article job delivered]):::worker --> FRESH{Fetched recently?}:::worker
-    FRESH -- Yes --> SKIP1[Acknowledge and skip]:::pub
+    FRESH -- Yes --> DONE
     FRESH -- No --> LOCK[Acquire the article lock in Redis]:::redis
     LOCK --> HELD{Lock already held?}:::worker
-    HELD -- Yes --> SKIP2[Acknowledge and skip]:::pub
+    HELD -- Yes --> DONE
     HELD -- No --> REC[Record fetch time in Redis before the Zyte call]:::redis
     REC --> ZYTE[Call Zyte API to extract the article]:::zyte
     ZYTE -- returns content --> HASH[Compare content hash with stored hash]:::redis
@@ -257,15 +222,8 @@ flowchart TD
     PUB --> STORE[Store the new content hash in Redis]:::redis
     STORE --> RELEASE[Release the lock in Redis]:::redis
     CHANGED -- No --> RELEASE
-    RELEASE --> ACK[Acknowledge the message]:::pub
-    ACK --> DONE([Done]):::done
-    SKIP1 --> DONE
-    SKIP2 --> DONE
-    DONE ~~~ SP1[ ]:::spacer
-    SP1 ~~~ SP2[ ]:::spacer
-    SP2 ~~~ SP3[ ]:::spacer
+    RELEASE --> DONE([Done]):::done
 
-    classDef spacer fill:none,stroke:none,color:none;
     classDef worker fill:#2c3e50,stroke:#1a252f,color:#ecf0f1;
     classDef redis fill:#0e6655,stroke:#073b31,color:#e8f8f5;
     classDef zyte fill:#616a6b,stroke:#2c3232,color:#f2f4f4;
