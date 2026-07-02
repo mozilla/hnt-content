@@ -85,24 +85,24 @@ flowchart TB
 
     subgraph deps["Shared dependencies"]
         direction TB
+        redis[("Redis")]:::store
         zyte["Zyte API"]:::external
         corpus["Curated Corpus API"]:::external
-        redis[("Redis")]:::store
     end
 
     agent -->|page jobs| qDisc
     agent -->|curated article jobs| qArt
     qDisc --> disc
+    disc -->|discovery events| tDisc --> bqDisc
     disc -->|new article jobs| qArt
     qArt --> art
-    disc -->|discovery events| tDisc --> bqDisc
     art -->|event when content changed| tArt --> bqArt
 
+    disc -.-> redis
     disc -.-> zyte
+    art -.-> redis
     art -.-> zyte
     art -.->|writes corrections| corpus
-    disc -.-> redis
-    art -.-> redis
 
     classDef service fill:#2c3e50,stroke:#1a252f,color:#ecf0f1,stroke-width:1px
     classDef messaging fill:#7d3c98,stroke:#4a235a,color:#f4ecf7,stroke-width:1px
