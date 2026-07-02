@@ -114,7 +114,9 @@ flowchart TB
 The diagrams share one visual language. Rectangles are services, stadium shapes
 are Pub/Sub queues and topics, cylinders are data stores, gray boxes are third
 party systems, and dotted lines mark a service reaching a shared dependency
-rather than passing a message along the pipeline.
+rather than passing a message along the pipeline. In the sequence diagrams the
+same colors appear as a lane behind the queues, topics, stores, and third party
+systems, so a purple lane marks a Pub/Sub queue or topic.
 
 ### Services
 
@@ -169,13 +171,23 @@ traces a discovered article through both workers.
 sequenceDiagram
     autonumber
     participant Agent as Crawl Agent
+    box rgb(215,189,236)
     participant DiscQ as crawl-article-discovery
+    end
     participant Disc as Discovery Worker
+    box rgb(214,217,217)
     participant Zyte as Zyte API
+    end
+    box rgb(215,189,236)
     participant DiscT as article-discoveries topic
+    end
+    box rgb(215,189,236)
     participant ArtQ as crawl-article
+    end
     participant Art as Article Worker
+    box rgb(215,189,236)
     participant ArtT as articles topic
+    end
 
     Agent->>DiscQ: publish page job with url and contexts
     DiscQ->>Disc: deliver page job
@@ -214,11 +226,19 @@ this harmless with a small amount of Redis state, as the sequence below shows.
 %%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#2c3e50','actorBorder':'#1a252f','actorTextColor':'#ecf0f1','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
 sequenceDiagram
     autonumber
+    box rgb(215,189,236)
     participant Q as crawl-article
+    end
     participant W as Article Worker
+    box rgb(208,236,231)
     participant R as Redis
+    end
+    box rgb(214,217,217)
     participant Z as Zyte API
+    end
+    box rgb(215,189,236)
     participant T as articles topic
+    end
 
     Q->>W: deliver article job
     W->>R: fetched recently?
