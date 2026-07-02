@@ -10,19 +10,19 @@ The crawler keeps Firefox New Tab supplied with fresh article content. It visits
 publisher pages, discovers the articles linked from them, extracts the text and
 metadata of each article, and streams the results into BigQuery where machine
 learning models rank them for readers. The design target is that a newly
-published article reaches BigQuery within roughly 75 minutes, at a scale of
-millions of articles per month.
+published article reaches BigQuery within 75 minutes, at a scale of millions of
+articles per month.
 
-The system is event driven. A small scheduler decides what to crawl, and a pool
-of stateless workers does the crawling. The two sides never call each other
-directly. They communicate through Pub/Sub. This lets the workers scale up and
+The system is event driven. A single scheduler decides what to crawl, and a pool
+of stateless workers does the crawling. The scheduler and workers never call
+each other directly. They communicate through Pub/Sub. This lets the workers scale up and
 down with demand and lets the system absorb bursts without losing work.
 
 ## System context
 
 The crawler is a single system that sits between Mozilla's editorial curation
-and the analytics that feed Firefox New Tab. This view shows who it talks to and
-why. The next section looks inside.
+and the analytics that feed Firefox New Tab. This view shows the external
+systems it exchanges data with, and why.
 
 ```mermaid
 flowchart TB
@@ -52,29 +52,29 @@ flowchart TB
 
 Every arrow points in the direction that data flows. Editors maintain the list
 of publisher pages to crawl in an editorial spreadsheet, which is exported to a
-committed JSON file that the agent reads on startup. The crawler drives the Zyte
-API to fetch and extract those pages and the articles found on them, since it
-never visits sites itself, so the extracted content flows back from Zyte. The
+committed JSON file that the agent reads on startup. The crawler never visits
+sites itself. It drives the Zyte API to fetch and extract those pages and the
+articles found on them, and the extracted content flows back from Zyte. The
 crawler streams its results into the BigQuery crawl dataset for the ranking
-pipeline. Its
-relationship with the Curated Corpus API runs both ways. Curated articles are
-the editorially approved items that New Tab serves, so the crawler reads the
-current set from that API to re-extract them and writes any changed headline or
-excerpt back to keep the copy readers see accurate.
+pipeline. Its relationship with the Curated Corpus API runs both ways. Curated
+articles are the editorially approved items that New Tab serves, so the crawler
+reads the current set from that API to re-extract them. It writes any changed
+headline or excerpt back so that the copy readers see stays accurate.
 
 ## Components
 
-The whole system lives in one TypeScript monorepo. Two deployable services carry
-the runtime behavior, and a set of shared packages provides the building blocks
-they share.
+The whole system lives in one TypeScript monorepo. Two programs carry the
+runtime behavior: the agent and the worker. The worker deploys in two roles, so
+the running system has three Kubernetes workloads. A set of shared packages
+provides their common building blocks.
 
 ```mermaid
 flowchart TB
-    agent["Crawl Agent<br/>single replica"]:::service
+    agent["Crawl Agent<br/>single replica"]:::workload
     qDisc(["crawl-article-discovery"]):::messaging
-    disc["Discovery Worker"]:::service
+    disc["Discovery Worker"]:::workload
     qArt(["crawl-article"]):::messaging
-    art["Article Worker"]:::service
+    art["Article Worker"]:::workload
     tDisc(["article-discoveries"]):::messaging
     bqDisc[("crawl.article_discoveries")]:::store
     tArt(["articles"]):::messaging
@@ -101,40 +101,38 @@ flowchart TB
     art -.-> zyte
     art -.->|writes corrections| corpus
 
-    classDef service fill:#2c3e50,stroke:#1a252f,color:#ecf0f1,stroke-width:1px
+    classDef workload fill:#2c3e50,stroke:#1a252f,color:#ecf0f1,stroke-width:1px
     classDef messaging fill:#7d3c98,stroke:#4a235a,color:#f4ecf7,stroke-width:1px
     classDef store fill:#0e6655,stroke:#073b31,color:#e8f8f5,stroke-width:1px
     classDef external fill:#616a6b,stroke:#2c3232,color:#f2f4f4,stroke-width:1px
     style deps fill:#f4f6f7,stroke:#d5dbdb,color:#1b2631
 ```
 
-The flowcharts share one visual language. Rectangles are services, stadium
-shapes are Pub/Sub queues and topics, cylinders are data stores, gray boxes are
-third party systems, and dotted lines mark a service reaching a shared
-dependency rather than passing a message along the pipeline. The sequence
-diagrams show the same types through participant symbols instead: a queue symbol
-for Pub/Sub queues and topics, a database symbol for a store, and a boundary
-symbol for an external API.
+Dark rectangles are workloads, stadium shapes are Pub/Sub queues and topics,
+cylinders are data stores, and gray rectangles are third party systems. Dotted
+lines mark a workload reaching a shared dependency rather than passing a message
+along the pipeline.
 
-### Services
+### Workloads
 
-The **Crawl Agent** is the scheduler. It runs as a single replica and wakes on a
-fixed interval of about a minute. On each tick it decides which publisher pages
-and curated articles are due for a crawl and publishes the corresponding jobs.
-It holds no queue itself and does no extraction. It takes its pages from the
-committed list and its curated articles from the Corpus API.
+The **[Crawl Agent](https://github.com/mozilla/hnt-content/tree/main/services/crawl-agent)** is the scheduler, running as a single replica. Every minute
+it decides which publisher pages and curated articles are due for a crawl, and
+publishes each job to the matching Pub/Sub queue. It does no extraction of its
+own. Its pages come from the committed list and its curated articles from the
+Corpus API.
 
-The **Crawl Worker** is the workhorse, and it runs in two roles selected by the
-`WORKER_ROLE` environment variable. As a **Discovery Worker** it reads a page,
-finds the articles linked from it, and enqueues each article for extraction. As
-an **Article Worker** it reads a single article and extracts its content. Both
-roles are built from the same image and deploy as separate, independently
-scalable groups of pods. Both are stateless, so Kubernetes can add or remove
-replicas freely and Pub/Sub redelivers anything a crashed pod left unfinished.
+The **[Crawl Worker](https://github.com/mozilla/hnt-content/tree/main/services/crawl-worker)** does the work the agent queues up, and it runs in two roles
+selected by the `WORKER_ROLE` environment variable. As a **Discovery Worker** it
+reads a page, finds the articles linked from it, and enqueues each one for
+extraction. As an **Article Worker** it reads a single article and extracts its
+content. Both roles are built from the same image and deploy as separate,
+independently scalable workloads. Both are stateless, so Kubernetes can add or
+remove replicas freely, and Pub/Sub redelivers anything a crashed pod left
+unfinished.
 
 ### Queues and topics
 
-Four Pub/Sub resources connect the pieces. The two **job queues**,
+Four Pub/Sub resources link the workloads. The two **job queues**,
 `crawl-article-discovery` and `crawl-article`, carry work to the two worker
 roles. The two **event topics**, `article-discoveries` and `articles`, carry
 results outward. Each event topic has a BigQuery subscription that writes every
@@ -144,7 +142,8 @@ fails to process after repeated attempts.
 
 ### Shared packages
 
-The shared packages keep the services thin and the responsibilities clear.
+The shared packages keep the agent and worker thin and the responsibilities
+clear.
 
 | Package | Responsibility |
 |---|---|
@@ -156,13 +155,12 @@ The shared packages keep the services thin and the responsibilities clear.
 | `sentry` | Error reporting with per-message context |
 
 The generic packages know nothing about the crawler. `crawl-common` layers the
-crawl specific domain on top, and the two services combine them to do their work.
+crawl-specific domain on top, and the agent and worker build on them.
 
 ## How an article flows through the system
 
-The pieces work together to move one article as follows. The happy path starts
-with a publisher page and ends with a row in BigQuery, and the sequence below
-traces a discovered article through both workers.
+The sequence below traces one discovered article along the main path, from a
+publisher page to a row in BigQuery through both workers.
 
 ```mermaid
 %%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#eef2f7','actorBorder':'#90a4ae','actorTextColor':'#1b2631','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
@@ -190,25 +188,24 @@ sequenceDiagram
     Art-)ArtT: publish an article event when the content changed
 ```
 
-The diagram compresses one subtlety. The discovery worker emits a separate
-discovery event for each surface and topic the page was crawled for, so a single
-article is recorded once per audience it serves. It keeps only links on the
-publisher's own domain and removes duplicates before that fan-out, then enqueues
-each new article for its own extraction. The article worker extracts the content
-and publishes an article event, and both kinds of event reach BigQuery through
-their subscriptions.
+The discovery worker emits a separate discovery event for each surface and topic
+the page was crawled for, so a single article is recorded once per audience it
+serves. It keeps only links on the publisher's own domain and removes duplicates
+before that fan-out, then enqueues each new article for extraction. The article
+worker extracts the content and publishes an article event, and both kinds of
+event reach BigQuery through their subscriptions.
 
 Curated articles take a shorter path. The agent enqueues them straight onto the
 `crawl-article` queue with their editorial record attached. When the article
 worker extracts one, it compares the fresh headline and excerpt against that
 record and writes any change back to the Curated Corpus API before publishing
-the article event. This keeps the editorial copy and the crawled copy in step.
+the article event. This keeps the editorial copy and the crawled copy aligned.
 
 ## Deduplication and idempotency
 
 Pub/Sub delivers each message at least once, so the same job can arrive more than
-once and two workers can pick up the same URL at the same time. The workers make
-this harmless with a small amount of Redis state, as the sequence below shows.
+once and two workers can pick up the same URL at the same time. The workers
+guard against this with a set of Redis keys.
 
 ```mermaid
 %%{init: {'theme':'base','sequence':{'diagramMarginX':270},'themeVariables':{'actorBkg':'#eef2f7','actorBorder':'#90a4ae','actorTextColor':'#1b2631','actorLineColor':'#5d6d7e','signalColor':'#5d6d7e','signalTextColor':'#1b2631','labelBoxBkgColor':'#eaf2f8','labelBoxBorderColor':'#aed6f1','labelTextColor':'#1b2631','loopTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410','sequenceNumberColor':'#ffffff'}}}%%
@@ -243,15 +240,17 @@ sequenceDiagram
     end
 ```
 
-Three mechanisms make this work. The **freshness check** skips any URL that was
-crawled within its interval, so the crawler does not re-fetch the same content
-on every delivery. The **lock** serializes concurrent workers on the same URL,
-so only one calls Zyte and the rest skip. Recording the fetch time **before** the
-Zyte call means that if a crash interrupts the fetch, the redelivered job is
-skipped within the freshness window instead of calling Zyte a second time.
-Finally, the **content hash** means an article event is published only when the
-content actually changed. This keeps unchanged articles from filling BigQuery
-with duplicates.
+Three mechanisms make the workers idempotent:
+
+1. The **freshness check** skips any URL that was crawled within its interval, so
+   the crawler does not re-fetch the same content on every delivery.
+2. The **lock** serializes concurrent workers on the same URL, so only one calls
+   Zyte and the rest skip. Recording the fetch time **before** the Zyte call
+   means that a crash mid-fetch leaves the redelivered job to be skipped within
+   the freshness window rather than calling Zyte a second time.
+3. The **content hash** means an article event is published only when the content
+   changed, which keeps unchanged articles from filling BigQuery with
+   duplicates.
 
 The discovery worker uses this pattern against its own page keys, and it
 checks each discovered article's freshness before enqueuing it, so an article
@@ -293,16 +292,17 @@ consumers validate them at the boundary and reject anything malformed.
 A `crawl-article` job carries a `crawl_id` that identifies the crawl run, and
 for a curated article it also carries an editorial record. Discovery events fan out
 to one message per article and context, so every discovery job must name the
-surface and topic through a context. Events keep only a small required core and
+surface and topic through a context. Events keep only a minimal required core and
 treat every extracted field as optional, since any given page may not supply all
 of them.
 
 ## Infrastructure and deployment
 
-The Dockerfile builds a single image that contains both services. Each
-Kubernetes workload overrides the container command and, for the workers, sets
-`WORKER_ROLE` to choose its role. The diagram below shows how a change reaches a
-running environment and what the workloads depend on once they are there.
+The Dockerfile builds a single image that contains both the agent and the
+worker. Each Kubernetes workload overrides the container command and, for the
+workers, sets `WORKER_ROLE` to choose its role. The diagram below shows how a
+change reaches a running environment and what the workloads depend on once they
+are there.
 
 ```mermaid
 flowchart TB
@@ -312,9 +312,9 @@ flowchart TB
     argo["ArgoCD Image Updater<br/>deploys the new digest"]:::platform
 
     subgraph gke["GKE workloads, one namespace per environment"]
-        agent["crawl-agent<br/>single replica"]:::service
-        artw["crawl-article-worker<br/>autoscaled"]:::service
-        discw["crawl-discovery-worker<br/>autoscaled"]:::service
+        agent["crawl-agent<br/>single replica"]:::workload
+        artw["crawl-article-worker<br/>autoscaled"]:::workload
+        discw["crawl-discovery-worker<br/>autoscaled"]:::workload
     end
 
     gcp["Managed cloud services<br/>Pub/Sub, Memorystore Redis,<br/>BigQuery, Secret Manager"]:::store
@@ -323,7 +323,7 @@ flowchart TB
     argo -->|deploy| agent & artw & discw
     agent & artw & discw --> gcp
 
-    classDef service fill:#2c3e50,stroke:#1a252f,color:#ecf0f1,stroke-width:1px
+    classDef workload fill:#2c3e50,stroke:#1a252f,color:#ecf0f1,stroke-width:1px
     classDef store fill:#0e6655,stroke:#073b31,color:#e8f8f5,stroke-width:1px
     classDef platform fill:#5d6d7e,stroke:#34495e,color:#f2f4f4,stroke-width:1px
     classDef actor fill:#935116,stroke:#5b3410,color:#fdf2e9,stroke-width:1px
@@ -332,15 +332,16 @@ flowchart TB
 
 Deployment runs through GitOps rather than a direct push. Continuous integration
 in the application repository builds the image and pushes it to Artifact
-Registry. ArgoCD Image Updater notices the new build by its digest and records
+Registry. ArgoCD Image Updater detects the new build by its digest and records
 it, and ArgoCD then syncs the Helm chart so Kubernetes rolls the workloads
 forward. The crawl agent runs as a single replica, while the two worker roles
 scale on demand.
 
-The cloud resources are defined as Terraform in a separate infrastructure
-repository, and the tenant and delivery pipeline are defined in a platform
-repository. The same image and chart run in three environments that map to two
-GCP projects.
+The cloud resources are defined as Terraform in
+[webservices-infra](https://github.com/mozilla/webservices-infra/tree/main/hnt/tf),
+and the tenant and delivery pipeline are defined in
+[global-platform-admin](https://github.com/mozilla/global-platform-admin/blob/main/tenants/hnt.yaml).
+The same image and chart run in three environments that map to two GCP projects.
 
 | Environment | GCP project | BigQuery dataset |
 |---|---|---|
@@ -348,7 +349,7 @@ GCP projects.
 | stage | moz-fx-hnt-nonprod | crawl_stage |
 | prod | moz-fx-hnt-prod | crawl |
 
-Each service reads its configuration from environment variables, and Pub/Sub and
+Each workload reads its configuration from environment variables, and Pub/Sub and
 BigQuery names are prefixed by the environment, so the same image runs unchanged
 everywhere. Secrets live in Secret Manager and reach the pods as environment
 variables through the deployment chart.
@@ -356,7 +357,7 @@ variables through the deployment chart.
 ## Failure modes
 
 The system is designed so that a failure degrades content freshness rather than
-taking anything down.
+causing an outage.
 
 | Situation | Behavior |
 |---|---|
