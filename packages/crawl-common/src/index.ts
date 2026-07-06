@@ -12,7 +12,12 @@ export type {
 export type {
   CorpusItem,
   CrawlArticleMessage,
+  DiscoveryContext,
+  CrawlArticleDiscoveryMessage,
   ArticleAuthor,
   ArticleBreadcrumb,
   ArticleEvent,
+  ArticleDiscoveryEvent,
+  LiveArticle,
+  PublisherList,
 } from './types/index.js';
