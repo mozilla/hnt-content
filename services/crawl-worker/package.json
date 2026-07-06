@@ -16,7 +16,8 @@
     "express": "^5.1.0",
     "zyte": "workspace:*",
     "metrics": "workspace:*",
-    "redis-state": "workspace:*"
+    "redis-state": "workspace:*",
+    "pubsub": "workspace:*"
   },
   "devDependencies": {
     "eslint": "^10.0.0",

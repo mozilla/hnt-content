@@ -228,6 +228,9 @@ importers:
       metrics:
         specifier: workspace:*
         version: link:../../packages/metrics
+      pubsub:
+        specifier: workspace:*
+        version: link:../../packages/pubsub
       redis-state:
         specifier: workspace:*
         version: link:../../packages/redis-state
