@@ -11,6 +11,18 @@ export interface ZyteClientOptions {
   timeout?: number;
   /** Max retry attempts for transient errors. Defaults to 3. */
   maxRetries?: number;
+  /**
+   * Called before every request to Zyte, including each retry, so
+   * callers can gate throughput (e.g. await a distributed rate-limit
+   * token). Awaited; throwing aborts the request.
+   */
+  beforeRequest?: () => Promise<void>;
+  /**
+   * Called when a failed attempt will be retried (a transient error
+   * with attempts remaining), so callers can count retries. Not
+   * awaited; must not throw.
+   */
+  onRetry?: () => void;
 }
 
 /** Per-request extraction options. */

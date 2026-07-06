@@ -8,12 +8,19 @@ vi.mock('crawl-common', async (importOriginal) => {
   const actual = await importOriginal<typeof import('crawl-common')>();
   return {
     ...actual,
-    extractArticle: vi.fn(),
     updateApprovedCorpusItem: vi.fn(),
   };
 });
+vi.mock('zyte', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('zyte')>();
+  return {
+    ...actual,
+    extractArticle: vi.fn(),
+  };
+});
 
-import { extractArticle, updateApprovedCorpusItem } from 'crawl-common';
+import { updateApprovedCorpusItem } from 'crawl-common';
+import { extractArticle } from 'zyte';
 import { handleArticleExtraction } from './extract-article.js';
 import {
   BASE_MESSAGE,
@@ -150,7 +157,7 @@ describe('handleArticleExtraction', () => {
       {
         scenario: 'smart quote differences',
         corpusTitle: "It's a 'test'",
-        zyteHeadline: 'It\u2019s a \u2018test\u2019',
+        zyteHeadline: 'It’s a ‘test’',
       },
     ])(
       'ignores $scenario in comparison',
