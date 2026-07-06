@@ -60,14 +60,30 @@ describe('handleArticleExtraction', () => {
       expect(event.published_at).toBe(ZYTE_ARTICLE.datePublished);
       expect(event.breadcrumbs).toEqual(ZYTE_ARTICLE.breadcrumbs);
       expect(event.language).toBe(ZYTE_ARTICLE.inLanguage);
-      expect(event.extracted_at).toBeDefined();
+      expect(event.extracted_at).toBe(ZYTE_ARTICLE.metadata.dateDownloaded);
     });
 
-    it('calls extractArticle with httpResponseBody', async () => {
+    it('falls back to the current time when Zyte omits dateDownloaded', async () => {
+      extractArticleMock.mockResolvedValueOnce({
+        ...ZYTE_RESPONSE,
+        data: {
+          ...ZYTE_ARTICLE,
+          metadata: { ...ZYTE_ARTICLE.metadata, dateDownloaded: '' },
+        },
+      });
+
+      const event = await handleArticleExtraction(BASE_MESSAGE);
+
+      expect(event.extracted_at).not.toBe('');
+      expect(Number.isNaN(Date.parse(event.extracted_at))).toBe(false);
+    });
+
+    it('calls extractArticle with the per-domain extraction mode', async () => {
       await handleArticleExtraction(BASE_MESSAGE);
 
+      // example.com is not on the cheap list, so it uses browserHtml.
       expect(extractArticleMock).toHaveBeenCalledWith(BASE_MESSAGE.url, {
-        extractFrom: 'httpResponseBody',
+        extractFrom: 'browserHtml',
       });
     });
 
@@ -157,7 +173,7 @@ describe('handleArticleExtraction', () => {
       {
         scenario: 'smart quote differences',
         corpusTitle: "It's a 'test'",
-        zyteHeadline: 'It’s a ‘test’',
+        zyteHeadline: 'It\u2019s a \u2018test\u2019',
       },
     ])(
       'ignores $scenario in comparison',
