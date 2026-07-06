@@ -31,6 +31,12 @@ export function setLastTickAt(t: number) {
 // K8s liveness probe: a healthy response requires a recent tick, so a
 // deadlocked or wedged event loop is detected and the pod is restarted.
 app.get('/healthz', (_req, res) => {
+  // With crawling disabled (the dev sandbox) there is no tick to go
+  // stale, so report healthy while the process is up.
+  if (!config.crawlEnabled) {
+    res.status(200).type('text/plain').send('ok (crawl disabled)');
+    return;
+  }
   if (lastTickAt === 0) {
     res.status(500).type('text/plain').send('no tick yet');
     return;
