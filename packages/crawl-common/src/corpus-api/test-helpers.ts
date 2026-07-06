@@ -56,3 +56,113 @@ export function mockResponse(body: unknown, status = 200): Response {
     headers: { 'content-type': 'application/json' },
   });
 }
+
+export const SCHEDULED_SURFACE_GUID = 'NEW_TAB_EN_US';
+
+const LIVE_1 = {
+  externalId: 'ext-1',
+  url: 'https://example.com/live-1',
+  title: 'Live One',
+  excerpt: 'Excerpt one.',
+  authors: [{ name: 'Jane Doe' }],
+  status: 'CORPUS',
+  language: 'EN',
+  publisher: 'Example News',
+  imageUrl: 'https://s3.amazonaws.com/live-1.jpg',
+  topic: 'TECHNOLOGY',
+  isTimeSensitive: false,
+};
+
+/**
+ * getSectionsWithSectionItems response with two LIVE sections (the
+ * second repeats LIVE_1 to exercise URL de-duplication) plus a DISABLED
+ * and a SCHEDULED (not-yet-live) section whose items must be skipped.
+ */
+export const SECTION_ITEMS_SUCCESS_BODY = {
+  data: {
+    getSectionsWithSectionItems: [
+      {
+        status: 'LIVE',
+        sectionItems: [
+          { approvedItem: LIVE_1 },
+          {
+            approvedItem: {
+              externalId: 'ext-2',
+              url: 'https://example.com/live-2',
+              title: 'Live Two',
+              excerpt: 'Excerpt two.',
+              authors: [{ name: 'John Roe' }, { name: 'Amy Lee' }],
+              status: 'CORPUS',
+              language: 'DE',
+              publisher: 'Example DE',
+              imageUrl: 'https://s3.amazonaws.com/live-2.jpg',
+              topic: 'SCIENCE',
+              isTimeSensitive: true,
+            },
+          },
+        ],
+      },
+      {
+        status: 'LIVE',
+        sectionItems: [
+          { approvedItem: LIVE_1 },
+          {
+            approvedItem: {
+              externalId: 'ext-3',
+              url: 'https://example.com/live-3',
+              title: 'Live Three',
+              excerpt: 'Excerpt three.',
+              authors: [],
+              status: 'RECOMMENDATION',
+              language: 'FR',
+              publisher: 'Example FR',
+              imageUrl: 'https://s3.amazonaws.com/live-3.jpg',
+              topic: 'BUSINESS',
+              isTimeSensitive: false,
+            },
+          },
+        ],
+      },
+      {
+        status: 'DISABLED',
+        sectionItems: [
+          {
+            approvedItem: {
+              externalId: 'ext-4',
+              url: 'https://example.com/disabled',
+              title: 'Disabled',
+              excerpt: 'Skip me.',
+              authors: [{ name: 'Nobody' }],
+              status: 'CORPUS',
+              language: 'EN',
+              publisher: 'Example',
+              imageUrl: 'https://s3.amazonaws.com/x.jpg',
+              topic: 'NEWS',
+              isTimeSensitive: false,
+            },
+          },
+        ],
+      },
+      {
+        status: 'SCHEDULED',
+        sectionItems: [
+          {
+            approvedItem: {
+              externalId: 'ext-5',
+              url: 'https://example.com/scheduled',
+              title: 'Scheduled',
+              excerpt: 'Not live yet.',
+              authors: [{ name: 'Future' }],
+              status: 'CORPUS',
+              language: 'EN',
+              publisher: 'Example',
+              imageUrl: 'https://s3.amazonaws.com/s.jpg',
+              topic: 'NEWS',
+              isTimeSensitive: false,
+            },
+          },
+        ],
+      },
+    ],
+  },
+};
