@@ -15,7 +15,8 @@
     "sentry": "workspace:*",
     "express": "^5.1.0",
     "pubsub": "workspace:*",
-    "redis-state": "workspace:*"
+    "redis-state": "workspace:*",
+    "metrics": "workspace:*"
   },
   "devDependencies": {
     "eslint": "^10.0.0",
