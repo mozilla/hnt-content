@@ -1,0 +1,45 @@
+import {
+  validateCrawlArticleMessage,
+  type CrawlArticleMessage,
+} from 'crawl-common';
+import { sentryPubSubErrorHandler, startSubscriber } from 'pubsub';
+import { withSentryHandler } from 'sentry';
+import config from './config.js';
+import { withMessageMetrics } from './message-metrics.js';
+import { processArticle } from './process-article.js';
+
+/**
+ * Wrap processArticle so any error it throws reaches Sentry with the
+ * job's identifying fields attached. worker_role distinguishes this
+ * worker from the discovery worker.
+ */
+const handleMessage = withSentryHandler<CrawlArticleMessage>(
+  (message) => ({
+    tags: {
+      worker_role: config.workerRole,
+      has_corpus_item: String(message.corpus_item != null),
+      // The editorial category, present only for live articles. Named
+      // corpus_topic so it is not mistaken for the Pub/Sub topic.
+      corpus_topic: message.corpus_item?.topic,
+    },
+    context: {
+      url: message.url,
+      crawl_id: message.crawl_id,
+      source_url: message.source_url,
+      enqueued_at: message.enqueued_at,
+    },
+  }),
+  withMessageMetrics(processArticle),
+);
+
+/** Start consuming jobs from the crawl-article subscription. */
+export function startArticleConsumer(): void {
+  startSubscriber<CrawlArticleMessage>({
+    subscriptionName: config.crawlArticleSubscription,
+    maxExtensionSeconds: config.maxExtensionSeconds,
+    maxMessages: config.pubsubMaxMessages,
+    validate: validateCrawlArticleMessage,
+    handler: handleMessage,
+    onError: sentryPubSubErrorHandler(config.crawlArticleSubscription),
+  });
+}
