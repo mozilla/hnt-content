@@ -204,7 +204,17 @@ async function start() {
   await run();
 }
 
-start().catch((err) => {
+// Wrap start so a startup failure is captured before exit. Otherwise
+// the rejection is caught below and a crash loop never reaches Sentry.
+const startWithSentry = withSentryHandler<void>(
+  () => ({ context: { kind: 'startup' } }),
+  start,
+);
+
+startWithSentry().catch(async (err) => {
   console.error('agent startup failed:', err);
+  // Flush the captured event before exit. The process ends here, so no
+  // later shutdown will flush it.
+  await shutdownSentry();
   process.exit(1);
 });
