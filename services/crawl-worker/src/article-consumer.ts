@@ -1,4 +1,5 @@
 import {
+  getRegistrableDomain,
   validateCrawlArticleMessage,
   type CrawlArticleMessage,
 } from 'crawl-common';
@@ -18,12 +19,15 @@ const handleMessage = withSentryHandler<CrawlArticleMessage>(
     tags: {
       worker_role: config.workerRole,
       has_corpus_item: String(message.corpus_item != null),
-      // The editorial category, present only for live articles. Named
-      // corpus_topic so it is not mistaken for the Pub/Sub topic.
-      corpus_topic: message.corpus_item?.topic,
+      // url and domain are searchable tags so failures can be filtered
+      // by publisher. Sentry truncates tag values at 200 characters,
+      // which is acceptable for a URL.
+      url: message.url,
+      domain: getRegistrableDomain(message.url),
+      // The editorial category, present only for live articles.
+      topic: message.corpus_item?.topic,
     },
     context: {
-      url: message.url,
       crawl_id: message.crawl_id,
       source_url: message.source_url,
       enqueued_at: message.enqueued_at,
