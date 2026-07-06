@@ -69,18 +69,22 @@ describe('discovery consumer', () => {
     expect(processDiscovery).toHaveBeenCalledWith(DISCOVERY_MESSAGE);
   });
 
-  it('reports the page url, context count, surfaces, and topics to Sentry', () => {
+  it('tags the page url, domain, and topics and keeps surfaces as context', () => {
     const metadata = captured.extractMetadata!(DISCOVERY_MESSAGE);
     expect(metadata).toEqual({
       // worker_role is 'article' here because vitest.config sets
       // WORKER_ROLE=article; the tag is read from config, not hardcoded.
-      tags: { worker_role: 'article' },
-      context: {
+      tags: {
+        worker_role: 'article',
         url: DISCOVERY_MESSAGE.url,
+        domain: 'example.com',
+        // Distinct context topics, sorted and joined so the tag is stable.
+        topic: 'technologie,technology',
+      },
+      context: {
         interval_minutes: DISCOVERY_MESSAGE.interval_minutes,
         context_count: DISCOVERY_MESSAGE.contexts.length,
         surface_ids: ['NEW_TAB_EN_US', 'NEW_TAB_DE_DE'],
-        topics: ['technology', 'technologie'],
       },
     });
   });
