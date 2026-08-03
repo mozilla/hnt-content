@@ -4,37 +4,48 @@ Article crawling and extraction pipeline for [Firefox New Tab](https://support.m
 
 ## Development
 
+### Prerequisites
+
+- **[nvm](https://github.com/nvm-sh/nvm#installing-and-updating)** — `nvm use` installs the Node version in [`.nvmrc`](.nvmrc).
+- **[pnpm](https://pnpm.io/installation)** — `corepack enable` activates the version pinned in `package.json`.
+
+### Setup
+
+From the repo root:
+
 ```sh
-nvm use  # Node 24
-pnpm install
-pnpm build
-pnpm test
+nvm use        # Node 24
+pnpm install   # install workspace dependencies
+pnpm build     # build packages and services
 ```
 
-Run a service locally (no build step, uses tsx):
+The article worker needs a [Zyte API key](https://app.zyte.com/o/612928/zyte-api/api-access). Copy `services/crawl-worker/.env.example` to `services/crawl-worker/.env` and set `ZYTE_API_KEY`. The dev scripts load `.env` automatically, and it is gitignored, so keep real keys there and never commit them. In deployed environments these values come from the Helm chart and Google Secret Manager, not from a file.
+
+### Agent
+
+The agent is a long-running service that every 60s checks Redis state and enqueues crawl jobs to Pub/Sub for the publisher pages and live articles due for a refresh. Run it with:
 
 ```sh
 pnpm --filter crawl-agent dev
-pnpm --filter crawl-worker dev:article
 ```
 
-The worker runs as one role per process: `dev:article` extracts
-articles and `dev:discovery` extracts article links from publisher
-pages. The discovery consumer is not built yet, so `dev:discovery`
-exits immediately until then.
+### Article worker
 
-Each service reads its config from environment variables. For local
-runs, copy the service's `.env.example` to `.env` and fill in the
-blanks; the dev scripts load `.env` automatically. `.env` is
-gitignored, so keep real keys there and never commit them. In deployed
-environments these variables come from the Helm chart and Google
-Secret Manager, not from a file.
+Consumes the `crawl-article` queue, extracts each article via Zyte, and publishes the result to the `articles` topic for BigQuery.
 
 ```sh
-cp services/crawl-worker/.env.example services/crawl-worker/.env
-# edit .env: add your personal ZYTE_API_KEY
 pnpm --filter crawl-worker dev:article
 ```
+
+### Discovery worker
+
+Consumes the `crawl-article-discovery` queue and extracts article links from publisher pages via Zyte, enqueuing a crawl job per discovered article.
+
+```sh
+pnpm --filter crawl-worker dev:discovery
+```
+
+### Common commands
 
 | Command | Description |
 |---------|-------------|
@@ -49,7 +60,7 @@ pnpm --filter crawl-worker dev:article
 
 See the [Article Crawler Technical Spec](https://mozilla-hub.atlassian.net/wiki/spaces/FPS/pages/1737064449) for the full design. In brief:
 
-- **Crawl Agent** runs a tick loop every 60s, checking which publisher pages and live articles need crawling based on Redis state, then enqueues jobs to Pub/Sub.
+- **Crawl Agent** is a long-running service that every 60s checks which publisher pages and live articles need crawling based on Redis state, then enqueues jobs to Pub/Sub.
 - **Crawl Worker** consumes from two Pub/Sub queues: `crawl-article-discovery` (page crawling) and `crawl-article` (article extraction). Results stream to BigQuery via Pub/Sub subscriptions.
 - **Redis** (Memorystore) tracks crawl timestamps, prevents duplicate fetches, and provides distributed locking.
 
@@ -67,9 +78,6 @@ which nacks the message so Pub/Sub redelivers it. Delivery is at-least-once,
 so duplicate events are expected and resolved by "latest per URL" queries.
 On `SIGTERM` the worker drains in-flight messages before exit. Errors are
 reported to Sentry with the job's URL and crawl ID attached.
-
-Not yet wired: page discovery (the `crawl-article-discovery` subscription,
-Task 6.2) and Redis fetch deduplication (Milestone 8).
 
 ### Repository structure
 
@@ -101,4 +109,3 @@ docker run -e PORT=8080 hnt-content node crawl-worker/dist/main.js
 ```
 
 The Dockerfile uses [Turborepo Docker pruning](https://turbo.build/repo/docs/guides/tools/docker) and `pnpm deploy --prod` to produce a minimal image with only production dependencies. Services deploy to GKE via ArgoCD (mozcloud Helm chart).
-
