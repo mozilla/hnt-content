@@ -36,6 +36,9 @@ logs
 # local Claude Code instructions
 CLAUDE.local.md
 
+# decisions log kept in the autopilot workspace, not source control
+/LEDGER.md
+
 # we only want pnpm-lock.yaml
 package-lock.json
 yarn.lock
