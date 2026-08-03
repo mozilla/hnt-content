@@ -67,16 +67,17 @@ describe('article consumer', () => {
     expect(processArticle).toHaveBeenCalledWith(BASE_MESSAGE);
   });
 
-  it('reports the url and crawl_id to Sentry, tagged by corpus_item presence', () => {
+  it('tags the url, domain, and topic and keeps crawl_id as context', () => {
     const discovered = captured.extractMetadata!(BASE_MESSAGE);
     expect(discovered).toEqual({
       tags: {
         worker_role: 'article',
         has_corpus_item: 'false',
-        corpus_topic: undefined,
+        url: BASE_MESSAGE.url,
+        domain: 'example.com',
+        topic: undefined,
       },
       context: {
-        url: BASE_MESSAGE.url,
         crawl_id: BASE_MESSAGE.crawl_id,
         source_url: BASE_MESSAGE.source_url,
         enqueued_at: BASE_MESSAGE.enqueued_at,
@@ -88,6 +89,6 @@ describe('article consumer', () => {
       corpus_item: CORPUS_ITEM,
     }) as { tags: Record<string, unknown> };
     expect(live.tags.has_corpus_item).toBe('true');
-    expect(live.tags.corpus_topic).toBe(CORPUS_ITEM.topic);
+    expect(live.tags.topic).toBe(CORPUS_ITEM.topic);
   });
 });

@@ -1,4 +1,5 @@
 import {
+  getRegistrableDomain,
   validateCrawlArticleDiscoveryMessage,
   type CrawlArticleDiscoveryMessage,
 } from 'crawl-common';
@@ -15,15 +16,26 @@ import { processDiscovery } from './process-discovery.js';
  */
 const handleMessage = withSentryHandler<CrawlArticleDiscoveryMessage>(
   (message) => ({
-    tags: { worker_role: config.workerRole },
-    context: {
+    tags: {
+      worker_role: config.workerRole,
+      // url and domain are searchable tags so failures can be filtered
+      // by publisher. Sentry truncates tag values at 200 characters,
+      // which is acceptable for a URL.
       url: message.url,
+      domain: getRegistrableDomain(message.url),
+      // A discovery job carries one topic per context. Join the
+      // distinct topics in sorted order so the tag stays stable and
+      // searchable.
+      topic: [...new Set(message.contexts.map((c) => c.topic))]
+        .sort()
+        .join(','),
+    },
+    context: {
       interval_minutes: message.interval_minutes,
       context_count: message.contexts.length,
-      // Spec 5.7 wants surface_id/topic when present; a discovery job
-      // carries one per context, so report the distinct values.
+      // A discovery job carries one surface per context, so report the
+      // distinct surfaces.
       surface_ids: [...new Set(message.contexts.map((c) => c.surface_id))],
-      topics: [...new Set(message.contexts.map((c) => c.topic))],
     },
   }),
   withMessageMetrics(processDiscovery),
