@@ -41,9 +41,9 @@ export interface MetricsInitOptions {
 // fragmentation on the 1460-byte MTU of a GKE VPC.
 const MAX_BUFFER_BYTES = 1432;
 
-// hot-shots calls errorHandler once per failed datagram, so an
-// unreachable gateway logs about once a second. Container stderr is a
-// synchronous pipe, so log the first failure and then summarize.
+// hot-shots calls errorHandler once per failed datagram, and its built-in
+// fallback logs every one. Container stderr is a synchronous pipe, so an
+// unreachable gateway would flood it; log the first, then summarize.
 const ERROR_LOG_INTERVAL_MS = 60_000;
 
 let client: StatsD | undefined;
@@ -72,20 +72,16 @@ function sendErrorLogger(): (err: Error) => void {
 }
 
 /**
- * Collapse runs of characters outside the allowlist into one underscore.
- * hot-shots escapes `:|@,` but not newlines, and a newline in a tag value
- * ends the datagram and injects a second StatsD line.
+ * Drop the keys a caller left undefined, which would otherwise reach the
+ * wire as the string "undefined". Values are passed through: hot-shots
+ * replaces the characters that break the line protocol, newlines and
+ * carriage returns included, so it owns that guarantee.
  */
-function sanitize(value: string): string {
-  return value.replace(/[^\w./-]+/g, '_');
-}
-
-/** Sanitize tag values, dropping the keys a caller left undefined. */
 function cleanTags(tags?: Tags): Record<string, string> | undefined {
   if (!tags) return undefined;
   const cleaned: Record<string, string> = {};
   for (const [key, value] of Object.entries(tags)) {
-    if (value !== undefined) cleaned[key] = sanitize(value);
+    if (value !== undefined) cleaned[key] = value;
   }
   return cleaned;
 }
@@ -127,6 +123,12 @@ export function initMetrics({ service }: MetricsInitOptions): void {
     // list, on the libuv threadpool Zyte and Pub/Sub also use.
     cacheDns: true,
     maxBufferSize: MAX_BUFFER_BYTES,
+    // Any of eleven DD_* env vars present in the pod would otherwise put
+    // hot-shots into Datadog mode, which reads /proc/self/cgroup for
+    // origin detection and adds `|c:`, `|e:` and telemetry to the wire.
+    // DD_TAGS and DD_ENV would also land in globalTags and shadow ours.
+    datadog: false,
+    includeDataDogTags: false,
     errorHandler: sendErrorLogger(),
   });
 }

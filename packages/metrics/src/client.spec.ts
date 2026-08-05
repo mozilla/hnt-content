@@ -56,14 +56,17 @@ describe('metrics client', () => {
     config.workerRole = 'article';
     initMetrics({ service: 'crawl-worker' });
 
-    // The gateway options are asserted as configuration: hot-shots is
-    // trusted to cache DNS and batch as documented, so what needs
-    // guarding is that we still ask it to.
+    // Asserted as configuration: hot-shots is trusted to cache DNS, batch,
+    // and stay out of Datadog mode as documented, so what needs guarding is
+    // that we still ask it to. datadog/includeDataDogTags matter most, since
+    // any DD_* env var in the pod flips them on and changes the wire.
     expect(captured.opts).toMatchObject({
       host: 'gateway',
       port: 8125,
       cacheDns: true,
       maxBufferSize: 1432,
+      datadog: false,
+      includeDataDogTags: false,
       globalTags: {
         service: 'crawl-worker',
         env: 'dev',
@@ -106,18 +109,6 @@ describe('metrics client', () => {
       42,
       { outcome: 'success' },
     );
-  });
-
-  // hot-shots escapes `:|@,` but not newlines, so an unsanitized error
-  // message could close the datagram and append a forged metric line.
-  it('sanitizes tag values so a newline cannot inject a second line', () => {
-    initMetrics({ service: 'crawl-worker' });
-
-    count('crawl.zyte.errors', 1, { error_type: 'line1\nother.metric:999|c' });
-
-    expect(mockClient.increment).toHaveBeenCalledWith('crawl.zyte.errors', 1, {
-      error_type: 'line1_other.metric_999_c',
-    });
   });
 
   it('drops tags left undefined so callers need no branching', () => {
