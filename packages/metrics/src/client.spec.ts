@@ -20,7 +20,7 @@ vi.mock('hot-shots', () => ({
 
 // Mutable config so tests can toggle the host (enabled/disabled).
 vi.mock('./config.js', () => ({
-  default: { host: 'gateway', port: 8125, environment: 'dev', workerRole: '' },
+  default: { host: 'gateway', port: 8125, environment: 'dev' },
 }));
 
 import config from './config.js';
@@ -37,7 +37,6 @@ describe('metrics client', () => {
   beforeEach(() => {
     config.host = 'gateway';
     config.environment = 'dev';
-    config.workerRole = '';
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -53,8 +52,7 @@ describe('metrics client', () => {
   });
 
   it('builds the client with gateway options and identity tags', () => {
-    config.workerRole = 'article';
-    initMetrics({ service: 'crawl-worker' });
+    initMetrics({ service: 'crawl-worker', workerRole: 'article' });
 
     // Asserted as configuration: hot-shots is trusted to cache DNS, batch,
     // and stay out of Datadog mode as documented, so what needs guarding is
@@ -75,7 +73,7 @@ describe('metrics client', () => {
     });
   });
 
-  it('omits env and worker_role when their env vars are unset', () => {
+  it('omits env and worker_role when neither is supplied', () => {
     config.environment = undefined;
     initMetrics({ service: 'crawl-agent' });
 

@@ -10,6 +10,4 @@ export default {
   port: Number(process.env.STATSD_PORT ?? '8125'),
   // Deploy environment tag, same ENVIRONMENT source as Sentry.
   environment: process.env.ENVIRONMENT,
-  // Present only on the worker; tags metrics by article vs discovery.
-  workerRole: process.env.WORKER_ROLE,
 };

@@ -24,17 +24,15 @@ describe('metrics config', () => {
     expect(config.port).toBe(8125);
   });
 
-  it('reads host, port, env, and worker role from the environment', async () => {
+  it('reads host, port, and env from the environment', async () => {
     vi.stubEnv('STATSD_HOST', 'localhost');
     vi.stubEnv('STATSD_PORT', '9125');
     vi.stubEnv('ENVIRONMENT', 'stage');
-    vi.stubEnv('WORKER_ROLE', 'discovery');
 
     expect(await loadConfig()).toMatchObject({
       host: 'localhost',
       port: 9125,
       environment: 'stage',
-      workerRole: 'discovery',
     });
   });
 

@@ -36,6 +36,12 @@ export type Tags = {
 export interface MetricsInitOptions {
   /** Static tag identifying the service, e.g. 'crawl-agent', 'crawl-worker'. */
   service: string;
+  /**
+   * Which role a multi-role service runs as, e.g. 'article'. Passed in
+   * rather than read from the environment because only one service has
+   * roles, unlike ENVIRONMENT, which every workload sets.
+   */
+  workerRole?: string;
 }
 
 // Batch metrics rather than sending one packet per metric. The receiver
@@ -96,7 +102,7 @@ function cleanTags(tags?: Tags): Record<string, string> | undefined {
  * errors are logged rather than thrown. Call once at process startup; a
  * second call closes and replaces the previous client.
  */
-export function initMetrics({ service }: MetricsInitOptions): void {
+export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
   // Close any existing socket first: a second init would otherwise leak
   // the descriptor, and the disabled path below would leave the earlier
   // client emitting while logging that metrics are off.
@@ -115,7 +121,7 @@ export function initMetrics({ service }: MetricsInitOptions): void {
 
   const globalTags: Record<string, string> = { service };
   if (config.environment) globalTags.env = config.environment;
-  if (config.workerRole) globalTags.worker_role = config.workerRole;
+  if (workerRole) globalTags.worker_role = workerRole;
 
   client = new StatsD({
     host: config.host,
