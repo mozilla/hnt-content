@@ -16,10 +16,10 @@ export const OUTCOME = { success: 'success', failure: 'failure' } as const;
 export type Outcome = (typeof OUTCOME)[keyof typeof OUTCOME];
 
 /**
- * Per-call tag vocabulary, closed on purpose. It keeps the label set
- * low-cardinality, since a url or crawl_id tag would create a series per
- * value, and it rejects a per-call literal that would shadow the identity
- * tags set at init, which hot-shots otherwise allows.
+ * We only use low-cardinality tags (not url or crawl_id) because each
+ * distinct value becomes its own stored metric, and TypeScript rejects any
+ * other key passed directly. service, env and worker_role are set at init;
+ * passing one here would overwrite it and mislabel the metric.
  */
 export type Tags = {
   outcome?: Outcome;
