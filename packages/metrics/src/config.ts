@@ -1,8 +1,7 @@
 // In-cluster StatsD endpoint of the shared MozCloud OTEL gateway, which
 // forwards to Yardstick. Override host/port via env; set STATSD_HOST
 // empty to disable emission (e.g. local dev where the gateway DNS does
-// not resolve). The OTLP transport is the strategic alternative and can
-// replace this behind the same emit API; see the Task 5.8 plan.
+// not resolve).
 const DEFAULT_HOST =
   'mozcloud-opentelemetry-gateway-statsd.mozcloud-opentelemetry.svc.cluster.local';
 

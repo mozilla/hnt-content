@@ -1,16 +1,18 @@
+import type { ClientOptions } from 'hot-shots';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockClient, captured } = vi.hoisted(() => ({
   mockClient: {
     increment: vi.fn(),
     timing: vi.fn(),
-    close: vi.fn((cb: () => void) => cb()),
+    // close() is also called without a callback, on re-init.
+    close: vi.fn((cb?: () => void) => cb?.()),
   },
-  captured: { opts: undefined as unknown },
+  captured: {} as { opts: ClientOptions },
 }));
 
 vi.mock('hot-shots', () => ({
-  StatsD: vi.fn(function (opts: unknown) {
+  StatsD: vi.fn(function (opts: ClientOptions) {
     captured.opts = opts;
     return mockClient;
   }),
@@ -23,8 +25,8 @@ vi.mock('./config.js', () => ({
 
 import config from './config.js';
 import {
+  OUTCOME,
   count,
-  incr,
   initMetrics,
   shutdownMetrics,
   time,
@@ -36,21 +38,32 @@ describe('metrics client', () => {
     config.host = 'gateway';
     config.environment = 'dev';
     config.workerRole = '';
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(async () => {
     await shutdownMetrics();
+    vi.useRealTimers();
+    // restoreAllMocks un-spies console; it does not clear the call
+    // history of the plain vi.fn mocks, so both are needed.
+    vi.restoreAllMocks();
     vi.clearAllMocks();
-    captured.opts = undefined;
   });
 
-  it('builds the client with static service, env, and worker_role tags', () => {
+  it('builds the client with gateway options and identity tags', () => {
     config.workerRole = 'article';
     initMetrics({ service: 'crawl-worker' });
 
+    // The gateway options are asserted as configuration: hot-shots is
+    // trusted to cache DNS and batch as documented, so what needs
+    // guarding is that we still ask it to.
     expect(captured.opts).toMatchObject({
       host: 'gateway',
       port: 8125,
+      cacheDns: true,
+      maxBufferSize: 1432,
       globalTags: {
         service: 'crawl-worker',
         env: 'dev',
@@ -59,32 +72,34 @@ describe('metrics client', () => {
     });
   });
 
-  it('omits worker_role when unset (e.g. the agent)', () => {
+  it('omits env and worker_role when their env vars are unset', () => {
+    config.environment = undefined;
     initMetrics({ service: 'crawl-agent' });
 
-    expect(
-      (captured.opts as { globalTags: Record<string, string> }).globalTags,
-    ).toEqual({ service: 'crawl-agent', env: 'dev' });
+    expect(captured.opts.globalTags).toEqual({ service: 'crawl-agent' });
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('ENVIRONMENT empty'),
+    );
   });
 
   it('emits counters and timings with per-call tags', () => {
     initMetrics({ service: 'crawl-worker' });
 
-    incr('crawl.message.processed', { outcome: 'success' });
     count('crawl.tick.enqueued', 3, { kind: 'page' });
-    timing('crawl.message.duration_ms', 42, { outcome: 'success' });
+    count('crawl.tick.ran');
+    timing('crawl.message.duration_ms', 42, { outcome: OUTCOME.success });
 
-    expect(mockClient.increment).toHaveBeenCalledWith(
-      'crawl.message.processed',
-      1,
-      { outcome: 'success' },
-    );
     expect(mockClient.increment).toHaveBeenCalledWith(
       'crawl.tick.enqueued',
       3,
       {
         kind: 'page',
       },
+    );
+    expect(mockClient.increment).toHaveBeenCalledWith(
+      'crawl.tick.ran',
+      1,
+      undefined,
     );
     expect(mockClient.timing).toHaveBeenCalledWith(
       'crawl.message.duration_ms',
@@ -93,15 +108,40 @@ describe('metrics client', () => {
     );
   });
 
-  it('records timing when the wrapped fn resolves and when it rejects', async () => {
+  // hot-shots escapes `:|@,` but not newlines, so an unsanitized error
+  // message could close the datagram and append a forged metric line.
+  it('sanitizes tag values so a newline cannot inject a second line', () => {
+    initMetrics({ service: 'crawl-worker' });
+
+    count('crawl.zyte.errors', 1, { error_type: 'line1\nother.metric:999|c' });
+
+    expect(mockClient.increment).toHaveBeenCalledWith('crawl.zyte.errors', 1, {
+      error_type: 'line1_other.metric_999_c',
+    });
+  });
+
+  it('drops tags left undefined so callers need no branching', () => {
+    initMetrics({ service: 'crawl-worker' });
+
+    count('crawl.message.processed', 1, {
+      outcome: OUTCOME.success,
+      kind: undefined,
+    });
+
+    expect(mockClient.increment).toHaveBeenCalledWith(
+      'crawl.message.processed',
+      1,
+      { outcome: 'success' },
+    );
+  });
+
+  it('records timing tagged by outcome when the fn resolves and rejects', async () => {
     initMetrics({ service: 'crawl-worker' });
 
     const value = await time(
       'crawl.zyte.duration_ms',
       () => Promise.resolve(7),
-      {
-        extraction: 'article',
-      },
+      { extraction: 'article' },
     );
     expect(value).toBe(7);
 
@@ -112,12 +152,53 @@ describe('metrics client', () => {
     ).rejects.toThrow('boom');
 
     // The reject path is the regression guard: a timing() moved out of the
-    // finally would stop recording latency for failed Zyte calls.
+    // finally would stop recording latency for failed Zyte calls, and a
+    // shared outcome tag would hide fast failures inside the success p95.
     expect(mockClient.timing).toHaveBeenCalledTimes(2);
+    expect(mockClient.timing).toHaveBeenNthCalledWith(
+      1,
+      'crawl.zyte.duration_ms',
+      expect.any(Number),
+      { extraction: 'article', outcome: 'success' },
+    );
+    expect(mockClient.timing).toHaveBeenNthCalledWith(
+      2,
+      'crawl.zyte.duration_ms',
+      expect.any(Number),
+      { extraction: 'article', outcome: 'failure' },
+    );
+  });
+
+  it('overwrites an outcome tag supplied by the caller', async () => {
+    initMetrics({ service: 'crawl-worker' });
+
+    await time('crawl.zyte.duration_ms', () => Promise.resolve(1), {
+      outcome: OUTCOME.failure,
+    });
+
     expect(mockClient.timing).toHaveBeenCalledWith(
       'crawl.zyte.duration_ms',
       expect.any(Number),
-      { extraction: 'article' },
+      { outcome: 'success' },
+    );
+  });
+
+  it('logs one send error per window and counts the rest', () => {
+    vi.useFakeTimers();
+    initMetrics({ service: 'crawl-worker' });
+    const errorHandler = captured.opts.errorHandler!;
+
+    errorHandler(new Error('getaddrinfo ENOTFOUND'));
+    errorHandler(new Error('getaddrinfo ENOTFOUND'));
+    errorHandler(new Error('getaddrinfo ENOTFOUND'));
+    expect(console.error).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(60_000);
+    errorHandler(new Error('getaddrinfo ENOTFOUND'));
+
+    expect(console.error).toHaveBeenCalledTimes(2);
+    expect(console.error).toHaveBeenLastCalledWith(
+      expect.stringContaining('2 similar suppressed'),
     );
   });
 
@@ -125,11 +206,32 @@ describe('metrics client', () => {
     config.host = '';
     initMetrics({ service: 'crawl-worker' });
 
-    incr('crawl.message.processed', { outcome: 'success' });
+    count('crawl.message.processed', 1, { outcome: OUTCOME.success });
     timing('crawl.message.duration_ms', 5);
 
     expect(mockClient.increment).not.toHaveBeenCalled();
     expect(mockClient.timing).not.toHaveBeenCalled();
+  });
+
+  it('closes the previous client and builds a new one on re-init', () => {
+    initMetrics({ service: 'crawl-agent' });
+    initMetrics({ service: 'crawl-worker' });
+
+    expect(mockClient.close).toHaveBeenCalledOnce();
+    expect(captured.opts.globalTags).toEqual({
+      service: 'crawl-worker',
+      env: 'dev',
+    });
+  });
+
+  it('stops emitting when re-initialized with an empty host', () => {
+    initMetrics({ service: 'crawl-worker' });
+    config.host = '';
+    initMetrics({ service: 'crawl-worker' });
+
+    count('crawl.message.processed');
+
+    expect(mockClient.increment).not.toHaveBeenCalled();
   });
 
   it('closes the client on shutdown', async () => {
