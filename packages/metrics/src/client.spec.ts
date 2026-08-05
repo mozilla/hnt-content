@@ -46,8 +46,8 @@ describe('metrics client', () => {
   afterEach(async () => {
     await shutdownMetrics();
     vi.useRealTimers();
-    // restoreAllMocks un-spies console; it does not clear the call
-    // history of the plain vi.fn mocks, so both are needed.
+    // clearAllMocks resets the plain vi.fn history, which restoreAllMocks
+    // leaves alone; restoreAllMocks un-spies console.
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });
@@ -59,7 +59,7 @@ describe('metrics client', () => {
     // Asserted as configuration: hot-shots is trusted to cache DNS, batch,
     // and stay out of Datadog mode as documented, so what needs guarding is
     // that we still ask it to. datadog/includeDataDogTags matter most, since
-    // any DD_* env var in the pod flips them on and changes the wire.
+    // any of eleven DD_* env vars in the pod flips them on, changing the wire.
     expect(captured.opts).toMatchObject({
       host: 'gateway',
       port: 8125,

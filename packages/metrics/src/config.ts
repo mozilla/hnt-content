@@ -1,7 +1,7 @@
 // In-cluster StatsD endpoint of the shared MozCloud OTEL gateway, which
-// forwards to Yardstick. Override host/port via env; set STATSD_HOST
-// empty to disable emission (e.g. local dev where the gateway DNS does
-// not resolve).
+// exports to Google Managed Prometheus, queried from Yardstick. Override
+// host/port via env; set STATSD_HOST empty to disable emission (e.g.
+// local dev where the gateway DNS does not resolve).
 const DEFAULT_HOST =
   'mozcloud-opentelemetry-gateway-statsd.mozcloud-opentelemetry.svc.cluster.local';
 

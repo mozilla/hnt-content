@@ -1,12 +1,16 @@
 /**
- * Operational metrics client for the crawler. Wraps `hot-shots`
- * (StatsD UDP) as a module-level singleton that emits to the MozCloud
- * OTEL gateway, mirroring the `sentry` package's shape.
+ * Operational metrics client for the crawler. Wraps `hot-shots` (StatsD UDP)
+ * as a module-level singleton that emits to the MozCloud OTEL gateway.
  */
 import { StatsD } from 'hot-shots';
 import config from './config.js';
 
-/** Outcome tag values, shared so counters and timings agree. */
+/**
+ * Outcome tag values; the type below keeps counters and timings in step.
+ * This is a plain object rather than a TypeScript `enum`. Node strips types
+ * rather than compiling them, so an enum here would stop this file from being
+ * imported by a one-off script that Node runs directly as TypeScript.
+ */
 export const OUTCOME = { success: 'success', failure: 'failure' } as const;
 
 export type Outcome = (typeof OUTCOME)[keyof typeof OUTCOME];
@@ -14,8 +18,8 @@ export type Outcome = (typeof OUTCOME)[keyof typeof OUTCOME];
 /**
  * Per-call tag vocabulary, closed on purpose. It keeps the label set
  * low-cardinality, since a url or crawl_id tag would create a series per
- * value, and it stops a per-call tag shadowing the identity tags set at
- * init, which hot-shots otherwise allows.
+ * value, and it rejects a per-call literal that would shadow the identity
+ * tags set at init, which hot-shots otherwise allows.
  */
 export type Tags = {
   outcome?: Outcome;
@@ -25,7 +29,7 @@ export type Tags = {
   extraction?: string;
   /** Error class or status code, e.g. 'ZyteError', '429'. */
   error_type?: string;
-  /** Upstream being called, e.g. 'zyte', 'corpus_api', 'redis'. */
+  /** Upstream being called, e.g. 'zyte' or 'corpus_api'. */
   upstream?: string;
 };
 
@@ -34,16 +38,15 @@ export interface MetricsInitOptions {
   service: string;
 }
 
-// Batch metrics into one datagram rather than a packet per metric: at
-// peak this sends roughly 4 datagrams/sec instead of 50, which matters at
-// the shared gateway, where UDP receive-buffer overflow is the usual
-// ingestion failure. 1432 bytes is the largest payload that avoids IP
-// fragmentation on the 1460-byte MTU of a GKE VPC.
+// Batch metrics rather than sending one packet per metric. The receiver
+// aggregates over 30s, so this changes only datagram and syscall count,
+// not the series recorded, and the shared gateway is alerted on CPU and
+// memory. 1432 is the default 1460-byte GKE pod interface MTU less headers.
 const MAX_BUFFER_BYTES = 1432;
 
 // hot-shots calls errorHandler once per failed datagram, and its built-in
-// fallback logs every one. Container stderr is a synchronous pipe, so an
-// unreachable gateway would flood it; log the first, then summarize.
+// fallback logs every one, so an unreachable gateway would fill the
+// container log with identical lines; log the first, then summarize.
 const ERROR_LOG_INTERVAL_MS = 60_000;
 
 let client: StatsD | undefined;
@@ -105,8 +108,8 @@ export function initMetrics({ service }: MetricsInitOptions): void {
     return;
   }
   if (!config.environment) {
-    // dev and stage share one gateway, so an untagged series merges the
-    // two environments instead of failing visibly.
+    // dev and stage share one gateway. The collector still separates them by
+    // env_code, but our dashboards query this tag, so warn about its absence.
     console.warn('Metrics env tag unset: ENVIRONMENT empty');
   }
 
@@ -120,12 +123,12 @@ export function initMetrics({ service }: MetricsInitOptions): void {
     globalTags,
     // Resolve the gateway's DNS name once per TTL. Without this every
     // send runs a getaddrinfo, fanned out by the pod's ndots search
-    // list, on the libuv threadpool Zyte and Pub/Sub also use.
+    // list, on the same four libuv threads Zyte's fetch() competes for.
     cacheDns: true,
     maxBufferSize: MAX_BUFFER_BYTES,
     // Any of eleven DD_* env vars present in the pod would otherwise put
     // hot-shots into Datadog mode, which reads /proc/self/cgroup for
-    // origin detection and adds `|c:`, `|e:` and telemetry to the wire.
+    // origin detection and adds `|c:` and telemetry to the wire.
     // DD_TAGS and DD_ENV would also land in globalTags and shadow ours.
     datadog: false,
     includeDataDogTags: false,
@@ -170,7 +173,7 @@ export async function time<T>(
 
 /**
  * Flush and close the metrics client, if initialized. Call on SIGTERM
- * after the Pub/Sub drain, alongside shutdownSentry.
+ * alongside shutdownSentry, after any Pub/Sub drain.
  */
 export async function shutdownMetrics(): Promise<void> {
   if (!client) return;
