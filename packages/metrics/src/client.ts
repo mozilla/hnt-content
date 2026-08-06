@@ -50,35 +50,7 @@ export interface MetricsInitOptions {
 // memory. 1432 is the default 1460-byte GKE pod interface MTU less headers.
 const MAX_BUFFER_BYTES = 1432;
 
-// hot-shots calls errorHandler once per failed datagram, and its built-in
-// fallback logs every one, so an unreachable gateway would fill the
-// container log with identical lines; log the first, then summarize.
-const ERROR_LOG_INTERVAL_MS = 60_000;
-
 let client: StatsD | undefined;
-
-/**
- * Build an error handler that logs at most one send failure per window
- * and counts the rest. State lives per client, so a re-init starts clean.
- */
-function sendErrorLogger(): (err: Error) => void {
-  let lastLoggedAt: number | undefined;
-  let suppressed = 0;
-  return (err) => {
-    const now = Date.now();
-    if (
-      lastLoggedAt !== undefined &&
-      now - lastLoggedAt < ERROR_LOG_INTERVAL_MS
-    ) {
-      suppressed += 1;
-      return;
-    }
-    const summary = suppressed ? ` (${suppressed} similar suppressed)` : '';
-    console.error(`Metrics send failed: ${err.message}${summary}`);
-    lastLoggedAt = now;
-    suppressed = 0;
-  };
-}
 
 /**
  * Drop the keys a caller left undefined, which would otherwise reach the
@@ -98,8 +70,8 @@ function cleanTags(tags?: Tags): Record<string, string> | undefined {
 /**
  * Initialize the metrics client and attach the static service, env, and
  * worker_role tags. An empty STATSD_HOST disables emission, mirroring
- * Sentry's empty-DSN behavior. UDP is fire-and-forget, so socket and DNS
- * errors are logged rather than thrown. Call once at process startup; a
+ * Sentry's empty-DSN behavior. UDP is fire-and-forget, so hot-shots logs
+ * send failures rather than throwing. Call once at process startup; a
  * second call closes and replaces the previous client.
  */
 export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
@@ -133,7 +105,6 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
     // DD_TAGS and DD_ENV would also land in globalTags and shadow ours.
     datadog: false,
     includeDataDogTags: false,
-    errorHandler: sendErrorLogger(),
   });
 }
 

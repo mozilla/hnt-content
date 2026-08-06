@@ -37,7 +37,6 @@ describe('metrics client', () => {
   beforeEach(() => {
     config.host = 'gateway';
     config.environment = 'dev';
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
@@ -165,25 +164,6 @@ describe('metrics client', () => {
       'crawl.zyte.duration_ms',
       expect.any(Number),
       { outcome: 'success' },
-    );
-  });
-
-  it('logs one send error per window and counts the rest', () => {
-    vi.useFakeTimers();
-    initMetrics({ service: 'crawl-worker' });
-    const errorHandler = captured.opts.errorHandler!;
-
-    errorHandler(new Error('getaddrinfo ENOTFOUND'));
-    errorHandler(new Error('getaddrinfo ENOTFOUND'));
-    errorHandler(new Error('getaddrinfo ENOTFOUND'));
-    expect(console.error).toHaveBeenCalledTimes(1);
-
-    vi.advanceTimersByTime(60_000);
-    errorHandler(new Error('getaddrinfo ENOTFOUND'));
-
-    expect(console.error).toHaveBeenCalledTimes(2);
-    expect(console.error).toHaveBeenLastCalledWith(
-      expect.stringContaining('2 similar suppressed'),
     );
   });
 
