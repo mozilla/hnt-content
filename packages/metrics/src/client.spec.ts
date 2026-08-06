@@ -38,7 +38,6 @@ describe('metrics client', () => {
     config.host = 'gateway';
     config.environment = 'dev';
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
@@ -78,9 +77,6 @@ describe('metrics client', () => {
     initMetrics({ service: 'crawl-agent' });
 
     expect(captured.opts.globalTags).toEqual({ service: 'crawl-agent' });
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining('ENVIRONMENT empty'),
-    );
   });
 
   it('emits counters and timings with per-call tags', () => {

@@ -113,11 +113,6 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
     console.log(`Metrics disabled: STATSD_HOST empty (service=${service})`);
     return;
   }
-  if (!config.environment) {
-    // dev and stage share one gateway. The collector still separates them by
-    // env_code, but our dashboards query this tag, so warn about its absence.
-    console.warn('Metrics env tag unset: ENVIRONMENT empty');
-  }
 
   const globalTags: Record<string, string> = { service };
   if (config.environment) globalTags.env = config.environment;
