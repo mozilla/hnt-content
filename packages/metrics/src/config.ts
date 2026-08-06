@@ -8,6 +8,5 @@ const DEFAULT_HOST =
 export default {
   host: process.env.STATSD_HOST ?? DEFAULT_HOST,
   port: Number(process.env.STATSD_PORT ?? '8125'),
-  // Deploy environment tag, same ENVIRONMENT source as Sentry.
   environment: process.env.ENVIRONMENT,
 };

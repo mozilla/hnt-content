@@ -69,10 +69,10 @@ function cleanTags(tags?: Tags): Record<string, string> | undefined {
 
 /**
  * Initialize the metrics client and attach the static service, env, and
- * worker_role tags. An empty STATSD_HOST disables emission, mirroring
- * Sentry's empty-DSN behavior. UDP is fire-and-forget, so hot-shots logs
- * send failures rather than throwing. Call once at process startup; a
- * second call closes and replaces the previous client.
+ * worker_role tags. An empty STATSD_HOST disables emission. UDP is
+ * fire-and-forget, so hot-shots logs send failures rather than throwing.
+ * Call once at process startup; a second call closes and replaces
+ * the previous client.
  */
 export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
   // Close any existing socket first: a second init would otherwise leak
@@ -94,15 +94,10 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
     host: config.host,
     port: config.port,
     globalTags,
-    // Resolve the gateway's DNS name once per TTL. Without this every
-    // send runs a getaddrinfo, fanned out by the pod's ndots search
-    // list, on the same four libuv threads Zyte's fetch() competes for.
+    // Caching DNS improves performance, but is disabled by default.
     cacheDns: true,
     maxBufferSize: MAX_BUFFER_BYTES,
-    // Any of eleven DD_* env vars present in the pod would otherwise put
-    // hot-shots into Datadog mode, which reads /proc/self/cgroup for
-    // origin detection and adds `|c:` and telemetry to the wire.
-    // DD_TAGS and DD_ENV would also land in globalTags and shadow ours.
+    // Our metrics go to the MozCloud OTEL gateway, not a Datadog Agent.
     datadog: false,
     includeDataDogTags: false,
   });
