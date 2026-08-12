@@ -8,7 +8,9 @@ from a publisher's website into BigQuery.
 The crawler keeps Firefox New Tab supplied with fresh article content. It visits
 publisher pages, discovers the articles linked from them, extracts each
 article's text and metadata, and streams the results into BigQuery, where
-machine learning ranks them for users.
+machine learning ranks them for users. It also revisits articles already curated
+for New Tab and updates their corpus items, so a stored headline or excerpt
+stays accurate as a story develops.
 
 The system is event driven. A single scheduler decides what to crawl, and a
 pool of stateless workers carries out the crawling. The scheduler and workers
@@ -120,9 +122,54 @@ Waiting dominates, not work. Discovering an article, extracting it, and landing
 the row in BigQuery takes about two minutes. An article published just before
 its page is due arrives sooner, and one that just misses every wait in the
 chain takes roughly twice as long. The page crawl interval is the one latency
-lever this repo owns, and it is not free: article list extraction is the bulk
-of the [Zyte bill](https://app.zyte.com/o/612928/subscriptions/billing-history),
-so halving the interval halves the first bar but roughly doubles that cost.
+lever this repo owns, and it is not free: article list extraction is the bulk of
+the crawler's [Zyte usage](https://app.zyte.com/o/612928/stats/usage), so halving
+the interval halves the first bar and roughly doubles that usage.
+
+Why each interval sits where it does, weighed against the load it drives, is not
+yet documented; [HNT-2937](https://mozilla-hub.atlassian.net/browse/HNT-2937)
+tracks writing it down.
+
+### Load
+
+Crawling puts load on two systems outside this repo: Zyte and the Curated
+Corpus API. Every 20 minutes the crawler asks Zyte for each publisher page on
+the editorial team's list, and for any article it finds there that has not been
+fetched recently. It re-extracts the articles already curated for New Tab on the
+same 20-minute cycle, reading that set from the Corpus API every 15 minutes and
+writing back when a headline or excerpt has changed. Both kinds of job are
+staggered across their interval rather than all falling due together.
+
+The current page list and interval come to roughly 10,000 page crawls an hour.
+A page turns up around 25 new articles a day, spread across a crawl every twenty
+minutes, so most crawls find nothing new; across the whole list that is a few
+thousand newly discovered articles an hour. The
+[Zyte stats dashboard](https://app.zyte.com/o/612928/stats/usage) shows current
+volume and can separate page crawls from article extractions. The Corpus API
+sees far less, a few dozen reads an hour and on the order of a thousand writes a
+day. Those are production figures: stage crawls a small sample of the page list,
+and dev does not crawl at all.
+
+Our Zyte account allows 10,000 requests a minute, and Zyte can raise that if we
+ask. The stats API reports usage by the hour at its finest, so a short burst can
+breach a per-minute limit without showing up in the totals; in practice the
+first sign is the rejected requests themselves.
+
+Because the work is staggered, the load stays fairly steady from hour to hour.
+Launching a new market is the one thing that lifts it sharply: a batch of pages
+joins the list at once and most of their articles are new to the crawler, so
+article extraction climbs and stays high until that set is warm. That falls on
+Zyte alone, since the Corpus API only tracks articles editors have already
+curated. If the crawler reaches its request limit, the articles it could not get
+to are picked up on a later crawl rather than dropped altogether.
+
+Page crawls scale simply, as the number of pages divided by the crawl interval.
+Article extractions are the larger number, because an article that stays on a
+publisher's listing is extracted again once its re-fetch window has passed,
+which is how the crawler notices an updated headline or body. That window is
+therefore the main control on article volume. Everything using our Zyte account
+draws on a single quota, so any ad hoc job competes directly with production
+traffic for the same capacity.
 
 ## Components
 
@@ -193,20 +240,20 @@ flowchart TB
 
 ### Workloads
 
-The **[Crawl Agent](https://github.com/mozilla/hnt-content/tree/main/services/crawl-agent)** is the scheduler, running as a single replica. Every minute
-it decides which publisher pages and live articles are due for a crawl, and
-publishes each job to the matching Pub/Sub queue. It reads the page list once
-at startup from a committed JSON file and polls the Curated Corpus API for
-live articles.
+The **[Crawl Agent](https://github.com/mozilla/hnt-content/tree/main/services/crawl-agent)** schedules the crawling and runs as a single replica. It
+fetches nothing itself. Every minute it decides which publisher pages and live
+articles are due for a crawl, and publishes a job for each to the matching
+Pub/Sub queue. It reads the page list once at startup from a committed JSON file
+and polls the Curated Corpus API for live articles.
 
-The **[Crawl Worker](https://github.com/mozilla/hnt-content/tree/main/services/crawl-worker)** processes the jobs the agent publishes, and it runs in two
+The **[Crawl Worker](https://github.com/mozilla/hnt-content/tree/main/services/crawl-worker)** processes the jobs the agent schedules, and it runs in two
 roles selected by the `WORKER_ROLE` environment variable. As a
 **Discovery Worker** it reads a page, finds the articles linked from it, and
 enqueues each one for extraction. As an **Article Worker** it reads a single
-article and extracts its content. Both roles are built from the same image and
-deploy as separate, independently scalable workloads. Neither keeps local
-state, since their durable state lives in Redis, so Kubernetes can add or
-remove replicas at any time.
+article enqueued by the agent or by a discovery worker, and extracts its
+content. Both roles are built from the same image and deploy as separate,
+independently scalable workloads. Neither keeps local state, since their durable
+state lives in Redis, so Kubernetes can add or remove replicas at any time.
 
 ### Queues and topics
 
@@ -235,6 +282,8 @@ The generic packages know nothing about the crawler. `crawl-common` layers the
 crawl-specific domain on top, and the agent and worker build on them.
 
 ## How an article flows through the system
+
+### Discovered articles
 
 The sequence below traces one discovered article from a publisher page to a row
 in BigQuery, through both workers.
@@ -267,109 +316,55 @@ sequenceDiagram
     ArtT-)BQ: subscription<br/>writes row
 ```
 
-The discovery worker emits one discovery event per context, meaning each
+Each page job is a [`CrawlArticleDiscoveryMessage`](https://github.com/mozilla/hnt-content/blob/main/packages/crawl-common/src/types/messages.ts)
+carrying the page URL, its crawl interval, and its contexts. A context is one
 pairing of a surface (a localized New Tab feed) with a content topic the page
-was crawled under, so an article discovery is recorded once per localized
-topic. It keeps only links on the publisher's own domain and removes duplicates
-before that fan-out, then enqueues each new article for extraction. The article
-worker extracts the content and publishes an article event, and both kinds of
-event reach BigQuery through their subscriptions.
+was crawled under, such as `NEW_TAB_DE_DE` and `sports`. The discovery worker
+emits one [`ArticleDiscoveryEvent`](https://github.com/mozilla/hnt-content/blob/main/packages/crawl-common/src/types/events.ts)
+per article per context, so a discovery is recorded once for each localized
+topic the page serves. The worker keeps only links on the publisher's own domain
+and removes duplicates before that fan-out, then enqueues each new article as a
+[`CrawlArticleMessage`](https://github.com/mozilla/hnt-content/blob/main/packages/crawl-common/src/types/messages.ts).
+The article worker extracts the content and publishes an
+[`ArticleEvent`](https://github.com/mozilla/hnt-content/blob/main/packages/crawl-common/src/types/events.ts),
+and both kinds of event reach BigQuery through their subscriptions.
 
-Live articles take a shorter path. The agent enqueues them straight onto the
-`crawl-article` queue with their corpus record attached. When the article worker
-extracts one, it compares the fresh headline and excerpt against that record and
-updates the Curated Corpus API when they differ, before publishing the article
-event. Publishers often revise a headline as a story develops, so this keeps
-what New Tab shows current.
+### Live articles
 
-## Deduplication and idempotency
-
-The same article often appears on several publisher pages, and Pub/Sub delivers
-each message at least once, so a URL can be enqueued more than once and two
-workers can pick it up at the same time. The workers guard against this with
-several Redis keys.
+Articles already curated for New Tab take a shorter path, because the agent
+enqueues them itself and no discovery step runs.
 
 ```mermaid
-%%{init: {'flowchart': {'rankSpacing': 16, 'nodeSpacing': 40, 'wrappingWidth': 300}}}%%
-flowchart TD
-    START([crawl-article job delivered]):::worker --> FRESH{"Fetched<br/>recently?"}:::worker
-    FRESH -- Yes --> DONE
-    FRESH -- No --> LOCK["Acquire <code>article:lock</code>"]:::redis
-    LOCK --> HELD{"Already<br/>locked?"}:::worker
-    HELD -- Yes --> DONE
-    HELD -- No --> REC["Set <code>article:fetch</code>"]:::redis
-    REC --> ZYTE[Extract the article via Zyte API]:::zyte
-    ZYTE -- content --> HASH["Compare with <code>article:content</code>"]:::redis
-    HASH --> CHANGED{"Content<br/>changed?"}:::worker
-    CHANGED -- Yes --> PUB[Publish event to articles topic]:::pub
-    PUB --> STORE["Store <code>article:content</code>"]:::redis
-    CHANGED -- No --> STORE
-    STORE --> RELEASE["Release <code>article:lock</code>"]:::redis
-    RELEASE --> DONE([Done]):::done
+%%{init: {'sequence':{'mirrorActors':false,'width':150,'actorMargin':35,'diagramMarginX':100,'boxMargin':8,'messageMargin':26,'diagramMarginY':26,'messageAlign':'left'}, 'themeVariables':{'actorBkg':'#eef2f7','actorBorder':'#90a4ae','actorTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410'}}}%%
+sequenceDiagram
+    autonumber
+    participant Corpus@{ "type": "boundary" } as Curated<br/>Corpus API
+    participant Agent as Crawl Agent
+    participant ArtQ@{ "type": "queue" } as crawl-article
+    participant Art as Article Worker
+    participant Zyte@{ "type": "boundary" } as Zyte API
+    participant ArtT@{ "type": "queue" } as articles
+    participant BQ@{ "type": "database" } as BigQuery
 
-    classDef worker fill:#2c3e50,stroke:#1a252f,color:#ecf0f1;
-    classDef redis fill:#0e6655,stroke:#073b31,color:#e8f8f5;
-    classDef zyte fill:#616a6b,stroke:#2c3232,color:#f2f4f4;
-    classDef pub fill:#7d3c98,stroke:#4a235a,color:#f4ecf7;
-    classDef done fill:#eaeded,stroke:#95a5a6,color:#2c3e50;
+    Agent->>Corpus: poll scheduled<br/>section items
+    Corpus-->>Agent: live articles
+    Agent-)ArtQ: publish job with<br/>corpus record
+    ArtQ-)Art: deliver<br/>article job
+    Art->>Zyte: extract<br/>article content
+    Zyte-->>Art: headline,<br/>excerpt, body
+    Art->>Corpus: update headline or<br/>excerpt if changed
+    Art-)ArtT: publish if changed
+    ArtT-)BQ: subscription<br/>writes row
 ```
 
-Three mechanisms make the workers idempotent:
-
-1. The **freshness check** skips any URL that was crawled within its interval,
-   so the crawler does not re-fetch the same content on every delivery.
-2. The **lock** serializes concurrent workers on the same URL, so only one calls
-   Zyte and the rest skip.
-3. The **content hash** limits publishing to changed content, so unchanged
-   articles do not fill BigQuery with duplicates.
-
-The agent keeps its own pair of markers, recording when it last enqueued each
-page rather than when one was last fetched. It ticks every minute over the whole
-page list and skips any page whose marker is younger than its interval, so each
-page goes out once per interval instead of once per tick. The discovery worker
-guards its page crawls with a freshness check and a lock of its own, and skips
-discovered articles it has fetched recently rather than queueing them again.
-
-Because delivery is at least once, some duplicate rows still reach BigQuery.
-Each table carries a timestamp, `extracted_at` for articles and `crawled_at`
-for discoveries. Downstream queries take the latest row per URL and resolve the
-duplicates at read time.
-
-### Redis state
-
-| Key | Written by | Purpose |
-|---|---|---|
-| `page:enqueued` | Crawl Agent | Last time a page was enqueued for discovery |
-| `article:enqueued` | Crawl Agent | Last time a live article was enqueued |
-| `page:fetch` | Discovery Worker | Last time a page crawl started |
-| `page:lock` | Discovery Worker | Guard against concurrent page crawls |
-| `article:fetch` | Article Worker | Last time an article extraction started |
-| `article:lock` | Article Worker | Guard against concurrent extractions |
-| `article:content` | Article Worker | Content hash for change detection |
-
-Every key is scoped to a single URL. Fetch timestamps and content hashes expire
-after a fixed retention window. Each lock expires shortly before the
-Pub/Sub acknowledgement deadline, so a crashed worker cannot hold it forever.
-
-## Message and event contracts
-
-Four message shapes travel across the queues and topics. Workers validate the
-two job messages on arrival and reject anything malformed. The two event shapes
-are enforced by their TypeScript types rather than by a runtime check.
-
-| Message | Direction | Required fields |
-|---|---|---|
-| `crawl-article-discovery` job | Agent to Discovery Worker | `url`, `interval_minutes`, `contexts` |
-| `crawl-article` job | Agent or Discovery Worker to Article Worker | `url`, `source_url`, `crawl_id`, `enqueued_at` |
-| `article-discoveries` event | Discovery Worker to BigQuery | `url`, `source_url`, `crawled_at`, `surface_id` |
-| `articles` event | Article Worker to BigQuery | `url`, `extracted_at` |
-
-A `crawl-article` job carries a `crawl_id`, a fresh identifier for that single
-extraction attempt, and for a live article it also carries a corpus record.
-Discovery events fan out to one message per article and context, so
-every discovery job must name the surface and topic through a context. Events
-require only a few core fields and treat every extracted field as optional,
-since a given page may not supply all of them.
+Only the discovery hop is skipped, not the safeguards. The article worker
+applies the same freshness check and lock as it does for a discovered article,
+but against the shorter refresh window the agent sets on the job instead of the
+worker's longer default. When the worker extracts a live article, it compares
+the fresh headline and excerpt against the attached corpus record and updates
+the Curated Corpus API when they differ, before publishing the article event.
+Publishers often revise a headline as a story develops, so this keeps what
+New Tab shows current.
 
 ## Infrastructure and deployment
 
@@ -399,5 +394,7 @@ Pub/Sub names carry the environment as a prefix. Each workload reads its
 configuration from environment variables, and secrets come from Secret
 Manager through the chart.
 
-For local setup and development commands, see [README.md](../../README.md).
-For contribution conventions, see [CONTRIBUTING.md](../../CONTRIBUTING.md).
+For how the workers stay idempotent under duplicate delivery, see
+[DEDUPLICATION.md](DEDUPLICATION.md). For local setup and development commands,
+see [README.md](../../README.md). For contribution conventions, see
+[CONTRIBUTING.md](../../CONTRIBUTING.md).
