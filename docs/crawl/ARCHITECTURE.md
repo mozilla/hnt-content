@@ -135,9 +135,9 @@ tracks writing it down.
 Crawling puts load on two systems outside this repo: Zyte and the Curated
 Corpus API. Every 20 minutes the crawler asks Zyte for each publisher page on
 the editorial team's list, and for any article it finds there that has not been
-fetched recently. To keep titles accurate, it re-extracts articles in newsy
-sections every 15 minutes, reading and writing to the Corpus API. Both kinds of
-job are staggered across their interval to avoid load spikes.
+fetched in the last hour. To keep titles accurate, it re-extracts articles in
+newsy sections every 15 minutes, reading and writing to the Corpus API. Both
+kinds of job are staggered across their interval to avoid load spikes.
 
 The current page list and interval come to roughly 10,000 page crawls an hour.
 A page turns up around 25 new articles a day on average; across the whole list
@@ -152,8 +152,10 @@ Our Zyte account allows 10,000 requests per minute, and Zyte can raise that if
 we ask. Everything using our Zyte account draws on a single quota, so any ad hoc
 job competes with production traffic for the same capacity. We don't have great
 visibility into our remaining capacity per minute, because Zyte's dashboard
-aggregates by hour. The hourly peak in the last 90 days was 130k Zyte requests
-per hour, which is 6x higher than our average request rate.
+aggregates by hour. The busiest hour in the last 90 days carried 130k requests
+across everything using the account, 6x its 90-day average. That hour belongs to
+a single two-day backfill; excluding those two days, the busiest hour is 1.5x
+the average.
 
 Launching a new market temporarily lifts the Zyte request rate sharply: a batch
 of pages joins the list at once and most of their articles are new to the
