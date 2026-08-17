@@ -319,7 +319,9 @@ and removes duplicates before that fan-out, then enqueues each new article as a
 [`CrawlArticleMessage`](https://github.com/mozilla/hnt-content/blob/main/packages/crawl-common/src/types/messages.ts).
 The article worker extracts the content and publishes an
 [`ArticleEvent`](https://github.com/mozilla/hnt-content/blob/main/packages/crawl-common/src/types/events.ts),
-and both kinds of event reach BigQuery through their subscriptions.
+and both kinds of event reach BigQuery through their subscriptions. Redis keeps
+both workers from re-fetching anything crawled recently; see
+[DEDUPLICATION.md](DEDUPLICATION.md).
 
 ### Live articles
 
@@ -356,7 +358,8 @@ the worker's longer default. When the worker extracts a live article, it
 compares the fresh headline and excerpt against the attached corpus record and
 updates the Curated Corpus API when they differ, before publishing the article
 event. Publishers often revise a headline as a story develops, so this keeps
-what New Tab shows current.
+what New Tab shows current. For the refresh windows and the Redis keys behind
+those checks, see [DEDUPLICATION.md](DEDUPLICATION.md).
 
 ## Infrastructure and deployment
 
