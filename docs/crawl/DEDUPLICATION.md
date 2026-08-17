@@ -60,7 +60,7 @@ the Helm chart overrides them.
 |---|---|---|
 | Publisher page | 20 min | `interval_minutes`, carried per page on the job |
 | Discovered article | 60 min | `ARTICLE_FETCH_TTL_MINUTES` |
-| Live article | 20 min | `LIVE_ARTICLE_INTERVAL_MINUTES`, set on the job by the agent |
+| Live article | 15 min | `LIVE_ARTICLE_INTERVAL_MINUTES`, set on the job by the agent |
 | Lock | 270 s | `ACK_DEADLINE_SECONDS` minus 30 s |
 
 A live article carries its window on the message, so it dedups on the agent's
