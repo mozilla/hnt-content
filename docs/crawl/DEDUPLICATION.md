@@ -60,12 +60,13 @@ the Helm chart overrides them.
 |---|---|---|
 | Publisher page | 20 min | `interval_minutes`, carried per page on the job |
 | Discovered article | 60 min | `ARTICLE_FETCH_TTL_MINUTES` |
-| Live article | 15 min | `LIVE_ARTICLE_INTERVAL_MINUTES`, set on the job by the agent |
+| Live article | 15 min | `LIVE_ARTICLE_INTERVAL_MINUTES`, set on the job by the scheduler |
 | Lock | 270 s | `ACK_DEADLINE_SECONDS` minus 30 s |
 
-A live article carries its window on the message, so it dedups on the agent's
-cadence rather than the worker's longer default. Locks expire shortly before the
-Pub/Sub acknowledgement deadline, so a crashed worker cannot hold one forever.
+A live article carries its window on the message, so it dedups on the
+scheduler's cadence rather than the worker's longer default. Locks expire
+shortly before the Pub/Sub acknowledgement deadline, so a crashed worker cannot
+hold one forever.
 
 ## What the content hash covers
 
@@ -75,14 +76,14 @@ breadcrumbs, and language. The URL is excluded because it is constant for a
 given key, and the extraction timestamp because it changes on every fetch, which
 would make the hash miss every time and republish unchanged articles.
 
-## The agent and the discovery worker
+## The scheduler and the discovery worker
 
-The agent keeps its own pair of markers, recording when it last enqueued each
-page or live article rather than when one was last fetched. It ticks every
+The scheduler keeps its own pair of markers, recording when it last enqueued
+each page or live article rather than when one was last fetched. It ticks every
 minute over the whole list and skips anything whose marker is younger than its
 interval, so each item goes out once per interval instead of once per tick.
-Because the agent is a single replica, a plain check-then-set is enough here, so
-no lock is needed.
+Because the scheduler is a single replica, a plain check-then-set is enough
+here, so no lock is needed.
 
 The discovery worker guards its page crawls with a freshness check and a lock of
 its own, and checks each discovered article against `article:fetch` so it does
@@ -92,8 +93,8 @@ not queue a URL another crawl is already handling.
 
 | Key | Written by | Purpose |
 |---|---|---|
-| `page:enqueued` | Crawl Agent | Last time a page was enqueued for discovery |
-| `article:enqueued` | Crawl Agent | Last time a live article was enqueued |
+| `page:enqueued` | Crawl Scheduler | Last time a page was enqueued for discovery |
+| `article:enqueued` | Crawl Scheduler | Last time a live article was enqueued |
 | `page:fetch` | Discovery Worker | Last time a page crawl started |
 | `page:lock` | Discovery Worker | Guard against concurrent page crawls |
 | `article:fetch` | Article Worker | Last time an article extraction started |

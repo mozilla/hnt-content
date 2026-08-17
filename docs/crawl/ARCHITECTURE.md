@@ -51,7 +51,7 @@ flowchart TB
 
 Editors maintain the list of publisher pages to crawl in an [editorial spreadsheet](https://docs.google.com/spreadsheets/d/1xlZnDQjVnfhGvxuFhAvktRKaKdNIZBF1zypaOTdmnzQ/edit?gid=1566790416#gid=1566790416),
 which is exported to a [committed JSON file](https://github.com/mozilla/hnt-content/blob/main/services/crawl-agent/publishers.json)
-that the agent reads on startup. The crawler never visits sites itself. It
+that the scheduler reads on startup. The crawler never visits sites itself. It
 drives the Zyte API to fetch and extract those pages and the articles found on
 them, and the extracted content flows back from Zyte. The crawler streams its
 results into the BigQuery crawl dataset for
@@ -95,7 +95,7 @@ gantt
 | Stage | Average | What sets it |
 |---|---|---|
 | Wait for crawl | 10 min | Half the 20-minute revisit interval every page uses |
-| Crawl | 2 min | Agent tick, the two Zyte calls, and the BigQuery subscription |
+| Crawl | 2 min | Scheduler tick, the two Zyte calls, and the BigQuery subscription |
 | Wait for sections flow | 15 min | Half the flow's 30-minute period |
 | Sections Flow | 22 min | Measured for `NEW_TAB_EN_US`; the 14-locale average is about 16 min |
 | Merino cache | 1 min | Half the [2-minute serving cache](https://github.com/mozilla-services/merino-py/blob/main/merino/curated_recommendations/corpus_backends/sections_backend.py#L86) |
@@ -165,7 +165,7 @@ than dropped altogether.
 ## Components
 
 The whole system lives in one TypeScript monorepo with two entry points: the
-agent and the worker. The worker deploys in two roles, so the running system
+scheduler and the worker. The worker deploys in two roles, so the running system
 has three Kubernetes workloads. Shared packages hold their common code.
 
 ```mermaid
@@ -176,7 +176,7 @@ config:
     rankSpacing: 46
 ---
 flowchart TB
-    A["Crawl Agent<br/><i>single replica</i>"]
+    A["Crawl Scheduler<br/><i>single replica</i>"]
     Q1(["crawl-article-discovery"])
     DW["Discovery Worker"]
     T1(["article-discoveries"])
@@ -231,17 +231,17 @@ flowchart TB
 
 ### Workloads
 
-The **[Crawl Agent](https://github.com/mozilla/hnt-content/tree/main/services/crawl-agent)** schedules the crawling and runs as a single replica. It
-fetches nothing itself. Every minute it decides which publisher pages and live
-articles are due for a crawl, and publishes a job for each to the matching
-Pub/Sub queue. It reads the page list once at startup from a committed JSON file
-and polls the Curated Corpus API for live articles.
+The **[Crawl Scheduler](https://github.com/mozilla/hnt-content/tree/main/services/crawl-agent)** runs as a single replica and owns the crawl timing. It
+fetches nothing itself. Every minute it works out which publisher pages and live
+articles are due, and publishes a job for each to the matching Pub/Sub queue. It
+reads the page list once at startup from a committed JSON file and polls the
+Curated Corpus API for live articles.
 
-The **[Crawl Worker](https://github.com/mozilla/hnt-content/tree/main/services/crawl-worker)** processes the jobs the agent schedules, and it runs in two
+The **[Crawl Worker](https://github.com/mozilla/hnt-content/tree/main/services/crawl-worker)** processes the jobs the scheduler queues, and it runs in two
 roles selected by the `WORKER_ROLE` environment variable. As a
 **Discovery Worker** it reads a page, finds the articles linked from it, and
 enqueues each one for extraction. As an **Article Worker** it reads a single
-article enqueued by the agent or by a discovery worker, and extracts its
+article enqueued by the scheduler or by a discovery worker, and extracts its
 content. Both roles are built from the same image and deploy as separate,
 independently scalable workloads. Neither keeps local state, since their durable
 state lives in Redis, so Kubernetes can add or remove replicas at any time.
@@ -258,7 +258,8 @@ there is no separate loading step.
 
 ### Shared packages
 
-Shared packages keep the agent and worker thin and the responsibilities clear.
+Shared packages keep the scheduler and worker thin and the responsibilities
+clear.
 
 | Package | Responsibility |
 |---|---|
@@ -270,7 +271,7 @@ Shared packages keep the agent and worker thin and the responsibilities clear.
 | [`sentry`](https://github.com/mozilla/hnt-content/tree/main/packages/sentry) | Error reporting with per-message context |
 
 The generic packages know nothing about the crawler. `crawl-common` layers the
-crawl-specific domain on top, and the agent and worker build on them.
+crawl-specific domain on top, and the scheduler and worker build on them.
 
 ## How an article flows through the system
 
@@ -283,7 +284,7 @@ in BigQuery, through both workers.
 %%{init: {'sequence':{'mirrorActors':false,'width':135,'actorMargin':25,'diagramMarginX':100,'boxMargin':8,'messageMargin':26,'diagramMarginY':26,'messageAlign':'left'}, 'themeVariables':{'actorBkg':'#eef2f7','actorBorder':'#90a4ae','actorTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410'}}}%%
 sequenceDiagram
     autonumber
-    participant Agent as Crawl Agent
+    participant Sched as Crawl Scheduler
     participant DiscQ@{ "type": "queue" } as crawl-article-<br/>discovery
     participant Disc as Discovery Worker
     participant Zyte@{ "type": "boundary" } as Zyte API
@@ -293,7 +294,7 @@ sequenceDiagram
     participant ArtT@{ "type": "queue" } as articles
     participant BQ@{ "type": "database" } as BigQuery
 
-    Agent-)DiscQ: publish page job
+    Sched-)DiscQ: publish page job
     DiscQ-)Disc: deliver page job
     Disc->>Zyte: extract<br/>article list
     Zyte-->>Disc: article links
@@ -322,7 +323,7 @@ and both kinds of event reach BigQuery through their subscriptions.
 
 ### Live articles
 
-Articles already curated for New Tab take a shorter path, because the agent
+Articles already curated for New Tab take a shorter path, because the scheduler
 enqueues them itself and no discovery step runs.
 
 ```mermaid
@@ -330,16 +331,16 @@ enqueues them itself and no discovery step runs.
 sequenceDiagram
     autonumber
     participant Corpus@{ "type": "boundary" } as Curated<br/>Corpus API
-    participant Agent as Crawl Agent
+    participant Sched as Crawl Scheduler
     participant ArtQ@{ "type": "queue" } as crawl-article
     participant Art as Article Worker
     participant Zyte@{ "type": "boundary" } as Zyte API
     participant ArtT@{ "type": "queue" } as articles
     participant BQ@{ "type": "database" } as BigQuery
 
-    Agent->>Corpus: poll scheduled<br/>section items
-    Corpus-->>Agent: live articles
-    Agent-)ArtQ: publish job with<br/>corpus record
+    Sched->>Corpus: poll scheduled<br/>section items
+    Corpus-->>Sched: live articles
+    Sched-)ArtQ: publish job with<br/>corpus record
     ArtQ-)Art: deliver<br/>article job
     Art->>Zyte: extract<br/>article content
     Zyte-->>Art: headline,<br/>excerpt, body
@@ -350,30 +351,30 @@ sequenceDiagram
 
 Only the discovery hop is skipped, not the safeguards. The article worker
 applies the same freshness check and lock as it does for a discovered article,
-but against the shorter refresh window the agent sets on the job instead of the
-worker's longer default. When the worker extracts a live article, it compares
-the fresh headline and excerpt against the attached corpus record and updates
-the Curated Corpus API when they differ, before publishing the article event.
-Publishers often revise a headline as a story develops, so this keeps what
-New Tab shows current.
+but against the shorter refresh window the scheduler sets on the job instead of
+the worker's longer default. When the worker extracts a live article, it
+compares the fresh headline and excerpt against the attached corpus record and
+updates the Curated Corpus API when they differ, before publishing the article
+event. Publishers often revise a headline as a story develops, so this keeps
+what New Tab shows current.
 
 ## Infrastructure and deployment
 
-The Dockerfile builds a single image that contains both the agent and the
+The Dockerfile builds a single image that contains both the scheduler and the
 worker. Each Kubernetes workload overrides the container command and, for the
 workers, sets `WORKER_ROLE` to choose its role. Deployment is GitOps: a merge to
 `main` reaches the running workloads with no manual push.
 
 | Step | What happens | Where to find it |
 |---|---|---|
-| Source | Agent and worker code in one monorepo | [hnt-content](https://github.com/mozilla/hnt-content) |
+| Source | Scheduler and worker code in one monorepo | [hnt-content](https://github.com/mozilla/hnt-content) |
 | Build | GitHub Actions builds one image on every merge to `main` | [deploy.yml](https://github.com/mozilla/hnt-content/blob/main/.github/workflows/deploy.yml) |
 | Image | One image for every environment, kept in the **prod** project's registry | [Artifact Registry](https://console.cloud.google.com/artifacts/docker/moz-fx-hnt-prod/us/hnt-prod?project=moz-fx-hnt-prod) |
 | Deploy | ArgoCD Image Updater spots the new digest and syncs the Helm chart | [Helm chart](https://github.com/mozilla/webservices-infra/tree/main/hnt/k8s/hnt), [tenant and image updater](https://github.com/mozilla/global-platform-admin/blob/main/tenants/hnt.yaml) |
 | Cloud resources | Pub/Sub, Redis, BigQuery, and secrets, defined as Terraform | [webservices-infra](https://github.com/mozilla/webservices-infra/tree/main/hnt/tf) |
 
-One image runs in three environments across two GCP projects. The agent runs as
-a single replica, and the two worker roles autoscale.
+One image runs in three environments across two GCP projects. The scheduler runs
+as a single replica, and the two worker roles autoscale.
 
 | Environment | GCP project | BigQuery dataset |
 |---|---|---|
