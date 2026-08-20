@@ -134,9 +134,9 @@ tracks writing it down.
 
 Crawling puts load on two systems outside this repo: Zyte and the Curated
 Corpus API. Every 20 minutes the crawler asks Zyte for each publisher page on
-the editorial team's list, and for any article it finds there that has not been
-fetched in the last hour. To keep titles accurate, it re-extracts articles in
-newsy sections every 15 minutes, reading and writing to the Corpus API. Both
+the editorial team's list, and for any article it finds there that it has not
+extracted in the last 30 days. To keep titles accurate, it re-extracts articles
+in newsy sections every 15 minutes, reading and writing to the Corpus API. Both
 kinds of job are staggered across their interval to avoid load spikes.
 
 The current page list and interval come to roughly 10,000 page crawls an hour.
