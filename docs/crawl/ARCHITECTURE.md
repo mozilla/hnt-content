@@ -53,8 +53,8 @@ Editors maintain the list of publisher pages to crawl in an [editorial spreadshe
 which is exported to a [committed JSON file](https://github.com/mozilla/hnt-content/blob/main/services/crawl-agent/publishers.json)
 that the scheduler reads on startup. The crawler never visits sites itself. It
 drives the Zyte API to fetch and extract those pages and the articles found on
-them, and the extracted content flows back from Zyte. The crawler streams its
-results into the BigQuery crawl dataset for
+them, and the extracted fields flow back, without any HTML. The crawler streams
+its results into the BigQuery crawl dataset for
 [ML selection](https://github.com/mozilla/content-ml-services/blob/main/jobs/metaflow/prospecting/RSSSubtopicsFlow.py#L75).
 Its relationship with the [Curated Corpus API](https://github.com/Pocket/content-monorepo/tree/main/servers/curated-corpus-api)
 runs both ways. It reads the current set of live articles to re-extract them,

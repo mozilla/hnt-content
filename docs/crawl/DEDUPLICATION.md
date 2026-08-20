@@ -70,11 +70,7 @@ hold one forever.
 
 ## What the content hash covers
 
-The hash is taken over the extracted article fields, not the fetched page HTML:
-headline, description, authors, main image URL, truncated body, published date,
-breadcrumbs, and language. The URL is excluded because it is constant for a
-given key, and the extraction timestamp because it changes on every fetch, which
-would make the hash miss every time and republish unchanged articles.
+The hash covers every content column of `crawl.articles`.
 
 ## The scheduler and the discovery worker
 
