@@ -42,8 +42,9 @@ Three mechanisms make the workers idempotent:
    the crawler does not re-fetch the same content on every delivery.
 2. The **lock** serializes concurrent workers on the same URL, so only one calls
    Zyte and the rest skip.
-3. The **content hash** limits publishing to changed content, so unchanged
-   articles do not fill BigQuery with duplicates.
+3. The **content hash**, taken over every content column of `crawl.articles`,
+   limits publishing to changed content, so unchanged articles do not fill
+   BigQuery with duplicates.
 
 The fetch marker is set as a claim, before the Zyte call rather than after it,
 so a partial failure redelivers into a skip instead of paying for the same
@@ -67,10 +68,6 @@ A live article carries its window on the message, so it dedups on the
 scheduler's cadence rather than the worker's longer default. Locks expire
 shortly before the Pub/Sub acknowledgement deadline, so a crashed worker cannot
 hold one forever.
-
-## What the content hash covers
-
-The hash covers every content column of `crawl.articles`.
 
 ## The scheduler and the discovery worker
 
