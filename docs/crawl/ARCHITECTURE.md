@@ -326,7 +326,8 @@ both workers from re-fetching anything crawled recently; see
 ### Live articles
 
 Articles already curated for New Tab take a shorter path, because the scheduler
-enqueues them itself and no discovery step runs.
+enqueues them itself and no discovery step runs. Publishers often revise a
+headline as a story develops, so we revisit them to keep New Tab current.
 
 ```mermaid
 %%{init: {'sequence':{'mirrorActors':false,'width':150,'actorMargin':35,'diagramMarginX':100,'boxMargin':8,'messageMargin':26,'diagramMarginY':26,'messageAlign':'left'}, 'themeVariables':{'actorBkg':'#eef2f7','actorBorder':'#90a4ae','actorTextColor':'#1b2631','noteBkgColor':'#fdf2e9','noteBorderColor':'#935116','noteTextColor':'#5b3410'}}}%%
@@ -357,9 +358,8 @@ but against the shorter refresh window the scheduler sets on the job instead of
 the worker's longer default. When the worker extracts a live article, it
 compares the fresh headline and excerpt against the attached corpus record and
 updates the Curated Corpus API when they differ, before publishing the article
-event. Publishers often revise a headline as a story develops, so this keeps
-what New Tab shows current. For the refresh windows and the Redis keys behind
-those checks, see [DEDUPLICATION.md](DEDUPLICATION.md).
+event. For the refresh windows and the Redis keys behind those checks, see
+[DEDUPLICATION.md](DEDUPLICATION.md).
 
 ## Infrastructure and deployment
 
