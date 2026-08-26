@@ -64,13 +64,13 @@ costs no more than handling it once:
    limits publishing to changed content, so unchanged articles do not fill
    BigQuery with duplicates.
 
-The marker is written twice. The worker claims the URL for an hour before the
-Zyte call, then rewrites it for the full refresh window once the work is done,
-meaning a successful extraction or a permanent failure. The claim stops one
-failure from multiplying: Pub/Sub would otherwise redeliver the message up to
-five times, and the same URL is often linked from several pages. A recoverable
-failure leaves only the claim, so the URL is tried again on the first page crawl
-after the hour is up.
+The `article:extracted` marker is written twice. The worker claims the URL for
+an hour before the Zyte call, then rewrites it for the full refresh window once
+the work is done, meaning a successful extraction or a permanent failure. The
+claim stops one failure from multiplying: Pub/Sub would otherwise redeliver the
+message up to five times, and the same URL is often linked from several pages. A
+recoverable failure leaves only the claim, so the URL is tried again on the
+first page crawl after the hour is up.
 
 ## Refresh windows
 
@@ -116,7 +116,11 @@ retention with it.
 
 ## Duplicates that still reach BigQuery
 
-None of this makes delivery exactly once, so some duplicate rows do land. Each
-table carries a timestamp, `extracted_at` for articles and `crawled_at` for
-discoveries. Downstream queries take the latest row per URL and resolve the
-duplicates at read time.
+Both tables hold more than one row per URL by design. `article_discoveries`
+gets a row each time a crawl finds the article, and `articles` gets one each
+time the extracted content changes. Those rows are history, not duplicates: the
+`crawled_at` and `extracted_at` timestamps distinguish them.
+
+Pub/Sub loads BigQuery with at-least-once delivery, so real duplicates arrive
+too: the same event written more than once. Downstream queries remove them with
+a [QUALIFY](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#qualify_clause) clause.
