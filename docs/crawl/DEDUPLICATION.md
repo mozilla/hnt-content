@@ -1,13 +1,28 @@
-# Deduplication and Idempotency
+# Deduplication
 
 This document explains how the crawl workers avoid redundant work and stay safe
 under duplicate delivery. For the components and data flow, see
-[ARCHITECTURE.md](ARCHITECTURE.md).
+[ARCHITECTURE.md](ARCHITECTURE.md). The design philosophy is to balance
+simplicity, cost-efficiency, and resilience to failures.
 
-The same article often appears on several publisher pages, and Pub/Sub delivers
-each message at least once, so a URL can be enqueued more than once and two
-workers can pick it up at the same time. The workers guard against this with a
-few Redis keys, each scoped to a single URL.
+## The problem this solves
+
+The same URL can reach the crawler many times. Most often it is because a page
+still lists an article we already extracted, or because several pages carry it.
+We do not want to pay Zyte to re-extract articles needlessly, yet in other
+scenarios we _do_ want to extract the same URL again. The most common scenarios
+are listed below.
+
+| Why the same article URL comes back | Fetch it again? |
+|---|---|
+| A page is crawled again and still links the article | ❌ No, we extracted it recently |
+| Several publisher pages link the same article | ❌ No, one extraction serves them all |
+| The article returns a 404 or other non-recoverable error | ❌ No, there is nothing left to fetch |
+| At-least-once delivery duplicates a job | ❌ No, another worker has it or already did it |
+| An article is live on New Tab | ✅ Yes, every 15 minutes so headlines remain accurate |
+| Extraction fails with a [520](https://docs.zyte.com/zyte-api/usage/errors.html#ban-responses) or other recoverable error | ✅ Yes, Zyte recommends retrying, and doesn't charge for them |
+| Zyte experiences an outage | ✅ Yes, because the crawler should recover on its own |
+| Our record of the extraction expired | ✅ Yes, we balance the cost of re-extracting old featured articles against the cost of storing more records in Redis |
 
 ## Guarding an article extraction
 
@@ -38,7 +53,8 @@ flowchart TD
     classDef done fill:#eaeded,stroke:#95a5a6,color:#2c3e50;
 ```
 
-Three mechanisms make the workers idempotent:
+Three mechanisms make the workers idempotent, so handling the same job twice
+costs no more than handling it once:
 
 1. The **freshness check** skips any URL extracted within its refresh window,
    so the crawler does not re-fetch the same content on every delivery.
@@ -58,21 +74,15 @@ after the hour is up.
 
 ## Refresh windows
 
-Each window is configurable, and the defaults are what a deployment uses unless
-the Helm chart overrides them.
-
-| What | Window | Where it comes from |
-|---|---|---|
-| Publisher page | 20 min | `page_refresh_minutes`, carried per page on the job |
-| Discovered article | 30 days | `DISCOVERED_ARTICLE_REFRESH_DAYS` |
-| Live article | 15 min | `LIVE_ARTICLE_REFRESH_MINUTES`, set on the job by the scheduler |
-| Attempt claim | 60 min | `ARTICLE_ATTEMPT_TTL_MINUTES`, written before the Zyte call |
-| Lock | 270 s | `ACK_DEADLINE_SECONDS` minus 30 s |
+| Variable | What it sets | Default | Shorter | Longer |
+|---|---|---|---|---|
+| `pageRefreshMinutes` | How often a page is crawled again | 20 min | Faster discovery | Main lever to lower Zyte cost |
+| `discoveredArticleRefreshDays` | How long an extracted article is left alone | 30 days | Less Redis memory usage | Slightly reduced Zyte cost |
+| `liveArticleRefreshMinutes` | How often a curated article is re-extracted | 15 min | Fresher headlines | Fewer Zyte calls |
+| `articleAttemptTtlMinutes` | How long a failed attempt blocks the next one | 60 min | Faster recovery from a block | Fewer requests on URLs that keep failing |
 
 A live article carries its window on the message, so it dedups on the
-scheduler's cadence rather than the worker's longer default. Locks expire
-shortly before the Pub/Sub acknowledgement deadline, so a crashed worker cannot
-hold one forever.
+scheduler's cadence rather than the worker's longer default.
 
 ## The scheduler and the discovery worker
 
@@ -110,18 +120,3 @@ None of this makes delivery exactly once, so some duplicate rows do land. Each
 table carries a timestamp, `extracted_at` for articles and `crawled_at` for
 discoveries. Downstream queries take the latest row per URL and resolve the
 duplicates at read time.
-
-## Validating what arrives
-
-The Pub/Sub SDK hands the workers untyped JSON, so both job messages are checked
-at the consumer boundary before a handler trusts the static type. The checks are
-small hand-written guards in
-[`crawl-common/src/validation`](https://github.com/mozilla/hnt-content/tree/main/packages/crawl-common/src/validation)
-that name the offending field, and a malformed payload is nacked as a validation
-error so a poison message is told apart from a transient failure.
-
-The two event shapes need no such check, because the workers construct them
-rather than receive them. Their TypeScript types constrain what the code can
-build, and the BigQuery subscription rejects anything that does not match the
-table schema. Zyte responses are parsed but not schema-checked, so a field the
-extractor omits arrives as undefined and is treated as an optional field.
