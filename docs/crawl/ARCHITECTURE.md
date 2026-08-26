@@ -388,8 +388,3 @@ as a single replica, and the two worker roles autoscale.
 Pub/Sub names carry the environment as a prefix. Each workload reads its
 configuration from environment variables, and secrets come from Secret
 Manager through the chart.
-
-For how the workers stay idempotent under duplicate delivery, see
-[DEDUPLICATION.md](DEDUPLICATION.md). For local setup and development commands,
-see [README.md](../../README.md). For contribution conventions, see
-[CONTRIBUTING.md](../../CONTRIBUTING.md).
