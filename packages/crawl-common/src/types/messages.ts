@@ -28,19 +28,19 @@ export interface CrawlArticleMessage {
   crawl_id: string;
   // enqueued_at is a datetime string as required by BigQuery.
   enqueued_at: string;
-  // Refresh window for this article, set by the producer: discovery uses
-  // the article fetch TTL, the agent uses the live-article interval. The
-  // worker gates re-fetch and writes its fetch claim against this value.
-  // Optional so a rolling deploy does not reject messages enqueued before
-  // the field existed; the worker falls back to the configured fetch TTL.
-  refresh_interval_minutes?: number;
+  // How often this article should be re-extracted, in minutes, set
+  // by the producer: discovery uses the global article refresh
+  // setting, the agent uses its live-article interval. Required, so
+  // a job always carries the window it was scheduled under.
+  article_refresh_minutes: number;
   corpus_item?: CorpusItem;
 }
 
 /**
- * Surface and topic a discovered page is crawled for. A page
- * can be crawled for several surfaces, so each discovery job
- * carries one context per (surface, topic) pair.
+ * Surface and topic a discovered page is crawled for, e.g.
+ * surface_id 'NEW_TAB_EN_US' and topic 'BUSINESS'. A page can be
+ * crawled for several surfaces, so each discovery job carries one
+ * context per (surface, topic) pair.
  */
 export interface DiscoveryContext {
   surface_id: string;
@@ -49,13 +49,13 @@ export interface DiscoveryContext {
 
 /**
  * Pub/Sub message consumed from the crawl-article-discovery
- * subscription. Tells the discovery worker which page to crawl,
- * how recently it may have been crawled, and the contexts to
- * attribute discovered articles to.
+ * subscription. Tells the discovery worker which page to crawl and
+ * the contexts to attribute discovered articles to. The page crawl
+ * cadence is a global setting, not a per-page field, so a queued
+ * job is evaluated against the worker's setting at handling time.
  */
 export interface CrawlArticleDiscoveryMessage {
   url: string;
-  interval_minutes: number;
   contexts: DiscoveryContext[];
 }
 

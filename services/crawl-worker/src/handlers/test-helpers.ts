@@ -34,6 +34,7 @@ export const BASE_MESSAGE: CrawlArticleMessage = {
   source_url: TEST_SOURCE_URL,
   crawl_id: 'crawl-001',
   enqueued_at: '2025-06-01T12:00:00Z',
+  article_refresh_minutes: 1440,
 };
 
 /** Base CorpusItem whose title/excerpt match ZYTE_ARTICLE. */
