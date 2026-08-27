@@ -25,6 +25,7 @@ export interface ArticleEvent {
   body_truncated?: string;
   published_at?: string;
   breadcrumbs?: ArticleBreadcrumb[];
+  // Bare lowercase ISO 639-1 code, e.g. 'en'.
   language?: string;
 }
 
@@ -45,6 +46,7 @@ export interface ArticleDiscoveryEvent {
   headline?: string;
   authors?: ArticleAuthor[];
   summary?: string;
+  // Bare lowercase ISO 639-1 code, e.g. 'en'.
   language?: string;
   topic?: string;
   page_position?: number;

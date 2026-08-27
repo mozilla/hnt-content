@@ -124,6 +124,7 @@ export interface ZyteArticle {
   dateModifiedRaw?: string;
   canonicalUrl?: string;
   breadcrumbs?: ZyteBreadcrumb[];
+  //Zyte documents this as an ISO 639-1 code.
   inLanguage?: string;
   metadata: ZyteArticleMetadata;
 }
@@ -139,6 +140,7 @@ export interface ZyteArticleListItem {
   mainImage?: ZyteImage;
   images?: ZyteImage[];
   articleBody?: string;
+  //Zyte documents this as an ISO 639-1 code.
   inLanguage?: string;
   metadata: ZyteArticleListItemMetadata;
 }
