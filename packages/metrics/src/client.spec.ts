@@ -43,7 +43,7 @@ vi.mock('@opentelemetry/exporter-metrics-otlp-proto', async () => {
 vi.mock('./config.js', () => ({
   default: {
     endpoint: 'http://collector:4318/v1/metrics',
-    environment: 'dev',
+    environment: 'test',
   },
 }));
 
@@ -69,7 +69,7 @@ async function flush(): Promise<Map<string, MetricData>> {
 describe('metrics client', () => {
   beforeEach(() => {
     config.endpoint = 'http://collector:4318/v1/metrics';
-    config.environment = 'dev';
+    config.environment = 'test';
     mockExporter = undefined;
     mockExporterConstructorArgs = undefined;
     vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -92,7 +92,7 @@ describe('metrics client', () => {
     expect(enqueued).toHaveLength(1);
     expect(enqueued[0].value).toBe(5);
     expect(enqueued[0].attributes).toEqual({
-      env: 'dev',
+      env: 'test',
       worker_role: 'article',
       kind: 'page',
     });
@@ -107,7 +107,7 @@ describe('metrics client', () => {
     const metric = (await flush()).get('crawl.message.duration_ms')!;
     expect(metric.descriptor.unit).toBe('ms');
     expect(metric.dataPoints[0].attributes).toEqual({
-      env: 'dev',
+      env: 'test',
       outcome: 'success',
     });
     expect(metric.dataPoints[0].value).toMatchObject({ count: 1, sum: 42 });
@@ -134,7 +134,7 @@ describe('metrics client', () => {
     const metrics = await flush();
     expect(
       metrics.get('crawl.message.processed')!.dataPoints[0].attributes,
-    ).toEqual({ env: 'dev', outcome: 'success' });
+    ).toEqual({ env: 'test', outcome: 'success' });
   });
 
   it('records a timing tagged by outcome on both success and failure', async () => {
