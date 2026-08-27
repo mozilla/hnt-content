@@ -124,7 +124,7 @@ describe('metrics client', () => {
     ).toEqual({ env: 'dev', outcome: 'success' });
   });
 
-  it('records timing tagged by outcome when the fn resolves and rejects', async () => {
+  it('records a timing tagged by outcome on both success and failure', async () => {
     initMetrics({ service: 'crawl-worker' });
 
     const value = await time(
@@ -140,9 +140,7 @@ describe('metrics client', () => {
       }),
     ).rejects.toThrow('boom');
 
-    // The reject path is the regression guard: a timing() moved out of the
-    // finally would stop recording latency for failed Zyte calls, and a
-    // shared outcome tag would hide fast failures inside the success p95.
+    // A shared outcome tag would hide fast failures in the success p95.
     const points = (await flush()).get('crawl.zyte.duration_ms')!.dataPoints;
     expect(points).toHaveLength(2);
     for (const point of points) {
@@ -188,21 +186,6 @@ describe('metrics client', () => {
     count('crawl.tick.ran');
 
     expect(captured.exporter).toBeUndefined();
-  });
-
-  it('replaces the identity tags on re-init', async () => {
-    initMetrics({ service: 'crawl-worker', workerRole: 'article' });
-    count('crawl.tick.ran');
-    initMetrics({ service: 'crawl-worker', workerRole: 'discovery' });
-    count('crawl.tick.ran');
-
-    const metrics = await flush();
-    const points = metrics.get('crawl.tick.ran')!.dataPoints;
-    expect(points).toHaveLength(1);
-    expect(points[0].attributes).toEqual({
-      env: 'dev',
-      worker_role: 'discovery',
-    });
   });
 
   it('flushes pending datapoints on shutdown', async () => {

@@ -8,8 +8,6 @@ import {
   DiagConsoleLogger,
   DiagLogLevel,
   type Attributes,
-  type Counter,
-  type Histogram,
   type Meter,
 } from '@opentelemetry/api';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
@@ -21,21 +19,14 @@ import {
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import config from './config.js';
 
-/**
- * Outcome tag values; the type below keeps counters and timings in step.
- * This is a plain object rather than a TypeScript `enum`. Node strips types
- * rather than compiling them, so an enum here would stop this file from being
- * imported by a one-off script that Node runs directly as TypeScript.
- */
+/** Allowed values for the outcome tag. */
 export const OUTCOME = { success: 'success', failure: 'failure' } as const;
 
 export type Outcome = (typeof OUTCOME)[keyof typeof OUTCOME];
 
 /**
- * We only use low-cardinality tags (not url or crawl_id) because each
- * distinct value becomes its own stored series, and TypeScript rejects any
- * other key passed directly. env and worker_role are set at init; passing
- * one here would overwrite it and mislabel the metric.
+ * Only low-cardinality tags (never url or crawl_id): each distinct value
+ * becomes its own stored series. env and worker_role are attached at init.
  */
 export type Tags = {
   outcome?: Outcome;
@@ -52,11 +43,7 @@ export type Tags = {
 export interface MetricsInitOptions {
   /** Service name, e.g. 'crawl-agent'; becomes the Prometheus job label. */
   service: string;
-  /**
-   * Which role a multi-role service runs as, e.g. 'article'. Passed in
-   * rather than read from the environment because only one service has
-   * roles, unlike ENVIRONMENT, which every workload sets.
-   */
+  /** Which role a multi-role service runs as, e.g. 'article'. */
   workerRole?: string;
 }
 
@@ -67,8 +54,6 @@ const FLUSH_TIMEOUT_MS = 2_000;
 let provider: MeterProvider | undefined;
 let meter: Meter | undefined;
 let baseTags: Attributes = {};
-const counters = new Map<string, Counter>();
-const histograms = new Map<string, Histogram>();
 
 /**
  * Combine the base tags with per-call tags, dropping keys the caller left
@@ -86,13 +71,9 @@ function mergeTags(tags?: Tags): Attributes {
 /**
  * Initialize the metrics provider and attach the static env and
  * worker_role tags. An empty OTLP endpoint disables emission. Call once
- * at process startup; a second call replaces the previous provider.
+ * at process startup.
  */
 export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
-  // Runs synchronously up to its flush, so the previous provider is
-  // detached before the new one is built.
-  void shutdownMetrics();
-
   if (!config.endpoint) {
     console.log(`Metrics disabled: OTLP endpoint empty (service=${service})`);
     return;
@@ -128,24 +109,13 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
 
 /** Increment a counter. No-op when metrics are disabled. */
 export function count(name: string, value = 1, tags?: Tags): void {
-  if (!meter) return;
-  let counter = counters.get(name);
-  if (!counter) {
-    counter = meter.createCounter(name);
-    counters.set(name, counter);
-  }
-  counter.add(value, mergeTags(tags));
+  // createCounter returns the existing instrument on repeat names.
+  meter?.createCounter(name).add(value, mergeTags(tags));
 }
 
 /** Record a timing in milliseconds. No-op when metrics are disabled. */
 export function timing(name: string, ms: number, tags?: Tags): void {
-  if (!meter) return;
-  let histogram = histograms.get(name);
-  if (!histogram) {
-    histogram = meter.createHistogram(name, { unit: 'ms' });
-    histograms.set(name, histogram);
-  }
-  histogram.record(ms, mergeTags(tags));
+  meter?.createHistogram(name, { unit: 'ms' }).record(ms, mergeTags(tags));
 }
 
 /**
@@ -160,8 +130,7 @@ export async function time<T>(
   fn: () => Promise<T>,
   tags?: Tags,
 ): Promise<T> {
-  // Monotonic: Date.now() can step backwards under an NTP correction or
-  // a VM migration and emit a negative duration.
+  // Monotonic; wall time can step backwards.
   const start = performance.now();
   let outcome: Outcome = OUTCOME.failure;
   try {
@@ -182,8 +151,6 @@ export async function shutdownMetrics(): Promise<void> {
   const current = provider;
   provider = undefined;
   meter = undefined;
-  counters.clear();
-  histograms.clear();
   try {
     await current.shutdown({ timeoutMillis: FLUSH_TIMEOUT_MS });
   } catch (err) {
