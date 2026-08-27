@@ -17,6 +17,8 @@ vi.mock('@opentelemetry/exporter-metrics-otlp-proto', async () => {
     OTLPMetricExporter: class extends InMemoryMetricExporter {
       constructor(options: { url: string }) {
         super(AggregationTemporality.CUMULATIVE);
+        // The real exporter rejects malformed URLs in its constructor.
+        new URL(options.url);
         captured.url = options.url;
         captured.exporter = this;
       }
@@ -174,6 +176,16 @@ describe('metrics client', () => {
     await expect(
       time('crawl.zyte.duration_ms', () => Promise.resolve(7)),
     ).resolves.toBe(7);
+
+    expect(captured.exporter).toBeUndefined();
+  });
+
+  it('disables metrics when the endpoint is malformed', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    config.endpoint = 'not a url';
+
+    initMetrics({ service: 'crawl-worker' });
+    count('crawl.tick.ran');
 
     expect(captured.exporter).toBeUndefined();
   });

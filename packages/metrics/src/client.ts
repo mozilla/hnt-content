@@ -3,7 +3,15 @@
  * OpenTelemetry MeterProvider rather than registering it globally,
  * which would collide with the OTel setup inside @sentry/node.
  */
-import type { Attributes, Counter, Histogram, Meter } from '@opentelemetry/api';
+import {
+  diag,
+  DiagConsoleLogger,
+  DiagLogLevel,
+  type Attributes,
+  type Counter,
+  type Histogram,
+  type Meter,
+} from '@opentelemetry/api';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import {
@@ -96,14 +104,25 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
   if (config.environment) baseTags.env = config.environment;
   if (workerRole) baseTags.worker_role = workerRole;
 
-  provider = new MeterProvider({
-    resource: resourceFromAttributes({ [ATTR_SERVICE_NAME]: service }),
-    readers: [
-      new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter({ url: config.endpoint }),
-      }),
-    ],
-  });
+  // Export failures surface through the SDK's diag hook, which is silent
+  // until a logger is set.
+  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
+
+  try {
+    provider = new MeterProvider({
+      resource: resourceFromAttributes({ [ATTR_SERVICE_NAME]: service }),
+      readers: [
+        new PeriodicExportingMetricReader({
+          exporter: new OTLPMetricExporter({ url: config.endpoint }),
+        }),
+      ],
+    });
+  } catch (err) {
+    // The exporter rejects a malformed endpoint URL in its constructor;
+    // run without metrics rather than crash the service.
+    console.error('Metrics disabled: invalid OTLP endpoint', err);
+    return;
+  }
   meter = provider.getMeter(service);
 }
 
