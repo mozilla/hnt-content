@@ -51,7 +51,7 @@ hnt-content/
 
 ## Deployment
 
-The services deploy when a pull request merges to `main`. GitHub Actions builds the image and pushes it to Artifact Registry, then ArgoCD Image Updater notices the new digest and rolls it out. For now, dev, stage and prod all track the same tag, so a single merge reaches all three.
+The services deploy when a pull request merges to `main`. GitHub Actions builds the image and pushes it to Artifact Registry, then ArgoCD Image Updater notices the new digest and rolls it out. Merging to `main` publishes the `latest` tag, which stage and prod track. Pushing to the `dev` branch (e.g. `git push -f origin HEAD:dev`) publishes the `dev` tag, which only hnt-dev tracks, so dev can run a branch ahead of `main`.
 
 One image contains both entry points. The shared mozcloud Helm chart chooses which one each workload runs and sets `WORKER_ROLE` to select the discovery or article role, so all three workloads come from one build.
 
