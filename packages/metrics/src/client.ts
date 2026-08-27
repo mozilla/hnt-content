@@ -4,6 +4,7 @@
  * which @sentry/node's own OTel setup shares.
  */
 import {
+  createNoopMeter,
   diag,
   DiagConsoleLogger,
   DiagLogLevel,
@@ -52,7 +53,8 @@ export interface MetricsInitOptions {
 const FLUSH_TIMEOUT_MS = 2_000;
 
 let provider: MeterProvider | undefined;
-let meter: Meter | undefined;
+// A noop until initMetrics succeeds, so emits are always safe to call.
+let meter: Meter = createNoopMeter();
 let baseTags: Attributes = {};
 
 /**
@@ -110,12 +112,12 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
 /** Increment a counter. No-op when metrics are disabled. */
 export function count(name: string, value = 1, tags?: Tags): void {
   // createCounter returns the existing instrument on repeat names.
-  meter?.createCounter(name).add(value, mergeTags(tags));
+  meter.createCounter(name).add(value, mergeTags(tags));
 }
 
 /** Record a timing in milliseconds. No-op when metrics are disabled. */
 export function timing(name: string, ms: number, tags?: Tags): void {
-  meter?.createHistogram(name, { unit: 'ms' }).record(ms, mergeTags(tags));
+  meter.createHistogram(name, { unit: 'ms' }).record(ms, mergeTags(tags));
 }
 
 /**
@@ -150,7 +152,7 @@ export async function shutdownMetrics(): Promise<void> {
   if (!provider) return;
   const current = provider;
   provider = undefined;
-  meter = undefined;
+  meter = createNoopMeter();
   try {
     await current.shutdown({ timeoutMillis: FLUSH_TIMEOUT_MS });
   } catch (err) {
