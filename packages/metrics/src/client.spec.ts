@@ -39,6 +39,10 @@ vi.mock('@opentelemetry/exporter-metrics-otlp-proto', async () => {
   };
 });
 
+// Replace the real config with a test-owned object so setting endpoint
+// and environment below does not mutate the real module.
+vi.mock('./config.js', () => ({ default: {} }));
+
 import config from './config.js';
 import {
   OUTCOME,
@@ -60,7 +64,6 @@ async function flush(): Promise<Map<string, MetricData>> {
 
 describe('metrics client', () => {
   beforeEach(() => {
-    // The real config object is mutable; pin the fields each test reads.
     config.endpoint = 'http://collector:4318/v1/metrics';
     config.environment = 'test';
     mockExporter = undefined;
