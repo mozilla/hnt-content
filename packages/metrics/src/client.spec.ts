@@ -39,14 +39,6 @@ vi.mock('@opentelemetry/exporter-metrics-otlp-proto', async () => {
   };
 });
 
-// Mutable config so tests can toggle the endpoint (enabled/disabled).
-vi.mock('./config.js', () => ({
-  default: {
-    endpoint: 'http://collector:4318/v1/metrics',
-    environment: 'test',
-  },
-}));
-
 import config from './config.js';
 import {
   OUTCOME,
@@ -68,11 +60,11 @@ async function flush(): Promise<Map<string, MetricData>> {
 
 describe('metrics client', () => {
   beforeEach(() => {
+    // The real config object is mutable; pin the fields each test reads.
     config.endpoint = 'http://collector:4318/v1/metrics';
     config.environment = 'test';
     mockExporter = undefined;
     mockExporterConstructorArgs = undefined;
-    vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(async () => {
@@ -179,6 +171,7 @@ describe('metrics client', () => {
   });
 
   it('is a no-op when the endpoint is empty', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     config.endpoint = '';
     initMetrics({ service: 'crawl-worker' });
 
