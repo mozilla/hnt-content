@@ -1,8 +1,16 @@
 /**
- * Operational metrics client for the crawler. Wraps `hot-shots` (StatsD UDP)
- * as a module-level singleton that emits to the MozCloud OTEL gateway.
+ * Operational metrics client for the crawler. Holds a module-level
+ * OpenTelemetry MeterProvider rather than registering it globally,
+ * which would collide with the OTel setup inside @sentry/node.
  */
-import { StatsD } from 'hot-shots';
+import type { Attributes, Counter, Histogram, Meter } from '@opentelemetry/api';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from '@opentelemetry/sdk-metrics';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import config from './config.js';
 
 /**
@@ -17,9 +25,9 @@ export type Outcome = (typeof OUTCOME)[keyof typeof OUTCOME];
 
 /**
  * We only use low-cardinality tags (not url or crawl_id) because each
- * distinct value becomes its own stored metric, and TypeScript rejects any
- * other key passed directly. service, env and worker_role are set at init;
- * passing one here would overwrite it and mislabel the metric.
+ * distinct value becomes its own stored series, and TypeScript rejects any
+ * other key passed directly. env and worker_role are set at init; passing
+ * one here would overwrite it and mislabel the metric.
  */
 export type Tags = {
   outcome?: Outcome;
@@ -34,7 +42,7 @@ export type Tags = {
 };
 
 export interface MetricsInitOptions {
-  /** Static tag identifying the service, e.g. 'crawl-agent', 'crawl-worker'. */
+  /** Service name, e.g. 'crawl-agent'; becomes the Prometheus job label. */
   service: string;
   /**
    * Which role a multi-role service runs as, e.g. 'article'. Passed in
@@ -44,73 +52,81 @@ export interface MetricsInitOptions {
   workerRole?: string;
 }
 
-// Batch metrics rather than sending one packet per metric. The receiver
-// aggregates over 30s, so this changes only datagram and syscall count,
-// not the series recorded, and the shared gateway is alerted on CPU and
-// memory. 1432 is the default 1460-byte GKE pod interface MTU less headers.
-const MAX_BUFFER_BYTES = 1432;
+// Match the sentry package's flush timeout. Leaves most of the pod's 10s
+// SIGTERM window for application shutdown and Pub/Sub drain.
+const FLUSH_TIMEOUT_MS = 2_000;
 
-let client: StatsD | undefined;
+let provider: MeterProvider | undefined;
+let meter: Meter | undefined;
+let baseTags: Attributes = {};
+const counters = new Map<string, Counter>();
+const histograms = new Map<string, Histogram>();
 
 /**
- * Drop the keys a caller left undefined, which would otherwise reach the
- * wire as the string "undefined". Values are passed through: hot-shots
- * replaces the characters that break the line protocol, newlines and
- * carriage returns included, so it owns that guarantee.
+ * Combine the base tags with per-call tags, dropping keys the caller left
+ * undefined, which OTel would otherwise treat as a distinct label set.
  */
-function cleanTags(tags?: Tags): Record<string, string> | undefined {
-  if (!tags) return undefined;
-  const cleaned: Record<string, string> = {};
+function mergeTags(tags?: Tags): Attributes {
+  const merged: Attributes = { ...baseTags };
+  if (!tags) return merged;
   for (const [key, value] of Object.entries(tags)) {
-    if (value !== undefined) cleaned[key] = value;
+    if (value !== undefined) merged[key] = value;
   }
-  return cleaned;
+  return merged;
 }
 
 /**
- * Initialize the metrics client and attach the static service, env, and
- * worker_role tags. An empty STATSD_HOST disables emission. UDP is
- * fire-and-forget, so hot-shots logs send failures rather than throwing.
- * Call once at process startup; a second call closes and replaces
- * the previous client.
+ * Initialize the metrics provider and attach the static env and
+ * worker_role tags. An empty OTLP endpoint disables emission. Call once
+ * at process startup; a second call replaces the previous provider.
  */
 export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
-  // Close any existing socket first: a second init would otherwise leak
-  // the descriptor, and the disabled path below would leave the earlier
-  // client emitting while logging that metrics are off.
-  client?.close();
-  client = undefined;
+  // Runs synchronously up to its flush, so the previous provider is
+  // detached before the new one is built.
+  void shutdownMetrics();
 
-  if (!config.host) {
-    console.log(`Metrics disabled: STATSD_HOST empty (service=${service})`);
+  if (!config.endpoint) {
+    console.log(`Metrics disabled: OTLP endpoint empty (service=${service})`);
     return;
   }
 
-  const globalTags: Record<string, string> = { service };
-  if (config.environment) globalTags.env = config.environment;
-  if (workerRole) globalTags.worker_role = workerRole;
+  // env and worker_role ride on every datapoint: only datapoint
+  // attributes become queryable labels; resource attributes do not.
+  baseTags = {};
+  if (config.environment) baseTags.env = config.environment;
+  if (workerRole) baseTags.worker_role = workerRole;
 
-  client = new StatsD({
-    host: config.host,
-    port: config.port,
-    globalTags,
-    // Caching DNS improves performance, but is disabled by default.
-    cacheDns: true,
-    maxBufferSize: MAX_BUFFER_BYTES,
-    // Our metrics go to the MozCloud OTEL gateway, not a Datadog Agent.
-    datadog: false,
-    includeDataDogTags: false,
+  provider = new MeterProvider({
+    resource: resourceFromAttributes({ [ATTR_SERVICE_NAME]: service }),
+    readers: [
+      new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({ url: config.endpoint }),
+      }),
+    ],
   });
+  meter = provider.getMeter(service);
 }
 
 /** Increment a counter. No-op when metrics are disabled. */
 export function count(name: string, value = 1, tags?: Tags): void {
-  client?.increment(name, value, cleanTags(tags));
+  if (!meter) return;
+  let counter = counters.get(name);
+  if (!counter) {
+    counter = meter.createCounter(name);
+    counters.set(name, counter);
+  }
+  counter.add(value, mergeTags(tags));
 }
 
 /** Record a timing in milliseconds. No-op when metrics are disabled. */
 export function timing(name: string, ms: number, tags?: Tags): void {
-  client?.timing(name, ms, cleanTags(tags));
+  if (!meter) return;
+  let histogram = histograms.get(name);
+  if (!histogram) {
+    histogram = meter.createHistogram(name, { unit: 'ms' });
+    histograms.set(name, histogram);
+  }
+  histogram.record(ms, mergeTags(tags));
 }
 
 /**
@@ -139,12 +155,19 @@ export async function time<T>(
 }
 
 /**
- * Flush and close the metrics client, if initialized. Call on SIGTERM
- * alongside shutdownSentry, after any Pub/Sub drain.
+ * Flush pending datapoints and shut the provider down, if initialized.
+ * Call on SIGTERM alongside shutdownSentry, after any Pub/Sub drain.
  */
 export async function shutdownMetrics(): Promise<void> {
-  if (!client) return;
-  const current = client;
-  client = undefined;
-  await new Promise<void>((resolve) => current.close(() => resolve()));
+  if (!provider) return;
+  const current = provider;
+  provider = undefined;
+  meter = undefined;
+  counters.clear();
+  histograms.clear();
+  try {
+    await current.shutdown({ timeoutMillis: FLUSH_TIMEOUT_MS });
+  } catch (err) {
+    console.error('Metrics shutdown failed; datapoints may be lost', err);
+  }
 }
