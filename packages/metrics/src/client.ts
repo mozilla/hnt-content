@@ -1,7 +1,7 @@
 /**
  * Operational metrics client for the crawler. Holds a module-level
- * OpenTelemetry MeterProvider rather than registering it globally,
- * which would collide with the OTel setup inside @sentry/node.
+ * OpenTelemetry MeterProvider; nothing here needs the global registry,
+ * which @sentry/node's own OTel setup shares.
  */
 import {
   diag,
