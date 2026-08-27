@@ -26,6 +26,7 @@ export interface CrawlArticleMessage {
   url: string;
   source_url: string;
   crawl_id: string;
+  // enqueued_at is a datetime string as required by BigQuery.
   enqueued_at: string;
   // Refresh window for this article, set by the producer: discovery uses
   // the article fetch TTL, the agent uses the live-article interval. The
