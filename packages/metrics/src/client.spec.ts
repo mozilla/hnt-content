@@ -4,9 +4,20 @@ import type {
 } from '@opentelemetry/sdk-metrics';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { captured } = vi.hoisted(() => ({
-  captured: {} as { exporter?: InMemoryMetricExporter; url?: string },
-}));
+// Hoisted so the vi.mock factory and the tests share these bindings;
+// see the pattern notes in packages/crawl-common/src/pubsub/client.spec.ts.
+
+// On each `new OTLPMetricExporter(...)`, the mocked constructor creates an
+// in-memory exporter and assigns it here; tests read its recorded
+// datapoints. Stays undefined while metrics are disabled.
+let mockExporter = vi.hoisted(
+  () => undefined as InMemoryMetricExporter | undefined,
+);
+
+// On every `new OTLPMetricExporter(...)` call, the mocked constructor
+// writes its options argument here. Tests read it to assert how
+// initMetrics initialized the exporter.
+let mockExporterConstructorArgs = vi.hoisted(() => undefined as unknown);
 
 // Swap the OTLP exporter for the SDK's in-memory one so tests assert on
 // real recorded datapoints rather than mocks of the metrics pipeline.
@@ -14,15 +25,17 @@ vi.mock('@opentelemetry/exporter-metrics-otlp-proto', async () => {
   const { AggregationTemporality, InMemoryMetricExporter } =
     await import('@opentelemetry/sdk-metrics');
   return {
-    OTLPMetricExporter: class extends InMemoryMetricExporter {
-      constructor(options: { url: string }) {
-        super(AggregationTemporality.CUMULATIVE);
-        // The real exporter rejects malformed URLs in its constructor.
-        new URL(options.url);
-        captured.url = options.url;
-        captured.exporter = this;
-      }
-    },
+    OTLPMetricExporter: vi.fn(function OTLPMetricExporter(options: {
+      url: string;
+    }) {
+      // The real exporter rejects malformed URLs in its constructor.
+      new URL(options.url);
+      mockExporterConstructorArgs = options;
+      mockExporter = new InMemoryMetricExporter(
+        AggregationTemporality.CUMULATIVE,
+      );
+      return mockExporter;
+    }),
   };
 });
 
@@ -47,8 +60,8 @@ import {
 /** Flush via shutdown and return the exported metrics keyed by name. */
 async function flush(): Promise<Map<string, MetricData>> {
   await shutdownMetrics();
-  const metrics = captured
-    .exporter!.getMetrics()
+  const metrics = mockExporter!
+    .getMetrics()
     .flatMap((rm) => rm.scopeMetrics.flatMap((sm) => sm.metrics));
   return new Map(metrics.map((m) => [m.descriptor.name, m]));
 }
@@ -57,8 +70,8 @@ describe('metrics client', () => {
   beforeEach(() => {
     config.endpoint = 'http://collector:4318/v1/metrics';
     config.environment = 'dev';
-    captured.exporter = undefined;
-    captured.url = undefined;
+    mockExporter = undefined;
+    mockExporterConstructorArgs = undefined;
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
@@ -175,7 +188,7 @@ describe('metrics client', () => {
       time('crawl.zyte.duration_ms', () => Promise.resolve(7)),
     ).resolves.toBe(7);
 
-    expect(captured.exporter).toBeUndefined();
+    expect(mockExporter).toBeUndefined();
   });
 
   it('disables metrics when the endpoint is malformed', () => {
@@ -185,7 +198,7 @@ describe('metrics client', () => {
     initMetrics({ service: 'crawl-worker' });
     count('crawl.tick.ran');
 
-    expect(captured.exporter).toBeUndefined();
+    expect(mockExporter).toBeUndefined();
   });
 
   it('flushes pending datapoints on shutdown', async () => {
@@ -194,8 +207,10 @@ describe('metrics client', () => {
 
     await shutdownMetrics();
 
-    expect(captured.url).toBe('http://collector:4318/v1/metrics');
-    const [resourceMetrics] = captured.exporter!.getMetrics();
+    expect(mockExporterConstructorArgs).toEqual({
+      url: 'http://collector:4318/v1/metrics',
+    });
+    const [resourceMetrics] = mockExporter!.getMetrics();
     expect(resourceMetrics.resource.attributes['service.name']).toBe(
       'crawl-worker',
     );
@@ -205,6 +220,6 @@ describe('metrics client', () => {
 
     // Emitting after shutdown is a silent no-op.
     count('crawl.tick.ran');
-    expect(captured.exporter!.getMetrics()).toHaveLength(1);
+    expect(mockExporter!.getMetrics()).toHaveLength(1);
   });
 });
