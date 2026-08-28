@@ -80,8 +80,8 @@ describe('metrics client', () => {
   it('exports counters with base and per-call tags', async () => {
     initMetrics({ service: 'crawl-worker', workerRole: 'article' });
 
-    count('crawl.tick.enqueued', 3, { kind: 'page' });
-    count('crawl.tick.enqueued', 2, { kind: 'page' });
+    count('crawl.tick.enqueued', 3, { item_type: 'page' });
+    count('crawl.tick.enqueued', 2, { item_type: 'page' });
     count('crawl.tick.ran');
 
     const metrics = await flush();
@@ -91,7 +91,7 @@ describe('metrics client', () => {
     expect(enqueued[0].attributes).toEqual({
       env: 'test',
       worker_role: 'article',
-      kind: 'page',
+      item_type: 'page',
     });
     expect(metrics.get('crawl.tick.ran')!.dataPoints[0].value).toBe(1);
   });
@@ -115,7 +115,7 @@ describe('metrics client', () => {
 
     count('crawl.message.processed', 1, {
       outcome: OUTCOME.success,
-      kind: undefined,
+      item_type: undefined,
     });
 
     const metrics = await flush();
@@ -130,20 +130,20 @@ describe('metrics client', () => {
     const value = await time(
       'crawl.zyte.duration_ms',
       () => Promise.resolve(7),
-      { kind: 'article' },
+      { item_type: 'article' },
     );
     expect(value).toBe(7);
 
     await expect(
       time('crawl.zyte.duration_ms', () => Promise.reject(new Error('boom')), {
-        kind: 'article',
+        item_type: 'article',
       }),
     ).rejects.toThrow('boom');
 
     const points = (await flush()).get('crawl.zyte.duration_ms')!.dataPoints;
     expect(points).toHaveLength(2);
     for (const point of points) {
-      expect(point.attributes.kind).toBe('article');
+      expect(point.attributes.item_type).toBe('article');
       expect(point.value).toMatchObject({ count: 1 });
     }
     // A shared outcome tag would hide fast failures in the success p95.

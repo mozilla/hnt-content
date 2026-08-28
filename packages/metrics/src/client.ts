@@ -32,8 +32,8 @@ export type Outcome = (typeof OUTCOME)[keyof typeof OUTCOME];
  */
 export type Tags = {
   outcome?: Outcome;
-  /** What was processed, e.g. 'page'. */
-  kind?: string;
+  /** Type of item processed, e.g. 'page' or 'live_article'. */
+  item_type?: string;
   /** Error class or status code, e.g. 'TimeoutError', '429'. */
   error_type?: string;
   /** External service being called. */
