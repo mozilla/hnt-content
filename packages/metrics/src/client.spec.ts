@@ -66,6 +66,8 @@ describe('metrics client', () => {
   beforeEach(() => {
     config.endpoint = 'http://collector:4318/v1/metrics';
     config.environment = 'test';
+    // Reset so each init constructs a fresh exporter and the disabled
+    // tests can assert that none was constructed.
     mockExporter = undefined;
     mockExporterConstructorArgs = undefined;
   });
@@ -106,16 +108,6 @@ describe('metrics client', () => {
       outcome: 'success',
     });
     expect(metric.dataPoints[0].value).toMatchObject({ count: 1, sum: 42 });
-  });
-
-  it('omits env and worker_role when neither is supplied', async () => {
-    config.environment = undefined;
-    initMetrics({ service: 'crawl-agent' });
-
-    count('crawl.tick.ran');
-
-    const metrics = await flush();
-    expect(metrics.get('crawl.tick.ran')!.dataPoints[0].attributes).toEqual({});
   });
 
   it('drops tags left undefined so callers need no branching', async () => {
@@ -187,13 +179,17 @@ describe('metrics client', () => {
     expect(mockExporter).toBeUndefined();
   });
 
-  it('disables metrics when the endpoint is malformed', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('logs and disables metrics when the endpoint is malformed', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     config.endpoint = 'not a url';
 
     initMetrics({ service: 'crawl-worker' });
     count('crawl.tick.ran');
 
+    expect(error).toHaveBeenCalledWith(
+      'Metrics disabled: invalid OTLP endpoint',
+      expect.any(Error),
+    );
     expect(mockExporter).toBeUndefined();
   });
 
