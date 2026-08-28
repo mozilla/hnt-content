@@ -1,7 +1,7 @@
 /**
- * Operational metrics client for the crawler. Holds a module-level
- * OpenTelemetry MeterProvider; nothing here needs the global registry,
- * which @sentry/node's own OTel setup shares.
+ * Operational metrics client based on OpenTelemetry (OTel). The provider
+ * is not registered on OTel's global API, so `metrics.getMeter()` returns
+ * a noop meter; record through this module's functions instead.
  */
 import {
   createNoopMeter,
@@ -26,18 +26,17 @@ export const OUTCOME = { success: 'success', failure: 'failure' } as const;
 export type Outcome = (typeof OUTCOME)[keyof typeof OUTCOME];
 
 /**
- * Only low-cardinality tags (never url or crawl_id): each distinct value
- * becomes its own stored series. env and worker_role are attached at init.
+ * Only low-cardinality tags (never a URL or an ID): each distinct value
+ * becomes its own stored series. Extend this closed set when a metric
+ * needs a new tag. env and worker_role are attached at init.
  */
 export type Tags = {
   outcome?: Outcome;
-  /** What was enqueued or processed, e.g. 'page', 'live_article'. */
+  /** What was processed, e.g. 'page'. */
   kind?: string;
-  /** Zyte extraction type, e.g. 'article', 'article_list'. */
-  extraction?: string;
-  /** Error class or status code, e.g. 'ZyteError', '429'. */
+  /** Error class or status code, e.g. 'TimeoutError', '429'. */
   error_type?: string;
-  /** Upstream being called, e.g. 'zyte' or 'corpus_api'. */
+  /** External service being called. */
   upstream?: string;
 };
 
