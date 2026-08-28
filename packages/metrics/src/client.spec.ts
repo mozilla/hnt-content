@@ -167,7 +167,7 @@ describe('metrics client', () => {
     expect(mockExporter).toBeUndefined();
   });
 
-  it('logs and disables metrics when the endpoint is malformed', () => {
+  it('logs and disables metrics on invalid configuration such as a malformed endpoint', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     config.endpoint = 'not a url';
 
@@ -175,7 +175,7 @@ describe('metrics client', () => {
     count('crawl.tick.ran');
 
     expect(error).toHaveBeenCalledWith(
-      'Metrics disabled: invalid OTLP endpoint',
+      'Metrics disabled: invalid configuration',
       expect.any(Error),
     );
     expect(mockExporter).toBeUndefined();

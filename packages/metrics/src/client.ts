@@ -90,6 +90,8 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
 
   try {
+    // The MeterProvider is the SDK entry point that owns the export pipeline.
+    // https://opentelemetry.io/docs/specs/otel/metrics/api/#meterprovider
     provider = new MeterProvider({
       resource: resourceFromAttributes({ [ATTR_SERVICE_NAME]: service }),
       readers: [
@@ -99,9 +101,9 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
       ],
     });
   } catch (err) {
-    // The exporter rejects a malformed endpoint URL in its constructor;
-    // run without metrics rather than crash the service.
-    console.error('Metrics disabled: invalid OTLP endpoint', err);
+    // Invalid configuration, such as a malformed endpoint URL, throws in
+    // the constructors; run without metrics rather than crash the service.
+    console.error('Metrics disabled: invalid configuration', err);
     return;
   }
   meter = provider.getMeter(service);
