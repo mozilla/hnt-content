@@ -153,9 +153,9 @@ describe('metrics client', () => {
     ]);
   });
 
-  it('is a no-op when the endpoint is empty', async () => {
+  it('is a no-op when no endpoint is configured', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
-    config.endpoint = '';
+    config.endpoint = undefined;
     initMetrics({ service: 'crawl-worker' });
 
     count('crawl.message.processed');

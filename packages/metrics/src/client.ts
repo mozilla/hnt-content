@@ -71,12 +71,15 @@ function mergeTags(tags?: Tags): Attributes {
 
 /**
  * Initialize the metrics provider and attach the static env and
- * worker_role tags. An empty OTLP endpoint disables emission. Call once
+ * worker_role tags. An unset OTLP endpoint disables emission. Call once
  * at process startup.
  */
 export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
   if (!config.endpoint) {
-    console.log(`Metrics disabled: OTLP endpoint empty (service=${service})`);
+    console.log(
+      `Metrics disabled: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT not set ` +
+        `(service=${service})`,
+    );
     return;
   }
 
