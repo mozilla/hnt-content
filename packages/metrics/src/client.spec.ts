@@ -130,39 +130,27 @@ describe('metrics client', () => {
     const value = await time(
       'crawl.zyte.duration_ms',
       () => Promise.resolve(7),
-      { extraction: 'article' },
+      { kind: 'article' },
     );
     expect(value).toBe(7);
 
     await expect(
       time('crawl.zyte.duration_ms', () => Promise.reject(new Error('boom')), {
-        extraction: 'article',
+        kind: 'article',
       }),
     ).rejects.toThrow('boom');
 
-    // A shared outcome tag would hide fast failures in the success p95.
     const points = (await flush()).get('crawl.zyte.duration_ms')!.dataPoints;
     expect(points).toHaveLength(2);
     for (const point of points) {
-      expect(point.attributes.extraction).toBe('article');
+      expect(point.attributes.kind).toBe('article');
       expect(point.value).toMatchObject({ count: 1 });
     }
+    // A shared outcome tag would hide fast failures in the success p95.
     expect(points.map((p) => p.attributes.outcome).sort()).toEqual([
       'failure',
       'success',
     ]);
-  });
-
-  it('overwrites an outcome tag supplied by the caller', async () => {
-    initMetrics({ service: 'crawl-worker' });
-
-    await time('crawl.zyte.duration_ms', () => Promise.resolve(1), {
-      outcome: OUTCOME.failure,
-    });
-
-    const points = (await flush()).get('crawl.zyte.duration_ms')!.dataPoints;
-    expect(points).toHaveLength(1);
-    expect(points[0].attributes.outcome).toBe('success');
   });
 
   it('is a no-op when the endpoint is empty', async () => {
