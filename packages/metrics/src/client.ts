@@ -86,8 +86,7 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
   if (config.environment) baseTags.env = config.environment;
   if (workerRole) baseTags.worker_role = workerRole;
 
-  // Export failures surface through the SDK's diag hook, which is silent
-  // until a logger is set.
+  // Log export failures to console.error; the SDK is silent by default.
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
 
   try {
