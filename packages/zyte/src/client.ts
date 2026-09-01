@@ -46,7 +46,10 @@ let apiKey: string | undefined;
 let apiUrl = DEFAULT_API_URL;
 let timeout = DEFAULT_TIMEOUT_MS;
 let maxRetries = DEFAULT_MAX_RETRIES;
-let beforeRequest: (() => Promise<void>) | undefined;
+// Defining onRetry lets us take action on each failed attempt to hit Zyte. At
+// this time, this is a generic handler - eventually we should define a pattern
+// for this behavior and (probably) make it the default. For now, this is
+// future-proofing.
 let onRetry: (() => void) | undefined;
 
 /**
@@ -61,7 +64,6 @@ export function initZyteClient(opts: ZyteClientOptions): void {
   apiUrl = opts.apiUrl ?? DEFAULT_API_URL;
   timeout = opts.timeout ?? DEFAULT_TIMEOUT_MS;
   maxRetries = opts.maxRetries ?? DEFAULT_MAX_RETRIES;
-  beforeRequest = opts.beforeRequest;
   onRetry = opts.onRetry;
 }
 
@@ -165,9 +167,8 @@ async function zyteRequest(
 
   return pRetry(
     async () => {
-      // Gate each attempt (including retries) so a distributed rate
-      // limiter can throttle Zyte calls across replicas.
-      if (beforeRequest) await beforeRequest();
+      // TODO: decide how to handle Zyte rate limiting
+      // https://mozilla-hub.atlassian.net/browse/HNT-3130
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -214,6 +215,9 @@ async function zyteRequest(
         // left). The final failed attempt has retriesLeft 0. p-retry
         // passes a context object, so destructure the error out of it.
         if (onRetry && retriesLeft > 0 && isRetryable(error)) {
+          // Note - we may want to standardize this instead of having a
+          // configurable callable - likely that all our Zyte calls will
+          // want the same retry logic.
           onRetry();
         }
       },
