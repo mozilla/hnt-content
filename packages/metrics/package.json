@@ -1,5 +1,5 @@
 {
-  "name": "crawl-common",
+  "name": "metrics",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -23,7 +23,6 @@
     "vitest": "^4.1.2"
   },
   "dependencies": {
-    "jose": "^6.2.2",
-    "p-retry": "^8.0.0"
+    "hot-shots": "^11.0.0"
   }
 }

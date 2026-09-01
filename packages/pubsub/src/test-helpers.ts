@@ -13,8 +13,8 @@ export const PROJECT_ID = 'test-project';
 export const SUBSCRIPTION_NAME = 'test-subscription';
 export const TOPIC_NAME = 'test-topic';
 // Placeholder used by tests. The SDK is mocked, so the value
-// does not drive real timing. Production callers will source
-// it from a shared config module linked to the Redis lock TTL.
+// does not drive real timing. Production callers source it from
+// their service config (the worker's maxExtensionSeconds).
 export const TEST_MAX_EXTENSION_SECONDS = 180;
 
 export interface TestPayload {

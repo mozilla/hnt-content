@@ -84,6 +84,36 @@ describe('initZyteClient', () => {
   });
 });
 
+describe('beforeRequest hook', () => {
+  it('awaits beforeRequest before the request', async () => {
+    const beforeRequest = vi.fn(async () => {});
+    initZyteClient({ apiKey: 'test-key', maxRetries: 0, beforeRequest });
+    fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
+
+    await extractArticle('https://example.com/article');
+
+    expect(beforeRequest).toHaveBeenCalledOnce();
+    expect(beforeRequest.mock.invocationCallOrder[0]!).toBeLessThan(
+      fetchMock.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it('aborts the request when beforeRequest throws', async () => {
+    initZyteClient({
+      apiKey: 'test-key',
+      maxRetries: 0,
+      beforeRequest: async () => {
+        throw new Error('rate limited');
+      },
+    });
+
+    await expect(extractArticle('https://example.com/article')).rejects.toThrow(
+      'rate limited',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('extractArticle', () => {
   describe('request', () => {
     it('sends correct request body', async () => {
@@ -123,20 +153,18 @@ describe('extractArticle', () => {
       );
     });
 
-    it.each([
-      ['httpResponseBody', true],
-      ['browserHtml', undefined],
-      ['browserHtmlOnly', undefined],
-    ] as const)(
+    it.each(['httpResponseBody', 'browserHtml', 'browserHtmlOnly'] as const)(
       'includes extractFrom with %s',
-      async (extractFrom, expectedHttpResponseBody) => {
+      async (extractFrom) => {
         fetchMock.mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
 
         await extractArticle('https://example.com/a', { extractFrom });
 
         const body = lastRequestBody();
         expect(body.articleOptions).toEqual({ extractFrom });
-        expect(body.httpResponseBody).toBe(expectedHttpResponseBody);
+        // Never request the raw page body: extractFrom alone drives the
+        // HTTP fetch, and the top-level flag would return the full page.
+        expect(body.httpResponseBody).toBeUndefined();
       },
     );
 
@@ -279,7 +307,8 @@ describe('extractArticleList', () => {
       expect(body.articleListOptions).toEqual({
         extractFrom: 'httpResponseBody',
       });
-      expect(body.httpResponseBody).toBe(true);
+      // The raw page body is never requested; extractFrom drives the fetch.
+      expect(body.httpResponseBody).toBeUndefined();
     });
   });
 
@@ -343,6 +372,42 @@ describe('extractArticleList', () => {
   });
 });
 
+describe('onRetry hook', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('fires once when a retryable error is followed by success', async () => {
+    const onRetry = vi.fn();
+    initZyteClient({ apiKey: 'test-key', maxRetries: 1, onRetry });
+    fetchMock
+      .mockResolvedValueOnce(mockResponse({ status: 503 }, 503))
+      .mockResolvedValueOnce(mockResponse(ARTICLE_RESPONSE));
+
+    const promise = extractArticle('https://example.com/a');
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('does not fire for a non-retryable error', async () => {
+    const onRetry = vi.fn();
+    initZyteClient({ apiKey: 'test-key', maxRetries: 1, onRetry });
+    fetchMock.mockResolvedValue(mockResponse({ status: 401 }, 401));
+
+    await expect(extractArticle('https://example.com/a')).rejects.toThrow(
+      ZyteError,
+    );
+    expect(onRetry).not.toHaveBeenCalled();
+  });
+});
+
 describe('isRetryable', () => {
   it('returns true for transient Zyte status codes', () => {
     for (const code of [429, 500, 503, 520, 521]) {
@@ -354,6 +419,16 @@ describe('isRetryable', () => {
     for (const code of [400, 401, 403, 422, 451]) {
       expect(isRetryable(new ZyteError(code, 'test'))).toBe(false);
     }
+  });
+
+  it('returns true for a request timeout (AbortSignal.timeout)', () => {
+    expect(isRetryable(new DOMException('timed out', 'TimeoutError'))).toBe(
+      true,
+    );
+  });
+
+  it('returns false for a non-timeout DOMException', () => {
+    expect(isRetryable(new DOMException('aborted', 'AbortError'))).toBe(false);
   });
 
   it('returns true for network errors', () => {

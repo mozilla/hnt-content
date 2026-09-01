@@ -13,7 +13,8 @@
   "dependencies": {
     "crawl-common": "workspace:*",
     "sentry": "workspace:*",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "zyte": "workspace:*"
   },
   "devDependencies": {
     "eslint": "^10.0.0",
