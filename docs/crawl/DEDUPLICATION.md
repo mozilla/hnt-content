@@ -77,12 +77,16 @@ first page crawl after the hour is up.
 | Variable | What it sets | Default | Shorter | Longer |
 |---|---|---|---|---|
 | `pageRefreshMinutes` | How often a page is crawled again | 20 min | Faster discovery | Main lever to lower Zyte cost |
-| `discoveredArticleRefreshDays` | How long an extracted article is left alone | 30 days | Less Redis memory usage | Slightly reduced Zyte cost |
+| `discoveredArticleRefreshDays` | How long an extracted article is left alone | 30 days | Less Redis memory usage | Slightly fewer Zyte calls |
 | `liveArticleRefreshMinutes` | How often a curated article is re-extracted | 15 min | Fresher headlines | Fewer Zyte calls |
 | `articleAttemptTtlMinutes` | How long a failed attempt blocks the next one | 60 min | Faster recovery from a block | Fewer requests on URLs that keep failing |
 
-A live article carries its window on the message, so it dedups on the
-scheduler's cadence rather than the worker's longer default.
+Every crawl-article job carries its own window in `refresh_interval_minutes`, so
+the cadence is set where the job is enqueued rather than in worker config, and
+the worker needs no notion of which kind of article it holds. The scheduler
+sets `liveArticleRefreshMinutes` on a live article, so the freshness check
+measures against the scheduler's cadence; a discovered article carries no
+window, so the check falls back to `discoveredArticleRefreshDays`.
 
 ## The scheduler and the discovery worker
 
@@ -122,5 +126,12 @@ time the extracted content changes. Those rows are history, not duplicates: the
 `crawled_at` and `extracted_at` timestamps distinguish them.
 
 Pub/Sub loads BigQuery with at-least-once delivery, so real duplicates arrive
-too: the same event written more than once. Downstream queries remove them with
-a [QUALIFY](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#qualify_clause) clause.
+too: the same event written more than once. The worker sets `extracted_at` and
+`crawled_at` into the payload before publishing, so the copies are identical.
+Downstream queries in Metaflow drop them with a
+[QUALIFY](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#qualify_clause)
+clause over the columns that identify one event: `url` and `extracted_at` for
+`articles`, and `url`, `source_url`, `crawled_at`, `surface_id` and `topic` for
+`article_discoveries`, which holds one row per context per crawl. As a future
+improvement we could move deduplication to an ETL job to simplify downstream
+consumers.
