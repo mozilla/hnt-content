@@ -58,7 +58,7 @@ let baseTags: Attributes = {};
  * Combine the base tags with per-call tags, dropping keys the caller left
  * undefined, which OTel would otherwise treat as a distinct label set.
  */
-function mergeTags(tags?: Tags): Attributes {
+function mergeTagsWithBase(tags?: Tags): Attributes {
   const merged: Attributes = { ...baseTags };
   if (!tags) return merged;
   for (const [key, value] of Object.entries(tags)) {
@@ -113,12 +113,14 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
 /** Increment a counter. No-op when metrics are disabled. */
 export function count(name: string, value = 1, tags?: Tags): void {
   // createCounter returns the existing instrument on repeat names.
-  meter.createCounter(name).add(value, mergeTags(tags));
+  meter.createCounter(name).add(value, mergeTagsWithBase(tags));
 }
 
 /** Record a timing in milliseconds. No-op when metrics are disabled. */
 export function timing(name: string, ms: number, tags?: Tags): void {
-  meter.createHistogram(name, { unit: 'ms' }).record(ms, mergeTags(tags));
+  meter
+    .createHistogram(name, { unit: 'ms' })
+    .record(ms, mergeTagsWithBase(tags));
 }
 
 /**
