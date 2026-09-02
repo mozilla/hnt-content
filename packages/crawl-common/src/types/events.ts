@@ -16,6 +16,7 @@ export interface ArticleBreadcrumb {
  */
 export interface ArticleEvent {
   url: string;
+  // enqueued_at is a datetime string as required by BigQuery.
   extracted_at: string;
   headline?: string;
   description?: string;
@@ -24,5 +25,30 @@ export interface ArticleEvent {
   body_truncated?: string;
   published_at?: string;
   breadcrumbs?: ArticleBreadcrumb[];
+  // Bare lowercase ISO 639-1 code, e.g. 'en'.
   language?: string;
+}
+
+/**
+ * Event published to the article-discoveries Pub/Sub topic and
+ * written to the crawl.article_discoveries BigQuery table via a
+ * BigQuery subscription. One event per discovered article and
+ * context, so topic and surface_id come from the context the
+ * page was crawled for, while source_url is that page.
+ *
+ * crawled_at, published_at, are datetime strings.
+ */
+export interface ArticleDiscoveryEvent {
+  url: string;
+  source_url: string;
+  crawled_at: string;
+  published_at?: string;
+  headline?: string;
+  authors?: ArticleAuthor[];
+  summary?: string;
+  // Bare lowercase ISO 639-1 code, e.g. 'en'.
+  language?: string;
+  topic?: string;
+  page_position?: number;
+  surface_id: string;
 }
