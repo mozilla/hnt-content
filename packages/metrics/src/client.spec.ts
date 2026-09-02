@@ -44,13 +44,7 @@ vi.mock('@opentelemetry/exporter-metrics-otlp-proto', async () => {
 vi.mock('./config.js', () => ({ default: {} }));
 
 import config from './config.js';
-import {
-  OUTCOME,
-  count,
-  initMetrics,
-  shutdownMetrics,
-  timing,
-} from './client.js';
+import { count, initMetrics, shutdownMetrics, timing } from './client.js';
 
 /** Flush via shutdown and return the exported metrics keyed by name. */
 async function flush(): Promise<Map<string, MetricData>> {
@@ -98,7 +92,7 @@ describe('metrics client', () => {
   it('exports timings as millisecond histograms', async () => {
     initMetrics({ service: 'crawl-worker' });
 
-    timing('crawl.message.duration_ms', 42, { outcome: OUTCOME.success });
+    timing('crawl.message.duration_ms', 42, { outcome: 'success' });
 
     const metric = (await flush()).get('crawl.message.duration_ms')!;
     expect(metric.descriptor.unit).toBe('ms');
@@ -113,7 +107,7 @@ describe('metrics client', () => {
     initMetrics({ service: 'crawl-worker' });
 
     count('crawl.message.processed', 1, {
-      outcome: OUTCOME.success,
+      outcome: 'success',
       item_type: undefined,
     });
 

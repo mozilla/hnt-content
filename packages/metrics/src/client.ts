@@ -21,9 +21,7 @@ import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import config from './config.js';
 
 /** Allowed values for the outcome tag. */
-export const OUTCOME = { success: 'success', failure: 'failure' } as const;
-
-export type Outcome = (typeof OUTCOME)[keyof typeof OUTCOME];
+export type Outcome = 'success' | 'failure';
 
 /**
  * Only low-cardinality tags (never a URL or an ID): each distinct value
