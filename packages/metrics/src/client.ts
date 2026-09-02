@@ -85,6 +85,9 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
     return;
   }
 
+  // Log export failures to console.error; the SDK is silent by default.
+  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
+
   // env and worker_role ride on every datapoint: only datapoint
   // attributes become queryable labels; resource attributes do not.
   baseTags = {};
@@ -94,9 +97,6 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
   if (workerRole) {
     baseTags.worker_role = workerRole;
   }
-
-  // Log export failures to console.error; the SDK is silent by default.
-  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
 
   try {
     // The MeterProvider is the SDK entry point that owns the export pipeline.
