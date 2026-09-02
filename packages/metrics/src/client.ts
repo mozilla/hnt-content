@@ -30,18 +30,18 @@ export type Outcome = 'success' | 'failure';
  */
 export type Tags = {
   outcome?: Outcome;
-  /** Type of item processed, e.g. 'page' or 'live_article'. */
+  // Type of item processed, e.g. 'page' or 'live_article'.
   item_type?: string;
-  /** Error class or status code, e.g. 'TimeoutError', '429'. */
+  // Error class or status code, e.g. 'TimeoutError', '429'.
   error_type?: string;
-  /** External service being called. */
+  // External service being called.
   upstream?: string;
 };
 
 export interface MetricsInitOptions {
-  /** Service name, e.g. 'crawl-agent'; becomes the Prometheus job label. */
+  // Service name, e.g. 'crawl-agent'; becomes the Prometheus job label.
   service: string;
-  /** Which role a multi-role service runs as, e.g. 'article'. */
+  // Which role a multi-role service runs as, e.g. 'article'.
   workerRole?: string;
 }
 
