@@ -60,9 +60,13 @@ let baseTags: Attributes = {};
  */
 function mergeTagsWithBase(tags?: Tags): Attributes {
   const merged: Attributes = { ...baseTags };
-  if (!tags) return merged;
+  if (!tags) {
+    return merged;
+  }
   for (const [key, value] of Object.entries(tags)) {
-    if (value !== undefined) merged[key] = value;
+    if (value !== undefined) {
+      merged[key] = value;
+    }
   }
   return merged;
 }
@@ -84,8 +88,12 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
   // env and worker_role ride on every datapoint: only datapoint
   // attributes become queryable labels; resource attributes do not.
   baseTags = {};
-  if (config.environment) baseTags.env = config.environment;
-  if (workerRole) baseTags.worker_role = workerRole;
+  if (config.environment) {
+    baseTags.env = config.environment;
+  }
+  if (workerRole) {
+    baseTags.worker_role = workerRole;
+  }
 
   // Log export failures to console.error; the SDK is silent by default.
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
@@ -128,7 +136,9 @@ export function timing(name: string, ms: number, tags?: Tags): void {
  * Call on SIGTERM alongside shutdownSentry, after any Pub/Sub drain.
  */
 export async function shutdownMetrics(): Promise<void> {
-  if (!provider) return;
+  if (!provider) {
+    return;
+  }
   const current = provider;
   provider = undefined;
   meter = createNoopMeter();
