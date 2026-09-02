@@ -51,13 +51,9 @@ hnt-content/
 
 ## Deployment
 
-The Dockerfile builds a single image containing all services. Each Helm workload overrides the command to select which service to run:
+The services deploy when a pull request merges to `main`. GitHub Actions builds the image and pushes it to Artifact Registry, then ArgoCD Image Updater notices the new digest and rolls it out. For now, dev, stage and prod all track the same tag, so a single merge reaches all three.
 
-```sh
-docker build -t hnt-content .
-docker run -e PORT=8080 hnt-content node crawl-agent/dist/main.js
-docker run -e PORT=8080 hnt-content node crawl-worker/dist/main.js
-```
+One image contains both entry points. The shared mozcloud Helm chart chooses which one each workload runs and sets `WORKER_ROLE` to select the discovery or article role, so all three workloads come from one build.
 
-The Dockerfile uses [Turborepo Docker pruning](https://turbo.build/repo/docs/guides/tools/docker) and `pnpm deploy --prod` to produce a minimal image with only production dependencies. Services deploy to GKE via ArgoCD (mozcloud Helm chart).
+For how the system fits together, see [docs/crawl/ARCHITECTURE.md](docs/crawl/ARCHITECTURE.md).
 
