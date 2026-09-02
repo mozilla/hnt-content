@@ -49,7 +49,6 @@ import {
   count,
   initMetrics,
   shutdownMetrics,
-  time,
   timing,
 } from './client.js';
 
@@ -124,35 +123,6 @@ describe('metrics client', () => {
     ).toEqual({ env: 'test', outcome: 'success' });
   });
 
-  it('records a timing tagged by outcome on both success and failure', async () => {
-    initMetrics({ service: 'crawl-worker' });
-
-    const value = await time(
-      'crawl.zyte.duration_ms',
-      () => Promise.resolve(7),
-      { item_type: 'article' },
-    );
-    expect(value).toBe(7);
-
-    await expect(
-      time('crawl.zyte.duration_ms', () => Promise.reject(new Error('boom')), {
-        item_type: 'article',
-      }),
-    ).rejects.toThrow('boom');
-
-    const points = (await flush()).get('crawl.zyte.duration_ms')!.dataPoints;
-    expect(points).toHaveLength(2);
-    for (const point of points) {
-      expect(point.attributes.item_type).toBe('article');
-      expect(point.value).toMatchObject({ count: 1 });
-    }
-    // A shared outcome tag would hide fast failures in the success p95.
-    expect(points.map((p) => p.attributes.outcome).sort()).toEqual([
-      'failure',
-      'success',
-    ]);
-  });
-
   it('is a no-op when no endpoint is configured', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     config.endpoint = undefined;
@@ -160,9 +130,6 @@ describe('metrics client', () => {
 
     count('crawl.message.processed');
     timing('crawl.message.duration_ms', 5);
-    await expect(
-      time('crawl.zyte.duration_ms', () => Promise.resolve(7)),
-    ).resolves.toBe(7);
 
     expect(mockExporter).toBeUndefined();
   });

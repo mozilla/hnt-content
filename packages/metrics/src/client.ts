@@ -124,30 +124,6 @@ export function timing(name: string, ms: number, tags?: Tags): void {
 }
 
 /**
- * Run an async function and record its duration as a timing tagged by
- * outcome, whether it resolves or rejects, then re-throw on failure.
- * Splitting by outcome keeps fast failures, such as an upstream rejecting
- * every request, out of the success latency series. An `outcome` tag from
- * the caller is overwritten.
- */
-export async function time<T>(
-  name: string,
-  fn: () => Promise<T>,
-  tags?: Tags,
-): Promise<T> {
-  // Monotonic; wall time can step backwards.
-  const start = performance.now();
-  let outcome: Outcome = OUTCOME.failure;
-  try {
-    const result = await fn();
-    outcome = OUTCOME.success;
-    return result;
-  } finally {
-    timing(name, Math.round(performance.now() - start), { ...tags, outcome });
-  }
-}
-
-/**
  * Flush pending datapoints and shut the provider down, if initialized.
  * Call on SIGTERM alongside shutdownSentry, after any Pub/Sub drain.
  */

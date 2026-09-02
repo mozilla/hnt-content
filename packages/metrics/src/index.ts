@@ -2,7 +2,6 @@ export {
   initMetrics,
   count,
   timing,
-  time,
   shutdownMetrics,
   OUTCOME,
 } from './client.js';
