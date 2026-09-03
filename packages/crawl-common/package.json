@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "jose": "^6.2.2",
-    "p-retry": "^8.0.0"
+    "p-retry": "^8.0.0",
+    "tldts": "^7.4.4"
   }
 }

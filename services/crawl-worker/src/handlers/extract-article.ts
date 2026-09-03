@@ -1,12 +1,14 @@
-import { updateApprovedCorpusItem, normalizeText } from 'crawl-common';
-import { extractArticle } from 'zyte';
-import type {
-  CrawlArticleMessage,
+import {
   ArticleEvent,
   CorpusItem,
+  CrawlArticleMessage,
+  normalizeText,
+  updateApprovedCorpusItem,
   UpdateApprovedCorpusItemInput,
 } from 'crawl-common';
-import type { ZyteArticle } from 'zyte';
+import { extractArticle, ZyteArticle } from 'zyte';
+
+import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
 
 const BODY_TRUNCATE_LENGTH = 2_000;
 const EXCERPT_COMPARE_LENGTH = 255;
@@ -20,7 +22,7 @@ export async function handleArticleExtraction(
   message: CrawlArticleMessage,
 ): Promise<ArticleEvent> {
   const { data: article, url } = await extractArticle(message.url, {
-    extractFrom: 'httpResponseBody',
+    extractFrom: resolveExtractFrom(message.url, 'article'),
   });
 
   const event = mapToArticleEvent(article, url);
