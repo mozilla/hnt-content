@@ -203,6 +203,9 @@ importers:
       express:
         specifier: ^5.1.0
         version: 5.2.1
+      metrics:
+        specifier: workspace:*
+        version: link:../../packages/metrics
       sentry:
         specifier: workspace:*
         version: link:../../packages/sentry
@@ -240,6 +243,9 @@ importers:
       express:
         specifier: ^5.1.0
         version: 5.2.1
+      metrics:
+        specifier: workspace:*
+        version: link:../../packages/metrics
       sentry:
         specifier: workspace:*
         version: link:../../packages/sentry

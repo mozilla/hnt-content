@@ -1,7 +1,9 @@
 // Initialize Sentry first to capture errors from other modules.
 import './sentry-init.js';
+import './metrics-init.js';
 
 import { setTimeout as delay } from 'node:timers/promises';
+import { shutdownMetrics, timing, type Outcome } from 'metrics';
 import { shutdownSentry, withSentryHandler } from 'sentry';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
@@ -17,7 +19,7 @@ const SHUTDOWN_TIMEOUT_MS = 10_000;
 let shuttingDown = false;
 /**
  * Initiate graceful shutdown: stop the tick loop, close the server,
- * flush Sentry, and force-exit after a timeout. K8s sends SIGTERM
+ * flush telemetry, and force-exit after a timeout. K8s sends SIGTERM
  * before pod termination; a clean shutdown prevents duplicate
  * Pub/Sub message processing and ensures errors reach Sentry.
  */
@@ -28,7 +30,7 @@ function shutdown() {
   stopRunning();
   ac.abort();
   server.close(async () => {
-    await shutdownSentry();
+    await Promise.all([shutdownMetrics(), shutdownSentry()]);
     process.exit(0);
   });
   setTimeout(() => {
@@ -67,17 +69,23 @@ async function run() {
   while (isRunning()) {
     const start = Date.now();
     const startedAt = new Date(start).toISOString();
+    let outcome: Outcome = 'success';
     try {
       // Wrap tick() with a Sentry emission helper because it's the
       // outermost frame that bubbles errors up before the catch swallows them.
       await tickWithSentry({ startedAt });
     } catch (err) {
+      outcome = 'failure';
       // tickWithSentry already captured the error and rethrew so
       // the loop sees it; swallowing here keeps a single failed
       // tick from killing the agent.
       console.error('tick failed:', err);
     }
     const elapsed = Date.now() - start;
+    // Split by outcome: a tick that throws gives up early, so folding
+    // failures into one series would understate how long work takes.
+    // The histogram's count doubles as the tick and failure rate.
+    timing('crawl.tick.duration', elapsed, { outcome });
     const remainingMs = Math.max(0, config.tickIntervalMs - elapsed);
     try {
       await delay(remainingMs, undefined, { signal: ac.signal });
