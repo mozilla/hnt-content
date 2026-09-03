@@ -63,11 +63,14 @@ describe('handleArticleExtraction', () => {
       expect(event.extracted_at).toBeDefined();
     });
 
-    it('calls extractArticle with httpResponseBody', async () => {
+    it('calls extractArticle with browserHtml', async () => {
       await handleArticleExtraction(BASE_MESSAGE);
 
+      // extract mode is browserHtml because url given here is not in our
+      // pre-defined list of no JS domains. we have ample coverage on
+      // extract mode in that module's tests.
       expect(extractArticleMock).toHaveBeenCalledWith(BASE_MESSAGE.url, {
-        extractFrom: 'httpResponseBody',
+        extractFrom: 'browserHtml',
       });
     });
 

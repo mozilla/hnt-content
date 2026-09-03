@@ -1,4 +1,4 @@
-export { normalizeText } from './utils/index.js';
+export { getRegistrableDomain, normalizeText } from './utils/index.js';
 export {
   initCorpusApiClient,
   updateApprovedCorpusItem,

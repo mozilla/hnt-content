@@ -1,0 +1,58 @@
+import { describe, expect, it } from 'vitest';
+import { resolveExtractFrom } from './extraction-mode.js';
+import {
+  NO_JS_ARTICLE_DOMAINS,
+  NO_JS_ARTICLE_LIST_DOMAINS,
+} from './no-js-domains.js';
+
+describe('resolveExtractFrom', () => {
+  it('uses httpResponseBody for a no-js-listed domain, per product', () => {
+    expect(
+      resolveExtractFrom(`https://${NO_JS_ARTICLE_DOMAINS[0]}/a/b`, 'article'),
+    ).toBe('httpResponseBody');
+    expect(
+      resolveExtractFrom(
+        `https://${NO_JS_ARTICLE_LIST_DOMAINS[0]}/section`,
+        'articleList',
+      ),
+    ).toBe('httpResponseBody');
+  });
+
+  it('defaults to browserHtml for an unlisted domain', () => {
+    expect(
+      resolveExtractFrom('https://unlisted-publisher.example/story', 'article'),
+    ).toBe('browserHtml');
+    expect(
+      resolveExtractFrom(
+        'https://unlisted-publisher.example/news',
+        'articleList',
+      ),
+    ).toBe('browserHtml');
+  });
+
+  it('decides per product: a domain cleared for one product is not the other', () => {
+    const articleOnly = NO_JS_ARTICLE_DOMAINS.find(
+      (d) => !NO_JS_ARTICLE_LIST_DOMAINS.includes(d),
+    );
+    expect(articleOnly).toBeDefined();
+    expect(resolveExtractFrom(`https://${articleOnly}/x`, 'article')).toBe(
+      'httpResponseBody',
+    );
+    expect(resolveExtractFrom(`https://${articleOnly}/x`, 'articleList')).toBe(
+      'browserHtml',
+    );
+  });
+
+  it('matches on the registrable domain, so subdomains collapse', () => {
+    expect(
+      resolveExtractFrom(
+        `https://www.${NO_JS_ARTICLE_DOMAINS[0]}/a`,
+        'article',
+      ),
+    ).toBe('httpResponseBody');
+  });
+
+  it('falls back to browserHtml for an unparseable URL', () => {
+    expect(resolveExtractFrom('not a url', 'article')).toBe('browserHtml');
+  });
+});
