@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
 
 # Drop all default GITHUB_TOKEN permissions; each job declares its own.
 permissions: {}
@@ -19,6 +20,14 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # Everything the build step needs is an env var, never an inline ${{ }}:
+    # expressions are pasted into the script before bash parses it, so quoting
+    # cannot contain a hostile value.
+    env:
+      # Mutable tag followed by argocd-image-updater: "latest" deploys
+      # stage and prod, "dev" deploys hnt-dev.
+      CHANNEL_TAG: ${{ github.ref_name == 'main' && 'latest' || github.ref_name }}
+      GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -27,15 +36,18 @@ jobs:
       - name: Build Docker image
         run: |
           docker build . \
-            --build-arg GIT_SHA=${{ github.sha }} \
-            -t us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:latest \
-            -t us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${{ github.sha }}
+            --build-arg GIT_SHA="${GIT_SHA}" \
+            -t "us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${GIT_SHA}" \
+            -t "us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${CHANNEL_TAG}"
 
       - name: Push images to GAR
         uses: mozilla-it/deploy-actions/docker-push@4784cb70739a4f32ce010921f60fb1ebbc791a38 # v6.2.2
         with:
           project_id: moz-fx-hnt-prod
+          # Sha tag first: cancel-in-progress can stop the job between tag
+          # pushes, and the channel tag must never point at a digest whose
+          # sha tag was never pushed.
           image_tags: |-
-            us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:latest
-            us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${{ github.sha }}
+            us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${{ env.GIT_SHA }}
+            us-docker.pkg.dev/moz-fx-hnt-prod/hnt-prod/hnt-content:${{ env.CHANNEL_TAG }}
           workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
