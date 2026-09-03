@@ -1,140 +1,166 @@
+import type {
+  InMemoryMetricExporter,
+  MetricData,
+} from '@opentelemetry/sdk-metrics';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockClient, captured } = vi.hoisted(() => ({
-  mockClient: {
-    increment: vi.fn(),
-    timing: vi.fn(),
-    close: vi.fn((cb: () => void) => cb()),
-  },
-  captured: { opts: undefined as unknown },
-}));
+// Hoisted so the vi.mock factory and the tests share these bindings;
+// see the pattern notes in packages/crawl-common/src/pubsub/client.spec.ts.
 
-vi.mock('hot-shots', () => ({
-  StatsD: vi.fn(function (opts: unknown) {
-    captured.opts = opts;
-    return mockClient;
-  }),
-}));
+// On each `new OTLPMetricExporter(...)`, the mocked constructor creates an
+// in-memory exporter and assigns it here; tests read its recorded
+// datapoints. Stays undefined while metrics are disabled.
+let mockExporter = vi.hoisted(
+  () => undefined as InMemoryMetricExporter | undefined,
+);
 
-// Mutable config so tests can toggle the host (enabled/disabled).
-vi.mock('./config.js', () => ({
-  default: { host: 'gateway', port: 8125, environment: 'dev', workerRole: '' },
-}));
+// On every `new OTLPMetricExporter(...)` call, the mocked constructor
+// writes its options argument here. Tests read it to assert how
+// initMetrics initialized the exporter.
+let mockExporterConstructorArgs = vi.hoisted(() => undefined as unknown);
+
+// Swap the OTLP exporter for the SDK's in-memory one so tests assert on
+// real recorded datapoints rather than mocks of the metrics pipeline.
+vi.mock('@opentelemetry/exporter-metrics-otlp-proto', async () => {
+  const { AggregationTemporality, InMemoryMetricExporter } =
+    await import('@opentelemetry/sdk-metrics');
+  return {
+    OTLPMetricExporter: vi.fn(function OTLPMetricExporter(options: {
+      url: string;
+    }) {
+      // The real exporter rejects malformed URLs in its constructor.
+      new URL(options.url);
+      mockExporterConstructorArgs = options;
+      mockExporter = new InMemoryMetricExporter(
+        AggregationTemporality.CUMULATIVE,
+      );
+      return mockExporter;
+    }),
+  };
+});
+
+// Replace the real config with a test-owned object so setting endpoint
+// and environment below does not mutate the real module.
+vi.mock('./config.js', () => ({ default: {} }));
 
 import config from './config.js';
-import {
-  count,
-  incr,
-  initMetrics,
-  shutdownMetrics,
-  time,
-  timing,
-} from './client.js';
+import { count, initMetrics, shutdownMetrics, timing } from './client.js';
+
+/** Flush via shutdown and return the exported metrics keyed by name. */
+async function flush(): Promise<Map<string, MetricData>> {
+  await shutdownMetrics();
+  const metrics = mockExporter!
+    .getMetrics()
+    .flatMap((rm) => rm.scopeMetrics.flatMap((sm) => sm.metrics));
+  return new Map(metrics.map((m) => [m.descriptor.name, m]));
+}
 
 describe('metrics client', () => {
   beforeEach(() => {
-    config.host = 'gateway';
-    config.environment = 'dev';
-    config.workerRole = '';
+    config.endpoint = 'http://collector:4318/v1/metrics';
+    config.environment = 'test';
+    // Reset so each init constructs a fresh exporter and the disabled
+    // tests can assert that none was constructed.
+    mockExporter = undefined;
+    mockExporterConstructorArgs = undefined;
   });
 
   afterEach(async () => {
     await shutdownMetrics();
-    vi.clearAllMocks();
-    captured.opts = undefined;
+    vi.restoreAllMocks();
   });
 
-  it('builds the client with static service, env, and worker_role tags', () => {
-    config.workerRole = 'article';
-    initMetrics({ service: 'crawl-worker' });
+  it('exports counters with base and per-call tags', async () => {
+    initMetrics({ service: 'crawl-worker', workerRole: 'article' });
 
-    expect(captured.opts).toMatchObject({
-      host: 'gateway',
-      port: 8125,
-      globalTags: {
-        service: 'crawl-worker',
-        env: 'dev',
-        worker_role: 'article',
-      },
+    count('crawl.tick.enqueued', 3, { item_type: 'page' });
+    count('crawl.tick.enqueued', 2, { item_type: 'page' });
+    count('crawl.tick.ran');
+
+    const metrics = await flush();
+    const enqueued = metrics.get('crawl.tick.enqueued')!.dataPoints;
+    expect(enqueued).toHaveLength(1);
+    expect(enqueued[0].value).toBe(5);
+    expect(enqueued[0].attributes).toEqual({
+      env: 'test',
+      worker_role: 'article',
+      item_type: 'page',
     });
+    expect(metrics.get('crawl.tick.ran')!.dataPoints[0].value).toBe(1);
   });
 
-  it('omits worker_role when unset (e.g. the agent)', () => {
-    initMetrics({ service: 'crawl-agent' });
-
-    expect(
-      (captured.opts as { globalTags: Record<string, string> }).globalTags,
-    ).toEqual({ service: 'crawl-agent', env: 'dev' });
-  });
-
-  it('emits counters and timings with per-call tags', () => {
+  it('exports timings as millisecond histograms', async () => {
     initMetrics({ service: 'crawl-worker' });
 
-    incr('crawl.message.processed', { outcome: 'success' });
-    count('crawl.tick.enqueued', 3, { kind: 'page' });
     timing('crawl.message.duration_ms', 42, { outcome: 'success' });
 
-    expect(mockClient.increment).toHaveBeenCalledWith(
-      'crawl.message.processed',
-      1,
-      { outcome: 'success' },
-    );
-    expect(mockClient.increment).toHaveBeenCalledWith(
-      'crawl.tick.enqueued',
-      3,
-      {
-        kind: 'page',
-      },
-    );
-    expect(mockClient.timing).toHaveBeenCalledWith(
-      'crawl.message.duration_ms',
-      42,
-      { outcome: 'success' },
-    );
+    const metric = (await flush()).get('crawl.message.duration_ms')!;
+    expect(metric.descriptor.unit).toBe('ms');
+    expect(metric.dataPoints[0].attributes).toEqual({
+      env: 'test',
+      outcome: 'success',
+    });
+    expect(metric.dataPoints[0].value).toMatchObject({ count: 1, sum: 42 });
   });
 
-  it('records timing when the wrapped fn resolves and when it rejects', async () => {
+  it('drops tags left undefined so callers need no branching', async () => {
     initMetrics({ service: 'crawl-worker' });
 
-    const value = await time(
-      'crawl.zyte.duration_ms',
-      () => Promise.resolve(7),
-      {
-        extraction: 'article',
-      },
-    );
-    expect(value).toBe(7);
+    count('crawl.message.processed', 1, {
+      outcome: 'success',
+      item_type: undefined,
+    });
 
-    await expect(
-      time('crawl.zyte.duration_ms', () => Promise.reject(new Error('boom')), {
-        extraction: 'article',
-      }),
-    ).rejects.toThrow('boom');
-
-    // The reject path is the regression guard: a timing() moved out of the
-    // finally would stop recording latency for failed Zyte calls.
-    expect(mockClient.timing).toHaveBeenCalledTimes(2);
-    expect(mockClient.timing).toHaveBeenCalledWith(
-      'crawl.zyte.duration_ms',
-      expect.any(Number),
-      { extraction: 'article' },
-    );
+    const metrics = await flush();
+    expect(
+      metrics.get('crawl.message.processed')!.dataPoints[0].attributes,
+    ).toEqual({ env: 'test', outcome: 'success' });
   });
 
-  it('is a no-op when STATSD_HOST is empty', () => {
-    config.host = '';
+  it('is a no-op when no endpoint is configured', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    config.endpoint = undefined;
     initMetrics({ service: 'crawl-worker' });
 
-    incr('crawl.message.processed', { outcome: 'success' });
+    count('crawl.message.processed');
     timing('crawl.message.duration_ms', 5);
 
-    expect(mockClient.increment).not.toHaveBeenCalled();
-    expect(mockClient.timing).not.toHaveBeenCalled();
+    expect(mockExporter).toBeUndefined();
   });
 
-  it('closes the client on shutdown', async () => {
+  it('logs and disables metrics on invalid configuration such as a malformed endpoint', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    config.endpoint = 'not a url';
+
     initMetrics({ service: 'crawl-worker' });
+    count('crawl.tick.ran');
+
+    expect(error).toHaveBeenCalledWith(
+      'Metrics disabled: invalid configuration',
+      expect.any(Error),
+    );
+    expect(mockExporter).toBeUndefined();
+  });
+
+  it('flushes pending datapoints on shutdown', async () => {
+    initMetrics({ service: 'crawl-worker' });
+    count('crawl.tick.ran');
+
     await shutdownMetrics();
-    expect(mockClient.close).toHaveBeenCalledOnce();
+
+    expect(mockExporterConstructorArgs).toEqual({
+      url: 'http://collector:4318/v1/metrics',
+    });
+    const [resourceMetrics] = mockExporter!.getMetrics();
+    expect(resourceMetrics.resource.attributes['service.name']).toBe(
+      'crawl-worker',
+    );
+    expect(resourceMetrics.scopeMetrics[0].metrics[0].dataPoints[0].value).toBe(
+      1,
+    );
+
+    // Emitting after shutdown is a silent no-op.
+    count('crawl.tick.ran');
+    expect(mockExporter!.getMetrics()).toHaveLength(1);
   });
 });

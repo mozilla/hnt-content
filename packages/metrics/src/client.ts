@@ -1,87 +1,150 @@
 /**
- * Operational metrics client for the crawler. Wraps `hot-shots`
- * (StatsD UDP) as a module-level singleton that emits to the MozCloud
- * OTEL gateway, mirroring the `sentry` package's shape. The emit API
- * is transport-agnostic, so an OTLP exporter could replace the StatsD
- * client without touching call sites.
+ * Operational metrics client based on OpenTelemetry (OTel). The provider
+ * is not registered on OTel's global API, so `metrics.getMeter()` returns
+ * a noop meter; record through this module's functions instead.
  */
-import { StatsD } from 'hot-shots';
+import {
+  createNoopMeter,
+  diag,
+  DiagConsoleLogger,
+  DiagLogLevel,
+  type Attributes,
+  type Meter,
+} from '@opentelemetry/api';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from '@opentelemetry/sdk-metrics';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import config from './config.js';
 
-// One static tag set per call site; per-call tags merge over it.
-export type Tags = Record<string, string>;
+/** Allowed values for the outcome tag. */
+export type Outcome = 'success' | 'failure';
 
-let client: StatsD | undefined;
+/**
+ * Only low-cardinality tags (never a URL or an ID): each distinct value
+ * becomes its own stored series. Extend this closed set when a metric
+ * needs a new tag. env and worker_role are attached at init.
+ */
+export type Tags = {
+  outcome?: Outcome;
+  // Type of item processed, e.g. 'page' or 'live_article'.
+  item_type?: string;
+  // Error class or status code, e.g. 'TimeoutError', '429'.
+  error_type?: string;
+  // External service being called.
+  upstream?: string;
+};
 
 export interface MetricsInitOptions {
-  /** Static tag identifying the service, e.g. 'crawl-agent', 'crawl-worker'. */
+  // Service name, e.g. 'crawl-agent'; becomes the Prometheus job label.
   service: string;
+  // Which role a multi-role service runs as, e.g. 'article'.
+  workerRole?: string;
+}
+
+// Match the sentry package's flush timeout. Leaves most of the pod's 10s
+// SIGTERM window for application shutdown and Pub/Sub drain.
+const FLUSH_TIMEOUT_MS = 2_000;
+
+let provider: MeterProvider | undefined;
+// A noop until initMetrics succeeds, so emits are always safe to call.
+let meter: Meter = createNoopMeter();
+let baseTags: Attributes = {};
+
+/**
+ * Combine the base tags with per-call tags, dropping keys the caller left
+ * undefined, which OTel would otherwise treat as a distinct label set.
+ */
+function mergeTagsWithBase(tags?: Tags): Attributes {
+  const merged: Attributes = { ...baseTags };
+  if (!tags) {
+    return merged;
+  }
+  for (const [key, value] of Object.entries(tags)) {
+    if (value !== undefined) {
+      merged[key] = value;
+    }
+  }
+  return merged;
 }
 
 /**
- * Initialize the metrics client and attach the static service, env,
- * and worker_role tags. An empty STATSD_HOST disables emission (the
- * emit functions become no-ops), mirroring Sentry's empty-DSN
- * behavior. UDP is fire-and-forget, so socket and DNS errors are
- * logged rather than thrown. Call once at process startup.
+ * Initialize the metrics provider and attach the static env and
+ * worker_role tags. An unset OTLP endpoint disables emission. Call once
+ * at process startup.
  */
-export function initMetrics({ service }: MetricsInitOptions): void {
-  if (!config.host) {
-    console.log(`Metrics disabled: STATSD_HOST empty (service=${service})`);
+export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
+  if (!config.endpoint) {
+    console.log(
+      `Metrics disabled: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT not set ` +
+        `(service=${service})`,
+    );
     return;
   }
-  const globalTags: Tags = { service };
-  if (config.environment) globalTags.env = config.environment;
-  if (config.workerRole) globalTags.worker_role = config.workerRole;
-  client = new StatsD({
-    host: config.host,
-    port: config.port,
-    globalTags,
-    errorHandler: (err) => console.error('metrics:error', err.message),
-  });
-}
 
-/** Increment a counter by one. No-op when metrics are disabled. */
-export function incr(name: string, tags?: Tags): void {
-  client?.increment(name, 1, tags);
-}
+  // Log export failures to console.error; the SDK is silent by default.
+  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
 
-/** Increment a counter by a given value. No-op when disabled. */
-export function count(name: string, value: number, tags?: Tags): void {
-  client?.increment(name, value, tags);
-}
-
-/** Record a timing in milliseconds. No-op when disabled. */
-export function timing(name: string, ms: number, tags?: Tags): void {
-  client?.timing(name, ms, tags);
-}
-
-/**
- * Run an async function and record its duration as a timing, whether
- * it resolves or rejects, then return or re-throw. No-op recording
- * when metrics are disabled.
- */
-export async function time<T>(
-  name: string,
-  fn: () => Promise<T>,
-  tags?: Tags,
-): Promise<T> {
-  const start = Date.now();
-  try {
-    return await fn();
-  } finally {
-    timing(name, Date.now() - start, tags);
+  // env and worker_role ride on every datapoint: only datapoint
+  // attributes become queryable labels; resource attributes do not.
+  baseTags = {};
+  if (config.environment) {
+    baseTags.env = config.environment;
   }
+  if (workerRole) {
+    baseTags.worker_role = workerRole;
+  }
+
+  try {
+    // The MeterProvider is the SDK entry point that owns the export pipeline.
+    // https://opentelemetry.io/docs/specs/otel/metrics/api/#meterprovider
+    provider = new MeterProvider({
+      resource: resourceFromAttributes({ [ATTR_SERVICE_NAME]: service }),
+      readers: [
+        new PeriodicExportingMetricReader({
+          exporter: new OTLPMetricExporter({ url: config.endpoint }),
+        }),
+      ],
+    });
+  } catch (err) {
+    // Invalid configuration, such as a malformed endpoint URL, throws in
+    // the constructors; run without metrics rather than crash the service.
+    console.error('Metrics disabled: invalid configuration', err);
+    return;
+  }
+  meter = provider.getMeter(service);
+}
+
+/** Increment a counter. No-op when metrics are disabled. */
+export function count(name: string, value = 1, tags?: Tags): void {
+  // createCounter returns the existing instrument on repeat names.
+  meter.createCounter(name).add(value, mergeTagsWithBase(tags));
+}
+
+/** Record a timing in milliseconds. No-op when metrics are disabled. */
+export function timing(name: string, ms: number, tags?: Tags): void {
+  meter
+    .createHistogram(name, { unit: 'ms' })
+    .record(ms, mergeTagsWithBase(tags));
 }
 
 /**
- * Flush and close the metrics client. Idempotent; safe when
- * uninitialized. Call on SIGTERM after the Pub/Sub drain, alongside
- * shutdownSentry.
+ * Flush pending datapoints and shut the provider down, if initialized.
+ * Call on SIGTERM alongside shutdownSentry, after any Pub/Sub drain.
  */
 export async function shutdownMetrics(): Promise<void> {
-  if (!client) return;
-  const current = client;
-  client = undefined;
-  await new Promise<void>((resolve) => current.close(() => resolve()));
+  if (!provider) {
+    return;
+  }
+  const current = provider;
+  provider = undefined;
+  meter = createNoopMeter();
+  try {
+    await current.shutdown({ timeoutMillis: FLUSH_TIMEOUT_MS });
+  } catch (err) {
+    console.error('Metrics shutdown failed; datapoints may be lost', err);
+  }
 }
