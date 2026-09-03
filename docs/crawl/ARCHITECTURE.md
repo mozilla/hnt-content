@@ -267,7 +267,7 @@ clear.
 | [`zyte`](https://github.com/mozilla/hnt-content/tree/main/packages/zyte) | Client for the Zyte extraction API, including retries on transient errors |
 | [`pubsub`](https://github.com/mozilla/hnt-content/tree/main/packages/pubsub) | Consumer and publisher helpers with batching and graceful drain |
 | [`redis-state`](https://github.com/mozilla/hnt-content/tree/main/packages/redis-state) | Timestamps, distributed locks, and a distributed rate limiter over Redis |
-| [`metrics`](https://github.com/mozilla/hnt-content/tree/main/packages/metrics) | StatsD metrics client |
+| [`metrics`](https://github.com/mozilla/hnt-content/tree/main/packages/metrics) | OpenTelemetry metrics client |
 | [`sentry`](https://github.com/mozilla/hnt-content/tree/main/packages/sentry) | Error reporting with per-message context |
 
 The generic packages know nothing about the crawler. `crawl-common` layers the
