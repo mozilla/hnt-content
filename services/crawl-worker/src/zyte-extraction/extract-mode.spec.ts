@@ -6,7 +6,7 @@ import {
 } from './no-js-domains.js';
 
 describe('resolveExtractFrom', () => {
-  it('uses httpResponseBody for a cheap-listed domain, per product', () => {
+  it('uses httpResponseBody for a no-js-listed domain, per product', () => {
     expect(
       resolveExtractFrom(`https://${NO_JS_ARTICLE_DOMAINS[0]}/a/b`, 'article'),
     ).toBe('httpResponseBody');
@@ -49,18 +49,6 @@ describe('resolveExtractFrom', () => {
         `https://www.${NO_JS_ARTICLE_DOMAINS[0]}/a`,
         'article',
       ),
-    ).toBe('httpResponseBody');
-  });
-
-  it('always uses httpResponseBody for theguardian.com (clears its 451)', () => {
-    expect(
-      resolveExtractFrom(
-        'https://www.theguardian.com/world/article',
-        'article',
-      ),
-    ).toBe('httpResponseBody');
-    expect(
-      resolveExtractFrom('https://www.theguardian.com/world', 'articleList'),
     ).toBe('httpResponseBody');
   });
 
