@@ -1,6 +1,8 @@
 // Initialize Sentry first to capture errors from other modules.
 import './sentry-init.js';
+import './metrics-init.js';
 
+import { shutdownMetrics } from 'metrics';
 import { shutdownSentry } from 'sentry';
 import { app } from './app.js';
 import config from './config.js';
@@ -13,7 +15,7 @@ const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 let shuttingDown = false;
 /**
- * Initiate graceful shutdown: close the server, flush Sentry, and
+ * Initiate graceful shutdown: close the server, flush telemetry, and
  * force-exit after a timeout. K8s sends SIGTERM before pod
  * termination; a clean shutdown prevents duplicate Pub/Sub message
  * processing and ensures captured errors reach Sentry.
@@ -23,7 +25,7 @@ function shutdown() {
   shuttingDown = true;
   console.log('Shutting down');
   server.close(async () => {
-    await shutdownSentry();
+    await Promise.all([shutdownMetrics(), shutdownSentry()]);
     process.exit(0);
   });
   setTimeout(() => {
