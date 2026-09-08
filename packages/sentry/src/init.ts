@@ -1,10 +1,10 @@
 import * as Sentry from '@sentry/node';
 import config from './config.js';
 
-export type SentryInitOptions = {
-  /** Static tag identifying the service, e.g. 'crawl-agent', 'crawl-worker'. */
+export interface SentryInitOptions {
+  // Static tag identifying the service, e.g. 'crawl-agent', 'crawl-worker'.
   service: string;
-};
+}
 
 /**
  * Initialize the Sentry SDK and attach static tags to the global scope.

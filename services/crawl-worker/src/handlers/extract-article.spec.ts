@@ -194,7 +194,7 @@ describe('handleArticleExtraction', () => {
         data: {
           ...ZYTE_ARTICLE,
           // Same first 255 chars, different after.
-          description: baseExcerpt + ' extra text',
+          description: `${baseExcerpt} extra text`,
         },
       });
 

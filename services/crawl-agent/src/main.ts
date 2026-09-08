@@ -22,7 +22,9 @@ let shuttingDown = false;
  * Pub/Sub message processing and ensures errors reach Sentry.
  */
 function shutdown() {
-  if (shuttingDown) return;
+  if (shuttingDown) {
+    return;
+  }
   shuttingDown = true;
   console.log('Shutting down');
   stopRunning();
@@ -82,7 +84,9 @@ async function run() {
     try {
       await delay(remainingMs, undefined, { signal: ac.signal });
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') break;
+      if (err instanceof Error && err.name === 'AbortError') {
+        break;
+      }
       throw err;
     }
   }

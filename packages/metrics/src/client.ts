@@ -28,7 +28,7 @@ export type Outcome = 'success' | 'failure';
  * becomes its own stored series. Extend this closed set when a metric
  * needs a new tag. env and worker_role are attached at init.
  */
-export type Tags = {
+export interface Tags {
   outcome?: Outcome;
   // Type of item processed, e.g. 'page' or 'live_article'.
   item_type?: string;
@@ -36,7 +36,7 @@ export type Tags = {
   error_type?: string;
   // External service being called.
   upstream?: string;
-};
+}
 
 export interface MetricsInitOptions {
   // Service name, e.g. 'crawl-agent'; becomes the Prometheus job label.

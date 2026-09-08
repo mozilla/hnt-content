@@ -294,8 +294,12 @@ async function processMessage<T>(
  * safe to call when uninitialized.
  */
 export async function shutdownPubSub(): Promise<void> {
-  if (shutdownPromise) return shutdownPromise;
-  if (!pubsub) return;
+  if (shutdownPromise) {
+    return shutdownPromise;
+  }
+  if (!pubsub) {
+    return;
+  }
   const client = pubsub;
   shutdownPromise = (async () => {
     // The nested try/finally below ensures client.close() and

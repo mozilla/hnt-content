@@ -140,7 +140,9 @@ export async function setTimestamp(
  */
 export async function getTimestamp(key: string): Promise<number | null> {
   const value = await requireClient().get(key);
-  if (value === null) return null;
+  if (value === null) {
+    return null;
+  }
   const parsed = Number(value);
   return Number.isNaN(parsed) ? null : parsed;
 }
@@ -189,9 +191,9 @@ export async function releaseLock(key: string, token: string): Promise<void> {
 
 /** Outcome of a rate-limit token request. */
 export interface RateLimitResult {
-  /** Whether a token was available and consumed. */
+  // Whether a token was available and consumed.
   allowed: boolean;
-  /** When not allowed, milliseconds until the next token refills. */
+  // When not allowed, milliseconds until the next token refills.
   retryAfterMs: number;
 }
 
@@ -232,7 +234,9 @@ export async function acquireRateLimitToken(
  * before closing, unlike disconnect().
  */
 export async function shutdownRedis(): Promise<void> {
-  if (!client) return;
+  if (!client) {
+    return;
+  }
   const current = client;
   client = undefined;
   await current.quit();

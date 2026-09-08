@@ -173,7 +173,7 @@ async function zyteRequest(
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          authorization: `Basic ${btoa(key + ':')}`,
+          authorization: `Basic ${btoa(`${key}:`)}`,
         },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(timeout),

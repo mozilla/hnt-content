@@ -49,7 +49,7 @@ describe('normalizeText', () => {
     ['truncates to maxLength', 'A'.repeat(300), 255, 'a'.repeat(255)],
     [
       'truncates before stripping periods',
-      'A'.repeat(254) + '..',
+      `${'A'.repeat(254)}..`,
       255,
       'a'.repeat(254),
     ],

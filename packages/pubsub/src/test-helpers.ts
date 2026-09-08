@@ -96,7 +96,7 @@ export interface MockMessage {
   id: string;
   ack: ReturnType<typeof vi.fn>;
   nack: ReturnType<typeof vi.fn>;
-  /** Resolves with 'ack' or 'nack' once the subscriber settles the message. */
+  // Resolves with 'ack' or 'nack' once the subscriber settles the message.
   settled: Promise<'ack' | 'nack'>;
 }
 

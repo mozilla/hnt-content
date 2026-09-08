@@ -19,7 +19,9 @@ let shuttingDown = false;
  * processing and ensures captured errors reach Sentry.
  */
 function shutdown() {
-  if (shuttingDown) return;
+  if (shuttingDown) {
+    return;
+  }
   shuttingDown = true;
   console.log('Shutting down');
   server.close(async () => {

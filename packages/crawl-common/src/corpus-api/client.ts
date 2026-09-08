@@ -185,8 +185,7 @@ export async function updateApprovedCorpusItem(
         }
         throw new CorpusApiError(
           `Corpus API client error: ${response.status} ` +
-            `for item ${input.externalId}: ` +
-            JSON.stringify(body),
+            `for item ${input.externalId}: ${JSON.stringify(body)}`,
           response.status,
         );
       }
@@ -200,15 +199,17 @@ export async function updateApprovedCorpusItem(
 
       if (payload.errors?.length) {
         throw new CorpusApiError(
-          `GraphQL errors for item ${input.externalId}: ` +
-            payload.errors.map((e) => e.message).join('; '),
+          `GraphQL errors for item ${input.externalId}: ${payload.errors
+            .map((e) => e.message)
+            .join('; ')}`,
         );
       }
 
       if (!payload.data?.updateApprovedCorpusItem) {
         throw new CorpusApiError(
-          `No data returned for item ${input.externalId}: ` +
-            JSON.stringify(payload),
+          `No data returned for item ${input.externalId}: ${JSON.stringify(
+            payload,
+          )}`,
         );
       }
 

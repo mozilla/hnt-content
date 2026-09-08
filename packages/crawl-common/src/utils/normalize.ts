@@ -12,7 +12,9 @@ export function normalizeText(
   text: string | null | undefined,
   maxLength?: number,
 ): string {
-  if (text == null) return '';
+  if (text == null) {
+    return '';
+  }
 
   // Unicode NFC canonical composition.
   let result = text.normalize('NFC');

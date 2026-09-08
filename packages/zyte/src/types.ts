@@ -1,58 +1,46 @@
 /** Options for configuring the Zyte API client. */
 export interface ZyteClientOptions {
-  /** Zyte API key for authentication. */
+  // Zyte API key for authentication.
   apiKey: string;
-  /** Base URL for the Zyte extract endpoint. */
+  // Base URL for the Zyte extract endpoint.
   apiUrl?: string;
-  /**
-   * Per-request timeout in milliseconds, applied to both
-   * connection and response. Defaults to 90000.
-   */
+  // Per-request timeout in milliseconds, applied to both
+  // connection and response. Defaults to 90000.
   timeout?: number;
-  /** Max retry attempts for transient errors. Defaults to 3. */
+  // Max retry attempts for transient errors. Defaults to 3.
   maxRetries?: number;
-  /**
-   * Called before every request to Zyte, including each retry, so
-   * callers can gate throughput (e.g. await a distributed rate-limit
-   * token). Awaited; throwing aborts the request.
-   */
+  // Called before every request to Zyte, including each retry, so
+  // callers can gate throughput (e.g. await a distributed rate-limit
+  // token). Awaited; throwing aborts the request.
   beforeRequest?: () => Promise<void>;
-  /**
-   * Called when a failed attempt will be retried (a transient error
-   * with attempts remaining), so callers can count retries. Not
-   * awaited; must not throw.
-   */
+  // Called when a failed attempt will be retried (a transient error
+  // with attempts remaining), so callers can count retries. Not
+  // awaited; must not throw.
   onRetry?: () => void;
 }
 
 /** Per-request extraction options. */
 export interface ExtractionOptions {
-  /**
-   * Source for article/articleList extraction.
-   * - 'httpResponseBody': extract from the raw HTTP response
-   *   (cheaper, no browser rendering).
-   * - 'browserHtml': extract from browser-rendered HTML
-   *   (handles JS-rendered content).
-   * - 'browserHtmlOnly': extract only from browser-rendered
-   *   HTML, not from screenshots. Can improve extraction on
-   *   pages with overlays or popups.
-   *
-   * Defaults to browser rendering when omitted.
-   */
+  // Source for article/articleList extraction.
+  // - 'httpResponseBody': extract from the raw HTTP response
+  //   (cheaper, no browser rendering).
+  // - 'browserHtml': extract from browser-rendered HTML
+  //   (handles JS-rendered content).
+  // - 'browserHtmlOnly': extract only from browser-rendered
+  //   HTML, not from screenshots. Can improve extraction on
+  //   pages with overlays or popups.
+  //
+  // Defaults to browser rendering when omitted.
   extractFrom?: 'httpResponseBody' | 'browserHtml' | 'browserHtmlOnly';
-  /**
-   * HTTP headers Zyte sends when fetching the target URL.
-   * Each header is a name/value pair. Overrides Zyte's
-   * defaults for the specified header names.
-   */
+  // HTTP headers Zyte sends when fetching the target URL.
+  // Each header is a name/value pair. Overrides Zyte's
+  // defaults for the specified header names.
   customHttpRequestHeaders?: Array<{
     name: string;
     value: string;
   }>;
-  /**
-   * Tags attached to the request for filtering and
-   * categorization in the Zyte dashboard and API logs.
-   */
+  // Tags attached to the request for filtering and
+  // categorization in the Zyte dashboard and API logs.
   tags?: string[];
 }
 
@@ -75,9 +63,9 @@ export interface ZyteBreadcrumb {
 
 /** Extraction metadata on a Zyte article response. */
 export interface ZyteArticleMetadata {
-  /** Confidence score from 0 to 1. */
+  // Confidence score from 0 to 1.
   probability: number;
-  /** ISO 8601 UTC timestamp of when Zyte downloaded the page. */
+  // ISO 8601 UTC timestamp of when Zyte downloaded the page.
   dateDownloaded: string;
 }
 
@@ -86,9 +74,9 @@ export interface ZyteArticleMetadata {
  * articleList response.
  */
 export interface ZyteArticleListItemMetadata {
-  /** Confidence score from 0 to 1. */
+  // Confidence score from 0 to 1.
   probability: number;
-  /** URL of the page where this article list was extracted. */
+  // URL of the page where this article list was extracted.
   url?: string;
 }
 
@@ -98,11 +86,11 @@ export interface ZyteArticleListItemMetadata {
  * so callers can access the redirect URL and status code.
  */
 export interface ZyteResponse<T> {
-  /** Extraction result. */
+  // Extraction result.
   data: T;
-  /** URL after redirects (may differ from the input URL). */
+  // URL after redirects (may differ from the input URL).
   url: string;
-  /** HTTP status code of the target page. */
+  // HTTP status code of the target page.
   statusCode: number;
 }
 

@@ -1,22 +1,18 @@
 /** Options for configuring the Corpus Admin API client. */
 export interface CorpusApiClientOptions {
-  /**
-   * Admin API GraphQL endpoint (e.g.
-   * 'https://admin-api.getpocket.com/').
-   */
+  // Admin API GraphQL endpoint (e.g.
+  // 'https://admin-api.getpocket.com/').
   endpoint: string;
-  /** JWK JSON string containing the RSA private key. */
+  // JWK JSON string containing the RSA private key.
   jwkJson: string;
-  /** JWT issuer claim. */
+  // JWT issuer claim.
   issuer: string;
-  /** JWT audience claim. */
+  // JWT audience claim.
   audience: string;
-  /**
-   * apollographql-client-name header value. Identifies
-   * this service in admin-api logs.
-   */
+  // apollographql-client-name header value. Identifies
+  // this service in admin-api logs.
   clientName?: string;
-  /** apollographql-client-version header value. */
+  // apollographql-client-version header value.
   clientVersion?: string;
 }
 

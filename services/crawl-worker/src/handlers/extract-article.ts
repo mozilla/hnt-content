@@ -1,12 +1,12 @@
-import {
+import type {
   ArticleEvent,
   CorpusItem,
   CrawlArticleMessage,
-  normalizeText,
-  updateApprovedCorpusItem,
   UpdateApprovedCorpusItemInput,
 } from 'crawl-common';
-import { extractArticle, ZyteArticle } from 'zyte';
+import { normalizeText, updateApprovedCorpusItem } from 'crawl-common';
+import type { ZyteArticle } from 'zyte';
+import { extractArticle } from 'zyte';
 
 import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
 
@@ -84,7 +84,9 @@ async function detectAndSyncChanges(
     normalizeText(extractedExcerpt, EXCERPT_COMPARE_LENGTH) !==
       normalizeText(corpusItem.excerpt, EXCERPT_COMPARE_LENGTH);
 
-  if (!titleChanged && !excerptChanged) return;
+  if (!titleChanged && !excerptChanged) {
+    return;
+  }
 
   const changedFields = [
     ...(titleChanged ? ['title'] : []),
