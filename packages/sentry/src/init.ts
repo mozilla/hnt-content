@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/node';
 import config from './config.js';
 
 export type SentryInitOptions = {
-  /** Static tag identifying the service, e.g. 'crawl-agent', 'crawl-worker'. */
+  /** Static tag identifying the service, e.g. 'crawl-scheduler', 'crawl-worker'. */
   service: string;
 };
 

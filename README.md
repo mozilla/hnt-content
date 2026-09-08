@@ -14,7 +14,7 @@ pnpm test
 Run a service locally (no build step, uses tsx):
 
 ```sh
-pnpm --filter crawl-agent dev
+pnpm --filter crawl-scheduler dev
 pnpm --filter crawl-worker dev
 ```
 
@@ -40,7 +40,7 @@ See the [Article Crawler Technical Spec](https://mozilla-hub.atlassian.net/wiki/
 ```
 hnt-content/
 ├── services/
-│   ├── crawl-agent/      # Scheduler: enqueues crawl jobs on configured intervals
+│   ├── crawl-scheduler/      # Scheduler: enqueues crawl jobs on configured intervals
 │   └── crawl-worker/     # Worker: discovers articles and extracts content
 ├── packages/
 │   └── crawl-common/     # Shared types, utilities, Zyte client

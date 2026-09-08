@@ -7,7 +7,7 @@ import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
 
 const server = app.listen(config.port, () => {
-  console.log(`crawl-agent listening on port ${config.port}`);
+  console.log(`crawl-scheduler listening on port ${config.port}`);
 });
 
 // Cancels the inter-tick delay in run() during shutdown.
