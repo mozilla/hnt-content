@@ -34,7 +34,7 @@ All non-trivial functions get a minimal `/** ... */` block:
  */
 ```
 
-Trivial one-liners do not need doc blocks.
+Trivial one-liners do not need doc blocks. Interface and type members take `//` line comments rather than TSDoc blocks; the linter enforces and autofixes this.
 
 ## Submitting Changes (HNT team)
 
