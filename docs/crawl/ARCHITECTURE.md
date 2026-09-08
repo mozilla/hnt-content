@@ -50,7 +50,7 @@ flowchart TB
 ```
 
 Editors maintain the list of publisher pages to crawl in an [editorial spreadsheet](https://docs.google.com/spreadsheets/d/1xlZnDQjVnfhGvxuFhAvktRKaKdNIZBF1zypaOTdmnzQ/edit?gid=1566790416#gid=1566790416),
-which is exported to a [committed JSON file](https://github.com/mozilla/hnt-content/blob/main/services/crawl-agent/publishers.json)
+which is exported to a [committed JSON file](https://github.com/mozilla/hnt-content/blob/main/services/crawl-scheduler/publishers.json)
 that the scheduler reads on startup. The crawler never visits sites itself. It
 drives the Zyte API to fetch and extract those pages and the articles found on
 them, and the extracted fields flow back, without any HTML. The crawler streams
@@ -231,7 +231,7 @@ flowchart TB
 
 ### Workloads
 
-The **[Crawl Scheduler](https://github.com/mozilla/hnt-content/tree/main/services/crawl-agent)** runs as a single replica and owns the crawl timing. It
+The **[Crawl Scheduler](https://github.com/mozilla/hnt-content/tree/main/services/crawl-scheduler)** runs as a single replica and owns the crawl timing. It
 fetches nothing itself. Every minute it works out which publisher pages and live
 articles are due, and publishes a job for each to the matching Pub/Sub queue. It
 reads the page list once at startup from a committed JSON file and polls the

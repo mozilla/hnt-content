@@ -1,5 +1,5 @@
 export default {
-  service: 'crawl-agent',
+  service: 'crawl-scheduler',
   port: Number(process.env.PORT ?? '8080'),
   tickIntervalMs: Number(process.env.TICK_INTERVAL_MS ?? '60000'),
   staleTickThresholdMinutes: Number(

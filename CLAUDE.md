@@ -18,9 +18,9 @@ Comments should add value: explain complex logic, workarounds, or business reaso
 
 ```sh
 pnpm test                                        # all tests (via Turbo)
-pnpm --filter crawl-agent test                   # single package
-pnpm --filter crawl-agent exec vitest run src/app.spec.ts          # single file
-pnpm --filter crawl-agent exec vitest run src/app.spec.ts -t "returns 200"  # single test
+pnpm --filter crawl-scheduler test                   # single package
+pnpm --filter crawl-scheduler exec vitest run src/app.spec.ts          # single file
+pnpm --filter crawl-scheduler exec vitest run src/app.spec.ts -t "returns 200"  # single test
 ```
 
 ## Debugging tests
@@ -28,19 +28,19 @@ pnpm --filter crawl-agent exec vitest run src/app.spec.ts -t "returns 200"  # si
 **console.log output is hidden by default.** Always add `--reporter=verbose`:
 
 ```sh
-pnpm --filter crawl-agent exec vitest run src/app.spec.ts --reporter=verbose
+pnpm --filter crawl-scheduler exec vitest run src/app.spec.ts --reporter=verbose
 ```
 
 Node inspector breakpoints:
 
 ```sh
-NODE_OPTIONS='--inspect-brk' pnpm --filter crawl-agent exec vitest run src/app.spec.ts
+NODE_OPTIONS='--inspect-brk' pnpm --filter crawl-scheduler exec vitest run src/app.spec.ts
 ```
 
 ## Debugging a running service
 
 ```sh
-NODE_OPTIONS='--inspect-brk' pnpm --filter crawl-agent start
+NODE_OPTIONS='--inspect-brk' pnpm --filter crawl-scheduler start
 ```
 
 ## Type checking
@@ -48,7 +48,7 @@ NODE_OPTIONS='--inspect-brk' pnpm --filter crawl-agent start
 Use `tsc --noEmit`, not `vitest typecheck` (not configured in this repo):
 
 ```sh
-pnpm --filter crawl-agent exec tsc --noEmit
+pnpm --filter crawl-scheduler exec tsc --noEmit
 ```
 
 # Before committing
@@ -80,7 +80,7 @@ Fix formatting with `pnpm format` (prettier --write).
 
 Examples:
 ```
-feat(HNT-2097): add crawl-agent healthcheck endpoint
+feat(HNT-2097): add crawl-scheduler healthcheck endpoint
 fix(HNT-3001): handle null article body from Zyte
 chore(HNT-2097): migrate from Jest to Vitest
 ```
