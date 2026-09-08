@@ -198,18 +198,16 @@ export async function updateApprovedCorpusItem(
       };
 
       if (payload.errors?.length) {
+        const messages = payload.errors.map((e) => e.message).join('; ');
         throw new CorpusApiError(
-          `GraphQL errors for item ${input.externalId}: ${payload.errors
-            .map((e) => e.message)
-            .join('; ')}`,
+          `GraphQL errors for item ${input.externalId}: ${messages}`,
         );
       }
 
       if (!payload.data?.updateApprovedCorpusItem) {
+        const json = JSON.stringify(payload);
         throw new CorpusApiError(
-          `No data returned for item ${input.externalId}: ${JSON.stringify(
-            payload,
-          )}`,
+          `No data returned for item ${input.externalId}: ${json}`,
         );
       }
 
