@@ -74,7 +74,7 @@ async function run() {
     } catch (err) {
       // tickWithSentry already captured the error and rethrew so
       // the loop sees it; swallowing here keeps a single failed
-      // tick from killing the agent.
+      // tick from killing the scheduler.
       console.error('tick failed:', err);
     }
     const elapsed = Date.now() - start;
