@@ -72,12 +72,14 @@ export interface SubscriberOptions<T> {
    * handlers run at once, which for the article worker bounds the
    * concurrent Zyte fetches and the response bodies held in
    * memory. The workers have no in-process concurrency cap by
-   * design, so this is the intended bound. The SDK default of 1000
-   * is far too high for the worker's memory limit: under a backlog
-   * it leases ~1000 messages and OOM-kills the pod. Omit to fall
-   * back to DEFAULT_MAX_MESSAGES.
+   * design, so this is the intended bound. Required rather than
+   * defaulted because the right value depends on the workload:
+   * article extraction holds whole response bodies, discovery does
+   * not. 64 is a reasonable starting point for the article worker.
+   * Never leave this to the SDK's own default of 1000; under a
+   * backlog it leases ~1000 messages and OOM-kills the pod.
    */
-  maxMessages?: number;
+  maxMessages: number;
   /**
    * Called on the Pub/Sub library's own internal errors
    * (stream-error, close-error, parse-error, validation-error).
