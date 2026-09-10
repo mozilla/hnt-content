@@ -84,7 +84,9 @@ async function detectAndSyncChanges(
     normalizeText(extractedExcerpt, EXCERPT_COMPARE_LENGTH) !==
       normalizeText(corpusItem.excerpt, EXCERPT_COMPARE_LENGTH);
 
-  if (!titleChanged && !excerptChanged) return;
+  if (!titleChanged && !excerptChanged) {
+    return;
+  }
 
   const changedFields = [
     ...(titleChanged ? ['title'] : []),

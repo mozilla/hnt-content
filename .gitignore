@@ -33,8 +33,11 @@ logs
 .idea
 .vscode
 
-# local Claude Code instructions
+# local AI tooling state
 CLAUDE.local.md
+.claude/settings.local.json
+.claude/worktrees/
+.codex/
 
 # we only want pnpm-lock.yaml
 package-lock.json

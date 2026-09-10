@@ -15,6 +15,9 @@ LICENSE
 .prettierrc
 .nvmrc
 eslint.config.js
+.prettierignore
+.claude
+.codex
 .npmrc
 .pnpmrc
 *.key
