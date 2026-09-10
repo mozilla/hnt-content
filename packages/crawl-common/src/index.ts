@@ -11,15 +11,6 @@ export {
   articleContentKey,
 } from './redis/index.js';
 export {
-  pageFetchKey,
-  pageLockKey,
-  pageEnqueuedKey,
-  articleEnqueuedKey,
-  articleFetchKey,
-  articleLockKey,
-  articleContentKey,
-} from './redis/index.js';
-export {
   initCorpusApiClient,
   updateApprovedCorpusItem,
   CorpusApiError,
