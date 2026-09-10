@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   articleContentKey,
+  articleEnqueuedKey,
   articleFetchKey,
   articleLockKey,
   hashUrl,
@@ -36,6 +37,7 @@ describe('key builders', () => {
     [pageFetchKey, 'page:fetch'],
     [pageLockKey, 'page:lock'],
     [pageEnqueuedKey, 'page:enqueued'],
+    [articleEnqueuedKey, 'article:enqueued'],
     [articleFetchKey, 'article:fetch'],
     [articleLockKey, 'article:lock'],
     [articleContentKey, 'article:content'],
