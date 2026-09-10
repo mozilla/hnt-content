@@ -6,16 +6,7 @@ export {
   pageLockKey,
   pageEnqueuedKey,
   articleEnqueuedKey,
-  articleFetchKey,
-  articleLockKey,
-  articleContentKey,
-} from './redis/index.js';
-export {
-  pageFetchKey,
-  pageLockKey,
-  pageEnqueuedKey,
-  articleEnqueuedKey,
-  articleFetchKey,
+  articleExtractedKey,
   articleLockKey,
   articleContentKey,
 } from './redis/index.js';

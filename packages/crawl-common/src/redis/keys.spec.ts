@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   articleContentKey,
   articleEnqueuedKey,
-  articleFetchKey,
+  articleExtractedKey,
   articleLockKey,
   hashUrl,
   pageEnqueuedKey,
@@ -38,7 +38,7 @@ describe('key builders', () => {
     [pageLockKey, 'page:lock'],
     [pageEnqueuedKey, 'page:enqueued'],
     [articleEnqueuedKey, 'article:enqueued'],
-    [articleFetchKey, 'article:fetch'],
+    [articleExtractedKey, 'article:extracted'],
     [articleLockKey, 'article:lock'],
     [articleContentKey, 'article:content'],
   ])('%o builds the %s namespace', (build, prefix) => {
