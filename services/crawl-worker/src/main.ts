@@ -3,7 +3,7 @@ import './sentry-init.js';
 
 import { shutdownSentry } from 'sentry';
 import { app } from './app.js';
-import config from './config.js';
+import config from './config/index.js';
 
 const server = app.listen(config.port, () => {
   console.log(`crawl-worker listening on port ${config.port}`);
