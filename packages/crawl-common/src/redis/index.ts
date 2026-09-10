@@ -4,7 +4,7 @@ export {
   pageLockKey,
   pageEnqueuedKey,
   articleEnqueuedKey,
-  articleFetchKey,
+  articleExtractedKey,
   articleLockKey,
   articleContentKey,
 } from './keys.js';
