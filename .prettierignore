@@ -1,0 +1,3 @@
+# Markdown tables are hand-formatted; pnpm owns the lockfile.
+*.md
+pnpm-lock.yaml
