@@ -16,6 +16,10 @@ export const TOPIC_NAME = 'test-topic';
 // does not drive real timing. Production callers source it from
 // their service config (the worker's maxExtensionSeconds).
 export const TEST_MAX_EXTENSION_SECONDS = 180;
+// Placeholder outstanding-message cap. Small enough that a test
+// can exceed it deliberately. Production callers source it from
+// their service config (the worker's maxMessages).
+export const TEST_MAX_MESSAGES = 8;
 
 export interface TestPayload {
   url: string;
@@ -34,6 +38,7 @@ export const TEST_PAYLOAD: TestPayload = {
 export const TEST_SUBSCRIBER_OPTIONS: SubscriberOptions<TestPayload> = {
   subscriptionName: SUBSCRIPTION_NAME,
   maxExtensionSeconds: TEST_MAX_EXTENSION_SECONDS,
+  maxMessages: TEST_MAX_MESSAGES,
   handler: async () => {},
 };
 

@@ -23,6 +23,7 @@ import {
 import {
   PROJECT_ID,
   TEST_MAX_EXTENSION_SECONDS,
+  TEST_MAX_MESSAGES,
   TEST_PAYLOAD,
   type TestPayload,
 } from './test-helpers.js';
@@ -117,6 +118,7 @@ describe('Pub/Sub client integration', () => {
     startSubscriber<TestPayload>({
       subscriptionName,
       maxExtensionSeconds: TEST_MAX_EXTENSION_SECONDS,
+      maxMessages: TEST_MAX_MESSAGES,
       handler: async (message) => {
         received.push(message);
       },

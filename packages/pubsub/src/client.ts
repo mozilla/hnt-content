@@ -51,16 +51,6 @@ import type {
 // K8s docs: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
 export const SHUTDOWN_TIMEOUT_SECONDS = 25;
 
-// Default cap on outstanding (leased but unacked) messages, used
-// when a subscriber omits maxMessages. This bounds concurrent
-// handlers, and for the article worker that bounds concurrent Zyte
-// fetches and the response bodies held in memory. The workers have
-// no in-process concurrency cap by design, so this is the intended
-// bound. The SDK default of 1000 is far too high for the worker's
-// memory limit: under a backlog it leases ~1000 messages, runs that
-// many concurrent fetches, and OOM-kills the pod.
-export const DEFAULT_MAX_MESSAGES = 64;
-
 // Module-level state.
 let pubsub: PubSub | undefined;
 let shutdownPromise: Promise<void> | undefined;
@@ -171,12 +161,11 @@ export function startSubscriber<T>(
     maxExtensionTime: Duration.from({
       seconds: opts.maxExtensionSeconds,
     }),
-    // Cap outstanding messages so the worker leases only a bounded
-    // number at once. allowExcessMessages: false makes the SDK stop
-    // pulling once the cap is reached rather than overshooting on a
-    // single streaming-pull response.
+    // allowExcessMessages: false makes the SDK stop pulling once
+    // maxMessages is reached rather than overshooting on a single
+    // streaming-pull response.
     flowControl: {
-      maxMessages: opts.maxMessages ?? DEFAULT_MAX_MESSAGES,
+      maxMessages: opts.maxMessages,
       allowExcessMessages: false,
     },
     // WaitForProcessing lets in-flight handlers finish on
@@ -203,13 +192,11 @@ export function startSubscriber<T>(
     handleError(err, { kind: 'stream-error' });
 
   const onMessage = (message: Message) => {
-    // We prefix the call with `void` because the SDK's Subscription
-    // class extends Node's EventEmitter, which calls message
-    // listeners synchronously and discards their return values. We
-    // cannot make the SDK wait, so this call is fire-and-forget. It
-    // is safe because processMessage catches every error path and
-    // signals completion through ack or nack on the message rather
-    // than through this promise.
+    // EventEmitter calls listeners synchronously and discards their
+    // return values, so we cannot make the SDK await this. It is
+    // safe as fire-and-forget: processMessage catches every error
+    // path and signals completion by acking or nacking the message,
+    // not through this promise. `void` marks that as deliberate.
     void processMessage(opts, message, handleError);
   };
 
