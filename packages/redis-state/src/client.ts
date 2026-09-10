@@ -140,7 +140,9 @@ export async function setTimestamp(
  */
 export async function getTimestamp(key: string): Promise<number | null> {
   const value = await requireClient().get(key);
-  if (value === null) return null;
+  if (value === null) {
+    return null;
+  }
   const parsed = Number(value);
   return Number.isNaN(parsed) ? null : parsed;
 }
@@ -232,7 +234,9 @@ export async function acquireRateLimitToken(
  * before closing, unlike disconnect().
  */
 export async function shutdownRedis(): Promise<void> {
-  if (!client) return;
+  if (!client) {
+    return;
+  }
   const current = client;
   client = undefined;
   await current.quit();

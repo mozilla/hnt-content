@@ -31,7 +31,9 @@ export function withSentryHandler<T>(
       const { tags, context } = extractMetadata(input);
       if (tags) {
         for (const [k, v] of Object.entries(tags)) {
-          if (v !== undefined) Sentry.setTag(k, v);
+          if (v !== undefined) {
+            Sentry.setTag(k, v);
+          }
         }
       }
       if (context && Object.keys(context).length > 0) {
