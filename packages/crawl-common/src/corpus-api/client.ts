@@ -298,9 +298,13 @@ export async function getScheduledSectionItems(
   const seen = new Set<string>();
   const liveArticles: LiveArticle[] = [];
   for (const section of data.getSectionsWithSectionItems ?? []) {
-    if (section.status !== 'LIVE') continue;
+    if (section.status !== 'LIVE') {
+      continue;
+    }
     for (const { approvedItem } of section.sectionItems ?? []) {
-      if (!approvedItem || seen.has(approvedItem.url)) continue;
+      if (!approvedItem || seen.has(approvedItem.url)) {
+        continue;
+      }
       seen.add(approvedItem.url);
       liveArticles.push(toLiveArticle(approvedItem));
     }
