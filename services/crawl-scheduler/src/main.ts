@@ -7,7 +7,7 @@ import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
 
 const server = app.listen(config.port, () => {
-  console.log(`crawl-agent listening on port ${config.port}`);
+  console.log(`crawl-scheduler listening on port ${config.port}`);
 });
 
 // Cancels the inter-tick delay in run() during shutdown.
@@ -74,7 +74,7 @@ async function run() {
     } catch (err) {
       // tickWithSentry already captured the error and rethrew so
       // the loop sees it; swallowing here keeps a single failed
-      // tick from killing the agent.
+      // tick from killing the scheduler.
       console.error('tick failed:', err);
     }
     const elapsed = Date.now() - start;

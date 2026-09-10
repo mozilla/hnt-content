@@ -2,7 +2,7 @@ import request from 'supertest';
 import { app, setLastTickAt } from './app.js';
 import config from './config.js';
 
-describe('crawl-agent healthcheck', () => {
+describe('crawl-scheduler healthcheck', () => {
   beforeEach(() => {
     setLastTickAt(0);
   });

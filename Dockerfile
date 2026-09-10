@@ -20,7 +20,7 @@ RUN pnpm add -g turbo@2.8.20
 FROM base AS setup
 
 COPY . .
-RUN turbo prune crawl-agent crawl-worker --docker
+RUN turbo prune crawl-scheduler crawl-worker --docker
 
 # ---- build ----
 FROM base AS builder
@@ -44,7 +44,7 @@ RUN pnpm run build
 # expects deps to be pre-copied, or "injected"). --legacy handles symlinks
 # by copying each dep's built dist/ into the deploy directory.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm --filter=crawl-agent --prod deploy --legacy /prod/crawl-agent && \
+    pnpm --filter=crawl-scheduler --prod deploy --legacy /prod/crawl-scheduler && \
     pnpm --filter=crawl-worker --prod deploy --legacy /prod/crawl-worker
 
 # ---- runner ----
@@ -66,4 +66,4 @@ ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["sh", "-c", "echo 'ERROR: specify a service command, e.g. node crawl-agent/dist/main.js' && exit 1"]
+CMD ["sh", "-c", "echo 'ERROR: specify a service command, e.g. node crawl-scheduler/dist/main.js' && exit 1"]

@@ -14,7 +14,7 @@ pnpm test
 Run a service locally (no build step, uses tsx):
 
 ```sh
-pnpm --filter crawl-agent dev
+pnpm --filter crawl-scheduler dev
 pnpm --filter crawl-worker dev
 ```
 
@@ -31,7 +31,7 @@ pnpm --filter crawl-worker dev
 
 See the [Article Crawler Technical Spec](https://mozilla-hub.atlassian.net/wiki/spaces/FPS/pages/1737064449) for the full design. In brief:
 
-- **Crawl Agent** runs a tick loop every 60s, checking which publisher pages and live articles need crawling based on Redis state, then enqueues jobs to Pub/Sub.
+- **Crawl Scheduler** runs a tick loop every 60s, checking which publisher pages and live articles need crawling based on Redis state, then enqueues jobs to Pub/Sub.
 - **Crawl Worker** consumes from two Pub/Sub queues: `crawl-article-discovery` (page crawling) and `crawl-article` (article extraction). Results stream to BigQuery via Pub/Sub subscriptions.
 - **Redis** (Memorystore) tracks crawl timestamps, prevents duplicate fetches, and provides distributed locking.
 
@@ -40,10 +40,15 @@ See the [Article Crawler Technical Spec](https://mozilla-hub.atlassian.net/wiki/
 ```
 hnt-content/
 ├── services/
-│   ├── crawl-agent/      # Scheduler: enqueues crawl jobs on configured intervals
-│   └── crawl-worker/     # Worker: discovers articles and extracts content
+│   ├── crawl-scheduler/  # Enqueues crawl jobs on configured intervals
+│   └── crawl-worker/     # Discovers articles and extracts content
 ├── packages/
-│   └── crawl-common/     # Shared types, utilities, Zyte client
+│   ├── crawl-common/     # Shared types, utilities, Corpus API client
+│   ├── metrics/          # OpenTelemetry metrics client
+│   ├── pubsub/           # Pub/Sub publisher and subscriber
+│   ├── redis-state/      # Redis crawl state and locks
+│   ├── sentry/           # Sentry init and handler wrapper
+│   └── zyte/             # Zyte API client
 ├── Dockerfile            # Multi-stage build with turbo prune + pnpm deploy
 ├── turbo.json
 └── pnpm-workspace.yaml

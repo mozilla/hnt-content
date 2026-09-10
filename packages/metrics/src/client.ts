@@ -39,7 +39,7 @@ export type Tags = {
 };
 
 export interface MetricsInitOptions {
-  // Service name, e.g. 'crawl-agent'; becomes the Prometheus job label.
+  // Service name, e.g. 'crawl-scheduler'; becomes the Prometheus job label.
   service: string;
   // Which role a multi-role service runs as, e.g. 'article'.
   workerRole?: string;

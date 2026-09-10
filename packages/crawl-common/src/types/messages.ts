@@ -20,7 +20,7 @@ export interface CorpusItem {
 /**
  * Pub/Sub message consumed from the crawl-article
  * subscription. corpus_item is present only for live
- * articles published by the crawl agent.
+ * articles published by the crawl scheduler.
  */
 export interface CrawlArticleMessage {
   url: string;
@@ -30,7 +30,7 @@ export interface CrawlArticleMessage {
   enqueued_at: string;
   // How often this article should be re-extracted, in minutes, set
   // by the producer: discovery uses the global article refresh
-  // setting, the agent uses its live-article interval. Required, so
+  // setting, the scheduler uses its live-article interval. Required, so
   // a job always carries the window it was scheduled under.
   article_refresh_minutes: number;
   corpus_item?: CorpusItem;
@@ -60,9 +60,9 @@ export interface CrawlArticleDiscoveryMessage {
 }
 
 /**
- * A live (curated) article in the agent's publisher list. The agent
- * enqueues a crawl-article job carrying this corpus_item so the
- * worker can re-extract and sync editorial metadata.
+ * A live (curated) article in the scheduler's publisher list. The
+ * scheduler enqueues a crawl-article job carrying this corpus_item so
+ * the worker can re-extract and sync editorial metadata.
  */
 export interface LiveArticle {
   url: string;
@@ -70,7 +70,7 @@ export interface LiveArticle {
 }
 
 /**
- * The agent's publisher list, loaded from JSON. pages drive
+ * The scheduler's publisher list, loaded from JSON. pages drive
  * discovery crawls; live_articles are re-crawled directly to keep
  * curated metadata fresh. Phase 5 replaces this with the Corpus API.
  */
