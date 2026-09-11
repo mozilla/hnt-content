@@ -1,3 +1,5 @@
+import type { JWK, JWKParameters } from 'jose';
+
 /** Options for configuring the Corpus Admin API client. */
 export interface CorpusApiClientOptions {
   /**
@@ -70,3 +72,9 @@ export interface ApiSection {
   status: string;
   sectionItems: Array<{ approvedItem: ApiApprovedCorpusItem }>;
 }
+
+/**
+ * Custom type that includes everything on the JWK type and overrides its kid field
+ * to be required. JWK inherits kid field from JWKParameters type.
+ */
+export type JwkWithKid = JWK & Required<Pick<JWKParameters, 'kid'>>;

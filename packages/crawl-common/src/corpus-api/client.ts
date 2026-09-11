@@ -2,6 +2,7 @@ import { importJWK, SignJWT } from 'jose';
 import type { JWK } from 'jose';
 import pRetry from 'p-retry';
 import type {
+  JwkWithKid,
   ApiApprovedCorpusItem,
   ApiSection,
   CorpusApiClientOptions,
@@ -33,6 +34,9 @@ const RETRY_MIN_TIMEOUT_MS = 2_000;
 /** Upper bound on retry delay for Corpus API calls. */
 export const RETRY_MAX_TIMEOUT_MS = 16_000;
 
+const DEFAULT_CLIENT_NAME = 'hnt-content';
+const DEFAULT_CLIENT_VERSION = '1.0';
+
 /** Error thrown when a Corpus Admin API request fails. */
 export class CorpusApiError extends Error {
   constructor(
@@ -46,8 +50,8 @@ export class CorpusApiError extends Error {
 
 // Module-level state.
 let endpoint: string | undefined;
-let clientName = 'hnt-content';
-let clientVersion = '1.0';
+let clientName: string;
+let clientVersion: string;
 let privateKey: CryptoKey | Uint8Array;
 let kid: string;
 
@@ -69,11 +73,11 @@ export async function initCorpusApiClient(
   endpoint = opts.endpoint;
   issuer = opts.issuer;
   audience = opts.audience;
-  clientName = opts.clientName ?? clientName;
-  clientVersion = opts.clientVersion ?? clientVersion;
+  clientName = opts.clientName ?? DEFAULT_CLIENT_NAME;
+  clientVersion = opts.clientVersion ?? DEFAULT_CLIENT_VERSION;
 
   const jwk = parseJwk(opts.jwkJson);
-  kid = jwk.kid!;
+  kid = jwk.kid;
   privateKey = await importJWK(jwk, 'RS256');
 
   // Reset cached token when re-initialized.
@@ -85,7 +89,7 @@ export async function initCorpusApiClient(
  * Parse a JWK JSON string, handling the {"keys": [...]}
  * wrapper format used by some secret stores.
  */
-function parseJwk(jwkJson: string): JWK {
+function parseJwk(jwkJson: string): JwkWithKid {
   const parsed = JSON.parse(jwkJson) as JWK | { keys: JWK[] };
   const jwk =
     'keys' in parsed && Array.isArray(parsed.keys)
@@ -97,7 +101,10 @@ function parseJwk(jwkJson: string): JWK {
   if (!jwk.kid) {
     throw new Error('JWK must include a kid field');
   }
-  return jwk;
+
+  // returning it as this type allows callers to avoid a non-null assertion for kid
+  // despite the fact that this function already does so above.
+  return { ...jwk, kid: jwk.kid };
 }
 
 /** Get a valid JWT, using the cache when possible. */
