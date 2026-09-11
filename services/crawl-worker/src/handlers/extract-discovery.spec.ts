@@ -10,7 +10,7 @@ vi.mock('zyte', async (importOriginal) => {
 });
 
 import { extractArticleList } from 'zyte';
-import { handleArticleDiscovery } from './extract-discovery.js';
+import { handleArticleDiscovery, selectArticles } from './extract-discovery.js';
 import { DISCOVERY_MESSAGE, ZYTE_LIST_ITEM } from './test-helpers.js';
 
 const extractListMock = vi.mocked(extractArticleList);
@@ -47,6 +47,7 @@ describe('handleArticleDiscovery', () => {
     });
 
     expect(events).toHaveLength(1);
+
     expect(events[0]).toMatchObject({
       url: ZYTE_LIST_ITEM.url,
       source_url: DISCOVERY_MESSAGE.url,
@@ -55,10 +56,11 @@ describe('handleArticleDiscovery', () => {
       authors: ZYTE_LIST_ITEM.authors,
       published_at: ZYTE_LIST_ITEM.datePublished,
       language: ZYTE_LIST_ITEM.inLanguage,
-      topic: 'technology',
-      surface_id: 'NEW_TAB_EN_US',
+      topic: DISCOVERY_MESSAGE.contexts[0].topic,
+      surface_id: DISCOVERY_MESSAGE.contexts[0].surface_id,
       page_position: 1,
     });
+
     expect(events[0]!.crawled_at).toBeDefined();
   });
 
@@ -68,10 +70,12 @@ describe('handleArticleDiscovery', () => {
 
     // One article x two contexts.
     expect(events).toHaveLength(2);
+
     expect(events.map((e) => e.surface_id)).toEqual([
       'NEW_TAB_EN_US',
       'NEW_TAB_DE_DE',
     ]);
+
     // One crawl-article job per unique article URL, not per context.
     expect(articleUrls).toEqual([ZYTE_LIST_ITEM.url]);
   });
@@ -118,6 +122,7 @@ describe('handleArticleDiscovery', () => {
       'https://example.com/news/a',
       'https://example.com/news/b',
     ]);
+
     expect(events.map((e) => e.page_position)).toEqual([1, 3]);
   });
 
@@ -146,5 +151,21 @@ describe('handleArticleDiscovery', () => {
     await expect(handleArticleDiscovery(DISCOVERY_MESSAGE)).rejects.toThrow(
       'zyte down',
     );
+  });
+});
+
+describe('selectArticles', () => {
+  it('should return results with a valid list and pageDomain', () => {
+    expect(selectArticles([ZYTE_LIST_ITEM], 'example.com/latest')).toEqual([
+      {
+        url: ZYTE_LIST_ITEM.url,
+        item: ZYTE_LIST_ITEM,
+        position: 1,
+      },
+    ]);
+  });
+
+  it('should exit early if pageDomain cannot be determined', () => {
+    expect(selectArticles([ZYTE_LIST_ITEM], 'notadomain')).toEqual([]);
   });
 });

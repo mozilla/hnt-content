@@ -69,26 +69,11 @@ export const ZYTE_LIST_ITEM: ZyteArticleListItem = {
 /** Discovery message for TEST_SOURCE_URL with two contexts. */
 export const DISCOVERY_MESSAGE: CrawlArticleDiscoveryMessage = {
   url: TEST_SOURCE_URL,
-  interval_minutes: 20,
   contexts: [
     { surface_id: 'NEW_TAB_EN_US', topic: 'technology' },
     { surface_id: 'NEW_TAB_DE_DE', topic: 'technologie' },
   ],
 };
-
-/** Poll until the predicate returns true, or reject on timeout. */
-export async function waitFor(
-  predicate: () => boolean,
-  timeoutMs: number,
-): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (!predicate()) {
-    if (Date.now() > deadline) {
-      throw new Error(`waitFor timed out after ${timeoutMs}ms`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-}
 
 /**
  * Generated 2048-bit RSA JWK used by integration tests that
