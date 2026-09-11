@@ -32,3 +32,10 @@ export type {
   LiveArticle,
   PublisherList,
 } from './types/index.js';
+export {
+  MessageValidationError,
+  validateCrawlArticleMessage,
+  validateCrawlArticleDiscoveryMessage,
+  validateLiveArticle,
+  validatePublisherList,
+} from './validation/index.js';
