@@ -1,14 +1,12 @@
-import { getRegistrableDomain } from 'crawl-common';
-import { extractArticleList } from 'zyte';
-import { time } from 'metrics';
-import { toEventAuthors, toEventTimestamp } from './event-fields.js';
-import { resolveExtractFrom } from '../zyte-extraction-mode.js';
-import type {
+import {
   ArticleDiscoveryEvent,
   CrawlArticleDiscoveryMessage,
   DiscoveryContext,
+  getRegistrableDomain,
 } from 'crawl-common';
-import type { ZyteArticleListItem } from 'zyte';
+import { extractArticleList, ZyteArticleListItem } from 'zyte';
+import { toEventAuthors, toEventTimestamp } from './event-fields.js';
+import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
 
 /**
  * Output of the discovery handler: one article-discoveries event
@@ -37,14 +35,9 @@ interface SelectedArticle {
 export async function handleArticleDiscovery(
   message: CrawlArticleDiscoveryMessage,
 ): Promise<DiscoveryResult> {
-  const { data: items } = await time(
-    'crawl.zyte.duration_ms',
-    () =>
-      extractArticleList(message.url, {
-        extractFrom: resolveExtractFrom(message.url, 'articleList'),
-      }),
-    { extraction: 'articleList' },
-  );
+  const { data: items } = await extractArticleList(message.url, {
+    extractFrom: resolveExtractFrom(message.url, 'articleList'),
+  });
 
   const crawledAt = new Date().toISOString();
   const articles = selectArticles(items, message.url);
@@ -65,22 +58,43 @@ export async function handleArticleDiscovery(
  * registrable domain than the page) are off-publisher and dropped;
  * the page domain is resolved once and reused across the list.
  */
-function selectArticles(
+export function selectArticles(
   items: ZyteArticleListItem[],
   pageUrl: string,
 ): SelectedArticle[] {
+  // get the domain of the given page
   const pageDomain = getRegistrableDomain(pageUrl);
-  const seen = new Set<string>();
+
+  // the articles in the list that we will enqueue to be crawled.
   const selected: SelectedArticle[] = [];
-  items.forEach((item, i) => {
-    const url = item.url;
-    if (!url || seen.has(url)) return;
-    if (pageDomain === undefined || getRegistrableDomain(url) !== pageDomain) {
-      return;
+
+  // if pageDomain cannot be determined, we exit early, as we will not be able
+  // to determine which articles in the list belong to the publisher.
+  if (pageDomain === undefined) {
+    // return an empty array
+    return selected;
+  }
+
+  // create a set to store URLs already seen in the list (as the list may
+  // have duplicates). this set is only used for de-duplication within
+  // the list, and is a convenience instead of looking up an object by URL in
+  // `selected`.
+  const seen = new Set<string>();
+
+  for (let i = 0; i < items.length; i++) {
+    const url = items[i].url;
+
+    // if there's no URL, or the URL was already found in this list, or the URL
+    // points to a different publisher, move to the next iteration of the loop.
+    if (!url || seen.has(url) || getRegistrableDomain(url) !== pageDomain) {
+      continue;
     }
+
     seen.add(url);
-    selected.push({ url, item, position: i + 1 });
-  });
+
+    selected.push({ url, item: items[i], position: i + 1 });
+  }
+
   return selected;
 }
 
@@ -92,20 +106,21 @@ function mapToDiscoveryEvent(
   crawledAt: string,
 ): ArticleDiscoveryEvent {
   const { item } = article;
+
   return {
-    url: article.url,
-    source_url: sourceUrl,
-    crawled_at: crawledAt,
-    published_at: toEventTimestamp(item.datePublished),
-    headline: item.headline ?? undefined,
     authors: toEventAuthors(item.authors),
+    crawled_at: crawledAt,
+    headline: item.headline ?? undefined,
+    language: item.inLanguage ?? undefined,
+    page_position: article.position,
+    published_at: toEventTimestamp(item.datePublished),
+    source_url: sourceUrl,
     // The list-page description (dek), not articleBody: Zyte's articleList
     // product reliably returns description but rarely a full body, so it
     // is the better summary source for discovery rows.
     summary: item.description ?? undefined,
-    language: item.inLanguage ?? undefined,
-    topic: context.topic,
-    page_position: article.position,
     surface_id: context.surface_id,
+    topic: context.topic,
+    url: article.url,
   };
 }
