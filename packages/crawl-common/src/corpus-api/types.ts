@@ -1,3 +1,5 @@
+import type { JWK, JWKParameters } from 'jose';
+
 /** Options for configuring the Corpus Admin API client. */
 export interface CorpusApiClientOptions {
   /**
@@ -42,3 +44,37 @@ export interface UpdateApprovedCorpusItemResponse {
   title: string;
   excerpt: string;
 }
+
+/**
+ * ApprovedCorpusItem fields selected by the section-items read query.
+ * These mirror the Corpus Admin API and map to our CorpusItem with the
+ * camelCase to snake_case renames done in the client.
+ */
+export interface ApiApprovedCorpusItem {
+  externalId: string;
+  url: string;
+  title: string;
+  excerpt: string;
+  authors: Array<{ name: string }>;
+  status: string;
+  language: string;
+  publisher: string;
+  imageUrl: string;
+  topic: string;
+  isTimeSensitive: boolean;
+}
+
+/** A section returned by getSectionsWithSectionItems. */
+export interface ApiSection {
+  // Computed liveness: SCHEDULED, DISABLED, LIVE, or EXPIRED. The admin
+  // query returns non-live sections too (unlike the public query, which
+  // date-filters), so only LIVE sections are kept.
+  status: string;
+  sectionItems: Array<{ approvedItem: ApiApprovedCorpusItem }>;
+}
+
+/**
+ * Custom type that includes everything on the JWK type and overrides its kid field
+ * to be required. JWK inherits kid field from JWKParameters type.
+ */
+export type JwkWithKid = JWK & Required<Pick<JWKParameters, 'kid'>>;

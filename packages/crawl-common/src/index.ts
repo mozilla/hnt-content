@@ -13,6 +13,7 @@ export {
 export {
   initCorpusApiClient,
   updateApprovedCorpusItem,
+  getScheduledSectionItems,
   CorpusApiError,
 } from './corpus-api/index.js';
 export type {
