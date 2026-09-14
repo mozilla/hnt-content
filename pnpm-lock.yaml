@@ -246,6 +246,9 @@ importers:
       express:
         specifier: ^5.1.0
         version: 5.2.1
+      pubsub:
+        specifier: workspace:*
+        version: link:../../packages/pubsub
       sentry:
         specifier: workspace:*
         version: link:../../packages/sentry
