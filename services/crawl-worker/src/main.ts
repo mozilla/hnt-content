@@ -42,6 +42,9 @@ function shutdown() {
     await shutdownSentry();
     process.exit(0);
   });
+  // The close callback above can stall on a lingering connection or a
+  // slow drain, so force an exit. Unref'd so this timer alone does not
+  // hold the event loop open and delay a clean exit.
   setTimeout(() => {
     console.error(`Forced exit after ${SHUTDOWN_TIMEOUT_MS}ms timeout`);
     process.exit(1);
