@@ -1,7 +1,7 @@
 /** Options for configuring the Redis client. */
 export interface RedisClientOptions {
-  /** Redis host (e.g. a Memorystore IP). */
-  host: string;
+  /** Redis host. Defaults to the REDIS_HOST variable. */
+  host?: string;
   /** Redis port. Defaults to 6379. */
   port?: number;
   /**
