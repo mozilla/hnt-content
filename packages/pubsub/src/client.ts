@@ -28,6 +28,7 @@
  * Tests and local dev point at a Pub/Sub emulator by passing
  * `apiEndpoint` and `useEmulator: true` to `initPubSubClient`.
  */
+import config from './config.js';
 import {
   Duration,
   PubSub,
@@ -81,7 +82,7 @@ function resetModuleState(): void {
  * owns a gRPC stream and in-flight messages; silent
  * replacement would leak both.
  */
-export function initPubSubClient(opts: PubSubClientOptions): void {
+export function initPubSubClient(opts: PubSubClientOptions = config): void {
   if (shutdownPromise) {
     throw new Error(
       'Pub/Sub shutdown in progress. Await shutdownPubSub() first.',

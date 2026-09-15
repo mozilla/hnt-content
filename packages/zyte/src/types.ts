@@ -1,7 +1,7 @@
 /** Options for configuring the Zyte API client. */
 export interface ZyteClientOptions {
-  /** Zyte API key for authentication. */
-  apiKey: string;
+  /** Zyte API key. Defaults to the ZYTE_API_KEY variable. */
+  apiKey?: string;
   /** Base URL for the Zyte extract endpoint. */
   apiUrl?: string;
   /**
