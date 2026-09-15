@@ -1,6 +1,5 @@
+export { default as crawlConfig } from './config.js';
 export { getRegistrableDomain, normalizeText } from './utils/index.js';
-// TEMPORARY (HNT-2086): remove with the deployed-defaults module.
-export { deployedRedisHost, deployedProjectId } from './utils/index.js';
 export {
   pageFetchKey,
   pageLockKey,

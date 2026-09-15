@@ -1,5 +1,6 @@
 import isNetworkError from 'is-network-error';
 import pRetry from 'p-retry';
+import config from './config.js';
 import type {
   ZyteClientOptions,
   ExtractionOptions,
@@ -56,9 +57,9 @@ let onRetry: (() => void) | undefined;
  * Initialize the Zyte API client. Must be called once before
  * extractArticle or extractArticleList.
  */
-export function initZyteClient(opts: ZyteClientOptions): void {
+export function initZyteClient(opts: ZyteClientOptions = config): void {
   if (!opts.apiKey) {
-    throw new Error('Zyte API key is required');
+    throw new Error('Zyte API key is required. Set ZYTE_API_KEY.');
   }
   apiKey = opts.apiKey;
   apiUrl = opts.apiUrl ?? DEFAULT_API_URL;
