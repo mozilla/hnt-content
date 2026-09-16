@@ -7,6 +7,7 @@ import {
   UpdateApprovedCorpusItemInput,
 } from 'crawl-common';
 import { extractArticle, ZyteArticle } from 'zyte';
+import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 
 import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
 
@@ -38,13 +39,18 @@ export async function handleArticleExtraction(
 function mapToArticleEvent(article: ZyteArticle, url: string): ArticleEvent {
   return {
     url,
-    extracted_at: new Date().toISOString(),
+    // Zyte's own download time is when the page was really fetched,
+    // which is what the column means; falling back to now only when
+    // Zyte returns an empty or unparseable value.
+    extracted_at:
+      toEventTimestamp(article.metadata.dateDownloaded) ??
+      new Date().toISOString(),
     headline: article.headline ?? undefined,
     description: article.description ?? undefined,
-    authors: article.authors?.map((a) => ({ name: a.name })),
+    authors: toEventAuthors(article.authors),
     main_image_url: article.mainImage?.url ?? undefined,
     body_truncated: article.articleBody?.slice(0, BODY_TRUNCATE_LENGTH),
-    published_at: article.datePublished ?? undefined,
+    published_at: toEventTimestamp(article.datePublished),
     breadcrumbs: article.breadcrumbs?.map((b) => ({
       name: b.name,
       url: b.url,
@@ -115,23 +121,17 @@ function buildUpdateInput(
   corpusItem: CorpusItem,
   changed: { title?: string; excerpt?: string },
 ): UpdateApprovedCorpusItemInput {
-  // Prefer extracted authors, fall back to corpus item.
-  const authors =
-    article.authors && article.authors.length > 0
-      ? article.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }))
-      : corpusItem.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }));
+  // Prefer the extracted authors, minus the ones Zyte returns without a
+  // name: the mutation overwrites the byline, so a blank name would
+  // replace a curator's. Fall back to the corpus item when none remain.
+  const extracted = toEventAuthors(article.authors) ?? [];
+  const authors = extracted.length > 0 ? extracted : corpusItem.authors;
 
   return {
     externalId: corpusItem.external_id,
     title: changed.title?.trim() ?? corpusItem.title,
     excerpt: changed.excerpt?.trim() ?? corpusItem.excerpt,
-    authors,
+    authors: authors.map((a, i) => ({ name: a.name, sortOrder: i })),
     status: corpusItem.status,
     language: corpusItem.language,
     publisher: corpusItem.publisher,

@@ -20,7 +20,7 @@ vi.mock('zyte', async (importOriginal) => {
 });
 
 import { updateApprovedCorpusItem } from 'crawl-common';
-import { extractArticle } from 'zyte';
+import { extractArticle, type ZyteAuthor } from 'zyte';
 import { handleArticleExtraction } from './extract-article.js';
 import {
   BASE_MESSAGE,
@@ -60,7 +60,21 @@ describe('handleArticleExtraction', () => {
       expect(event.published_at).toBe(ZYTE_ARTICLE.datePublished);
       expect(event.breadcrumbs).toEqual(ZYTE_ARTICLE.breadcrumbs);
       expect(event.language).toBe(ZYTE_ARTICLE.inLanguage);
-      expect(event.extracted_at).toBeDefined();
+      expect(event.extracted_at).toBe(ZYTE_ARTICLE.metadata.dateDownloaded);
+    });
+
+    it('falls back to now when Zyte returns no download time', async () => {
+      extractArticleMock.mockResolvedValueOnce({
+        ...ZYTE_RESPONSE,
+        data: {
+          ...ZYTE_ARTICLE,
+          metadata: { ...ZYTE_ARTICLE.metadata, dateDownloaded: '' },
+        },
+      });
+
+      const event = await handleArticleExtraction(BASE_MESSAGE);
+
+      expect(Number.isNaN(Date.parse(event.extracted_at))).toBe(false);
     });
 
     it('calls extractArticle with browserHtml', async () => {
@@ -132,6 +146,34 @@ describe('handleArticleExtraction', () => {
       expect(input.imageUrl).toBe(CORPUS_ITEM.image_url);
       expect(input.topic).toBe(CORPUS_ITEM.topic);
       expect(input.isTimeSensitive).toBe(CORPUS_ITEM.is_time_sensitive);
+    });
+
+    it.each([
+      {
+        scenario: 'drops the authors Zyte returns without a name',
+        zyteAuthors: [{ nameRaw: 'By Jane Doe' }, { name: 'John Roe' }],
+        expected: [{ name: 'John Roe', sortOrder: 0 }],
+      },
+      {
+        scenario: 'falls back to the corpus authors when none have a name',
+        zyteAuthors: [{ nameRaw: 'By Jane Doe' }],
+        expected: [{ name: CORPUS_ITEM.authors[0].name, sortOrder: 0 }],
+      },
+    ])('$scenario', async ({ zyteAuthors, expected }) => {
+      extractArticleMock.mockResolvedValueOnce({
+        ...ZYTE_RESPONSE,
+        data: {
+          ...ZYTE_ARTICLE,
+          headline: 'New Headline',
+          authors: zyteAuthors as ZyteAuthor[],
+        },
+      });
+
+      await handleArticleExtraction(liveMessage);
+
+      const input = updateCorpusMock.mock
+        .calls[0][0] as UpdateApprovedCorpusItemInput;
+      expect(input.authors).toEqual(expected);
     });
 
     it('updates when excerpt changed', async () => {
