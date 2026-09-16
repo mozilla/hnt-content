@@ -1,7 +1,10 @@
 /** Options for configuring the Pub/Sub client. */
 export interface PubSubClientOptions {
-  /** GCP project id (e.g. 'moz-fx-hnt-prod'). */
-  projectId: string;
+  /**
+   * GCP project id. Omit this to let the SDK resolve the project from
+   * the metadata server, which is what a deployed pod does.
+   */
+  projectId?: string;
   /**
    * Override the Pub/Sub API endpoint as 'host:port' (e.g.
    * 'localhost:8085' for the emulator). Set alongside useEmulator

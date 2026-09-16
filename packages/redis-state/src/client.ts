@@ -16,6 +16,7 @@
  */
 import { Redis } from 'ioredis';
 import { randomUUID } from 'node:crypto';
+import config from './config.js';
 import type { RedisClientOptions } from './types.js';
 
 // 30 days, the tech spec's retention for fetch timestamps and
@@ -75,11 +76,14 @@ let defaultTtl = DEFAULT_TTL_SECONDS;
  * lazily on the first command and reconnects on its own, so no
  * connect step is needed here.
  */
-export function initRedisClient(opts: RedisClientOptions): void {
+export function initRedisClient(opts: RedisClientOptions = config): void {
   if (client) {
     throw new Error(
       'Redis client already initialized. Call shutdownRedis() first.',
     );
+  }
+  if (!opts.host) {
+    throw new Error('Redis host is required. Set REDIS_HOST.');
   }
   defaultTtl = opts.defaultTtlSeconds ?? DEFAULT_TTL_SECONDS;
   client = new Redis({
