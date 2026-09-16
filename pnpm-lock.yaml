@@ -246,6 +246,9 @@ importers:
       pubsub:
         specifier: workspace:*
         version: link:../../packages/pubsub
+      redis-state:
+        specifier: workspace:*
+        version: link:../../packages/redis-state
       sentry:
         specifier: workspace:*
         version: link:../../packages/sentry
