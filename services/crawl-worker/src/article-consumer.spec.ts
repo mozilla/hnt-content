@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ArticleEvent, CrawlArticleMessage } from 'crawl-common';
+import {
+  crawlConfig,
+  type ArticleEvent,
+  type CrawlArticleMessage,
+} from 'crawl-common';
 
 vi.mock('pubsub', () => ({
   publishMessage: vi.fn(),
@@ -12,7 +16,7 @@ vi.mock('./handlers/extract-article.js', () => ({
 
 import { publishMessage, startSubscriber } from 'pubsub';
 import { startArticleConsumer } from './article-consumer.js';
-import config from './config/index.js';
+import config from './config.js';
 import { handleArticleExtraction } from './handlers/extract-article.js';
 import { BASE_MESSAGE } from './handlers/test-helpers.js';
 
@@ -36,8 +40,8 @@ describe('article consumer', () => {
     startArticleConsumer();
     expect(startSubscriber).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: config.crawlArticleSubscription,
-        maxMessages: config.pubsubMaxMessages,
+        subscriptionName: crawlConfig.crawlArticleSubscription,
+        maxMessages: config.maxMessages,
       }),
     );
   });
@@ -46,7 +50,10 @@ describe('article consumer', () => {
     vi.mocked(handleArticleExtraction).mockResolvedValue(EVENT);
     await registeredHandler()(BASE_MESSAGE);
     expect(handleArticleExtraction).toHaveBeenCalledWith(BASE_MESSAGE);
-    expect(publishMessage).toHaveBeenCalledWith(config.articlesTopic, EVENT);
+    expect(publishMessage).toHaveBeenCalledWith(
+      crawlConfig.articlesTopic,
+      EVENT,
+    );
   });
 
   it('rethrows an extraction error and publishes nothing', async () => {

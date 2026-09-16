@@ -5,6 +5,7 @@ import { initPubSubClient, shutdownPubSub } from 'pubsub';
 import { shutdownSentry } from 'sentry';
 import { initZyteClient } from 'zyte';
 import { app } from './app.js';
+import { startArticleConsumer } from './article-consumer.js';
 import config from './config.js';
 
 const server = app.listen(config.port, () => {
@@ -12,10 +13,11 @@ const server = app.listen(config.port, () => {
 });
 
 // The discovery role has no consumer yet (HNT-2112) and only serves
-// /healthz.
+// /healthz. Each client reads its own credentials from its package
+// config, so neither takes an argument here.
 if (config.workerRole === 'article') {
-  initZyteClient({ apiKey: config.zyteApiKey });
-  initPubSubClient({ projectId: config.projectId });
+  initZyteClient();
+  initPubSubClient();
   startArticleConsumer();
 }
 

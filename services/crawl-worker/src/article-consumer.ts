@@ -1,17 +1,17 @@
-import type { CrawlArticleMessage } from 'crawl-common';
+import { crawlConfig, type CrawlArticleMessage } from 'crawl-common';
 import {
   publishMessage,
   sentryPubSubErrorHandler,
   startSubscriber,
 } from 'pubsub';
 import { withSentryHandler } from 'sentry';
-import config from './config/index.js';
+import config from './config.js';
 import { handleArticleExtraction } from './handlers/extract-article.js';
 
 /** Extract one article and publish it as an `articles` event. */
 async function handleMessage(message: CrawlArticleMessage): Promise<void> {
   const event = await handleArticleExtraction(message);
-  await publishMessage(config.articlesTopic, event);
+  await publishMessage(crawlConfig.articlesTopic, event);
 }
 
 // A thrown error is captured with the job's identifying fields, then
@@ -37,10 +37,10 @@ const handleWithSentry = withSentryHandler<CrawlArticleMessage>(
  */
 export function startArticleConsumer(): void {
   startSubscriber<CrawlArticleMessage>({
-    subscriptionName: config.crawlArticleSubscription,
+    subscriptionName: crawlConfig.crawlArticleSubscription,
     maxExtensionSeconds: config.maxExtensionSeconds,
-    maxMessages: config.pubsubMaxMessages,
+    maxMessages: config.maxMessages,
     handler: handleWithSentry,
-    onError: sentryPubSubErrorHandler(config.crawlArticleSubscription),
+    onError: sentryPubSubErrorHandler(crawlConfig.crawlArticleSubscription),
   });
 }
