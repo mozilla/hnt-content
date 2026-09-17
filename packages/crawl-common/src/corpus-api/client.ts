@@ -10,6 +10,7 @@ import type {
   UpdateApprovedCorpusItemResponse,
 } from './types.js';
 import type { CorpusItem, LiveArticle } from '../types/messages.js';
+import crawlConfig from '../config.js';
 
 // JWT configuration matching content-ml-services
 // admin_backend.py.
@@ -64,11 +65,13 @@ let issuer: string;
 let audience: string;
 
 /**
- * Initialize the Corpus Admin API client. Must be called
- * once before updateApprovedCorpusItem.
+ * Initialize the Corpus Admin API client. Must be called once before
+ * any query or mutation. Defaults to the shared crawl config, as the
+ * Zyte, Pub/Sub and Redis clients do, so a service that reads its
+ * settings from the environment needs no arguments here.
  */
 export async function initCorpusApiClient(
-  opts: CorpusApiClientOptions,
+  opts: CorpusApiClientOptions = crawlConfig.corpusApi,
 ): Promise<void> {
   endpoint = opts.endpoint;
   issuer = opts.issuer;
@@ -89,7 +92,11 @@ export async function initCorpusApiClient(
  * Parse a JWK JSON string, handling the {"keys": [...]}
  * wrapper format used by some secret stores.
  */
-function parseJwk(jwkJson: string): JwkWithKid {
+function parseJwk(jwkJson: string | undefined): JwkWithKid {
+  if (!jwkJson) {
+    throw new Error('CORPUS_API_JWK_JSON is not set');
+  }
+
   const parsed = JSON.parse(jwkJson) as JWK | { keys: JWK[] };
   const jwk =
     'keys' in parsed && Array.isArray(parsed.keys)
