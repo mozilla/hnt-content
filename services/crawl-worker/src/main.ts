@@ -1,6 +1,7 @@
 // Initialize Sentry first to capture errors from other modules.
 import './sentry-init.js';
 
+import { crawlConfig, initCorpusApiClient } from 'crawl-common';
 import { initPubSubClient, shutdownPubSub } from 'pubsub';
 import { shutdownSentry } from 'sentry';
 import { initZyteClient } from 'zyte';
@@ -12,13 +13,33 @@ const server = app.listen(config.port, () => {
   console.log(`crawl-worker listening on port ${config.port}`);
 });
 
-// The discovery role has no consumer yet (HNT-2112) and only serves
-// /healthz. Each client reads its own credentials from its package
-// config, so neither takes an argument here.
-if (config.workerRole === 'article') {
+/**
+ * Initialize the clients the article role needs, then start consuming.
+ * The Zyte and Pub/Sub clients read their own credentials from their
+ * package config, so neither takes an argument. Importing the Corpus
+ * API signing key is asynchronous, and it must finish before the first
+ * live-article message calls updateApprovedCorpusItem.
+ */
+export async function startArticleRole(): Promise<void> {
   initZyteClient();
   initPubSubClient();
+  const { jwkJson } = crawlConfig.corpusApi;
+  // The chart mounts this key from hnt-secrets. Failing here stops the
+  // pod at startup rather than on the first live article.
+  if (!jwkJson) {
+    throw new Error('CORPUS_API_JWK_JSON is not set');
+  }
+  await initCorpusApiClient({ ...crawlConfig.corpusApi, jwkJson });
   startArticleConsumer();
+}
+
+// The discovery role has no consumer yet (HNT-2112) and only serves
+// /healthz.
+if (config.workerRole === 'article') {
+  startArticleRole().catch((err: unknown) => {
+    console.error('Article role startup failed:', err);
+    process.exit(1);
+  });
 }
 
 // Shorter than the 25s Pub/Sub drain, so a slow in-flight extraction is
