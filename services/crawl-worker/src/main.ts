@@ -8,19 +8,22 @@ import { initZyteClient } from 'zyte';
 import { app } from './app.js';
 import { startArticleConsumer } from './article-consumer.js';
 import config from './config.js';
+import { startDiscoveryConsumer } from './discovery-consumer.js';
 
 const server = app.listen(config.port, () => {
   console.log(`crawl-worker listening on port ${config.port}`);
 });
 
-// The discovery role has no consumer yet (HNT-2112) and only serves
-// /healthz. Each client reads its own credentials from its package
-// config, so none takes an argument here.
+// Each client reads its own credentials from its package config, so
+// none takes an argument here. Only the article worker syncs curated
+// metadata, so only it needs the Corpus API.
+initZyteClient();
+initPubSubClient();
 if (config.workerRole === 'article') {
-  initZyteClient();
-  initPubSubClient();
   await initCorpusApiClient();
   startArticleConsumer();
+} else {
+  startDiscoveryConsumer();
 }
 
 // Shorter than the 25s Pub/Sub drain, so a slow in-flight extraction is
