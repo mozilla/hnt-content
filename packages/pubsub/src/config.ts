@@ -3,8 +3,9 @@
 const emulatorHost = process.env.PUBSUB_EMULATOR_HOST;
 
 export default {
-  // Unset in a deployed pod: the SDK resolves the project from the GKE
-  // metadata server, so the chart does not have to inject it.
+  // Set by the chart. Left unset the SDK resolves the shared cluster's
+  // project, moz-fx-webservices-high-prod, while our topics live in
+  // moz-fx-hnt-prod. Non-prod mirrors this split.
   projectId: process.env.PROJECT_ID,
   apiEndpoint: emulatorHost,
   // An emulator endpoint also means no credentials, which skips a
