@@ -7,6 +7,7 @@ import {
   UpdateApprovedCorpusItemInput,
 } from 'crawl-common';
 import { extractArticle, ZyteArticle } from 'zyte';
+import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 
 import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
 
@@ -41,10 +42,10 @@ function mapToArticleEvent(article: ZyteArticle, url: string): ArticleEvent {
     extracted_at: new Date().toISOString(),
     headline: article.headline ?? undefined,
     description: article.description ?? undefined,
-    authors: article.authors?.map((a) => ({ name: a.name })),
+    authors: toEventAuthors(article.authors),
     main_image_url: article.mainImage?.url ?? undefined,
     body_truncated: article.articleBody?.slice(0, BODY_TRUNCATE_LENGTH),
-    published_at: article.datePublished ?? undefined,
+    published_at: toEventTimestamp(article.datePublished),
     breadcrumbs: article.breadcrumbs?.map((b) => ({
       name: b.name,
       url: b.url,
