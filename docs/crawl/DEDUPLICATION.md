@@ -81,7 +81,7 @@ first page crawl after the hour is up.
 | `liveArticleRefreshMinutes` | How often a curated article is re-extracted | 15 min | Fresher headlines | Fewer Zyte calls |
 | `articleAttemptTtlMinutes` | How long a failed attempt blocks the next one | 60 min | Faster recovery from a block | Fewer requests on URLs that keep failing |
 
-Every crawl-article job carries its own window in `refresh_interval_minutes`, so
+Every crawl-article job carries its own window in `article_refresh_minutes`, so
 the cadence is set where the job is enqueued rather than in worker config, and
 the worker needs no notion of which kind of article it holds. The scheduler
 sets `liveArticleRefreshMinutes` on a live article, so the freshness check

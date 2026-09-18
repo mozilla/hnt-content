@@ -7,8 +7,12 @@ export interface CorpusApiClientOptions {
    * 'https://admin-api.getpocket.com/').
    */
   endpoint: string;
-  /** JWK JSON string containing the RSA private key. */
-  jwkJson: string;
+  /**
+   * JWK JSON string containing the RSA private key. Optional here
+   * because it arrives from the environment; initialization fails
+   * when it is unset.
+   */
+  jwkJson?: string;
   /** JWT issuer claim. */
   issuer: string;
   /** JWT audience claim. */

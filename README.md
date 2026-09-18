@@ -58,6 +58,8 @@ hnt-content/
 
 The services deploy when a pull request merges to `main`. GitHub Actions builds the image and pushes it to Artifact Registry, then ArgoCD Image Updater notices the new digest and rolls it out. Merging to `main` publishes the `latest` tag, which stage and prod track. Pushing to the `dev` branch (e.g. `git push -f origin HEAD:dev`) publishes the `dev` tag, which only hnt-dev tracks, so dev can run a branch ahead of `main`.
 
+Per MozCloud convention the pods run on a shared platform cluster in `moz-fx-webservices-high-prod`, while this project's own infrastructure, including Pub/Sub, Redis and BigQuery, lives in `moz-fx-hnt-prod`, so the chart passes `PROJECT_ID` for the Google client libraries to use; dev and stage mirror that split in the nonprod projects.
+
 One image contains both entry points. The shared mozcloud Helm chart chooses which one each workload runs and sets `WORKER_ROLE` to select the discovery or article role, so all three workloads come from one build.
 
 For how the system fits together, see [docs/crawl/ARCHITECTURE.md](docs/crawl/ARCHITECTURE.md).

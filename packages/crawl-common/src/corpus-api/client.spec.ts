@@ -311,6 +311,11 @@ describe('corpus-api client', () => {
   describe('jwk parsing', () => {
     it.each([
       {
+        scenario: 'the JWK is not set',
+        jwkJson: undefined,
+        message: 'CORPUS_API_JWK_JSON is not set',
+      },
+      {
         scenario: 'the keys array is empty',
         jwkJson: JSON.stringify({ keys: [] }),
         message: 'JWK keys array is empty',

@@ -2,9 +2,12 @@
 import './sentry-init.js';
 
 import { setTimeout as delay } from 'node:timers/promises';
+import { initCorpusApiClient } from 'crawl-common';
+import { initPubSubClient, shutdownPubSub } from 'pubsub';
 import { shutdownSentry, withSentryHandler } from 'sentry';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
+import { enqueueLiveArticles } from './live-articles.js';
 
 const server = app.listen(config.port, () => {
   console.log(`crawl-scheduler listening on port ${config.port}`);
@@ -17,9 +20,7 @@ const SHUTDOWN_TIMEOUT_MS = 10_000;
 let shuttingDown = false;
 /**
  * Initiate graceful shutdown: stop the tick loop, close the server,
- * flush Sentry, and force-exit after a timeout. K8s sends SIGTERM
- * before pod termination; a clean shutdown prevents duplicate
- * Pub/Sub message processing and ensures errors reach Sentry.
+ * drain Pub/Sub, flush Sentry, and force-exit after a timeout.
  */
 function shutdown() {
   if (shuttingDown) {
@@ -30,6 +31,8 @@ function shutdown() {
   stopRunning();
   ac.abort();
   server.close(async () => {
+    // Draining Pub/Sub first flushes a batch the last tick published.
+    await shutdownPubSub();
     await shutdownSentry();
     process.exit(0);
   });
@@ -44,15 +47,11 @@ function shutdown() {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-/**
- * Execute a single crawl cycle. Currently only logs the time.
- * Eventually, each tick will check publisher pages and live
- * articles against Redis timestamps, then publish due items
- * to the crawl Pub/Sub queues for worker processing.
- */
+/** Execute a single crawl cycle, enqueueing the live articles due. */
 async function tick() {
-  console.log('tick', new Date().toISOString());
   setLastTickAt(Date.now());
+  const enqueuedCount = await enqueueLiveArticles();
+  console.log('tick', new Date().toISOString(), `enqueued=${enqueuedCount}`);
 }
 
 // tick() wrapped to report its errors to Sentry with startedAt context.
@@ -66,6 +65,8 @@ const tickWithSentry = withSentryHandler<{ startedAt: string }>(
  * process is signalled to stop.
  */
 async function run() {
+  await initCorpusApiClient();
+  initPubSubClient();
   while (isRunning()) {
     const start = Date.now();
     const startedAt = new Date(start).toISOString();

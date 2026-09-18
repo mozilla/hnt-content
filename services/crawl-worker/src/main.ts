@@ -1,6 +1,7 @@
 // Initialize Sentry first to capture errors from other modules.
 import './sentry-init.js';
 
+import { initCorpusApiClient } from 'crawl-common';
 import { initPubSubClient, shutdownPubSub } from 'pubsub';
 import { shutdownSentry } from 'sentry';
 import { initZyteClient } from 'zyte';
@@ -14,10 +15,11 @@ const server = app.listen(config.port, () => {
 
 // The discovery role has no consumer yet (HNT-2112) and only serves
 // /healthz. Each client reads its own credentials from its package
-// config, so neither takes an argument here.
+// config, so none takes an argument here.
 if (config.workerRole === 'article') {
   initZyteClient();
   initPubSubClient();
+  await initCorpusApiClient();
   startArticleConsumer();
 }
 
