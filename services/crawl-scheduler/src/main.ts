@@ -8,6 +8,7 @@ import { shutdownSentry, withSentryHandler } from 'sentry';
 import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
 import config from './config.js';
 import { enqueueLiveArticles } from './live-articles.js';
+import { enqueuePages } from './pages.js';
 
 const server = app.listen(config.port, () => {
   console.log(`crawl-scheduler listening on port ${config.port}`);
@@ -47,11 +48,21 @@ function shutdown() {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-/** Execute a single crawl cycle, enqueueing the live articles due. */
+/**
+ * Execute a single crawl cycle, enqueueing a batch of publisher pages
+ * and a batch of live articles.
+ */
 async function tick() {
   setLastTickAt(Date.now());
-  const enqueuedCount = await enqueueLiveArticles();
-  console.log('tick', new Date().toISOString(), `enqueued=${enqueuedCount}`);
+  const [pages, liveArticles] = await Promise.all([
+    enqueuePages(),
+    enqueueLiveArticles(),
+  ]);
+  console.log(
+    'tick',
+    new Date().toISOString(),
+    `pages=${pages} live_articles=${liveArticles}`,
+  );
 }
 
 // tick() wrapped to report its errors to Sentry with startedAt context.
