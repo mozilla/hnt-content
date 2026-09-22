@@ -116,23 +116,17 @@ function buildUpdateInput(
   corpusItem: CorpusItem,
   changed: { title?: string; excerpt?: string },
 ): UpdateApprovedCorpusItemInput {
-  // Prefer extracted authors, fall back to corpus item.
-  const authors =
-    article.authors && article.authors.length > 0
-      ? article.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }))
-      : corpusItem.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }));
+  // Prefer the extracted authors, minus the ones Zyte returns without a
+  // name: the mutation overwrites the byline, so a blank name would
+  // replace a curator's. Fall back to the corpus item when none remain.
+  const extracted = toEventAuthors(article.authors) ?? [];
+  const authors = extracted.length > 0 ? extracted : corpusItem.authors;
 
   return {
     externalId: corpusItem.external_id,
     title: changed.title?.trim() ?? corpusItem.title,
     excerpt: changed.excerpt?.trim() ?? corpusItem.excerpt,
-    authors,
+    authors: authors.map((a, i) => ({ name: a.name, sortOrder: i })),
     status: corpusItem.status,
     language: corpusItem.language,
     publisher: corpusItem.publisher,
