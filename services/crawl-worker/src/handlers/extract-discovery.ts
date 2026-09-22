@@ -27,7 +27,7 @@ interface SelectedArticle {
 }
 
 /**
- * Extract a page's article list via Zyte, drop cross-domain and
+ * Extract a page's article list via Zyte, drop off-publisher and
  * duplicate articles, and fan each remaining article out into one
  * article-discoveries event per context. Returns those events and
  * the unique article URLs for the worker to enqueue for extraction.
@@ -35,12 +35,21 @@ interface SelectedArticle {
 export async function handleArticleDiscovery(
   message: CrawlArticleDiscoveryMessage,
 ): Promise<DiscoveryResult> {
-  const { data: items } = await extractArticleList(message.url, {
+  const { data: items, url: finalUrl } = await extractArticleList(message.url, {
     extractFrom: resolveExtractFrom(message.url, 'articleList'),
   });
 
   const crawledAt = new Date().toISOString();
-  const articles = selectArticles(items, message.url);
+  // A publisher that redirects to a new domain still serves its own
+  // articles, so the post-redirect URL counts as the publisher too.
+  const articles = selectArticles(items, [message.url, finalUrl]);
+
+  if (articles.length === 0) {
+    console.warn(
+      `discovery: no articles selected for ${message.url} ` +
+        `(final url ${finalUrl}, ${items.length} raw items)`,
+    );
+  }
 
   const events = articles.flatMap((article) =>
     message.contexts.map((context) =>
@@ -52,47 +61,58 @@ export async function handleArticleDiscovery(
 }
 
 /**
- * Keep only same-domain articles that have a URL, deduplicated by
- * URL (first occurrence wins), preserving each article's 1-based
- * position in the original list. Cross-domain links (a different
- * registrable domain than the page) are off-publisher and dropped;
- * the page domain is resolved once and reused across the list.
+ * Keep the publisher's own articles, deduplicated by URL (first
+ * occurrence wins) and tagged with their 1-based position in the
+ * original list. An article belongs to the publisher when its
+ * registrable domain matches one of the given page URLs, or when its
+ * URL yields no domain at all. Logs a summary of what it dropped.
  */
 export function selectArticles(
   items: ZyteArticleListItem[],
-  pageUrl: string,
+  pageUrls: string[],
 ): SelectedArticle[] {
-  // get the domain of the given page
-  const pageDomain = getRegistrableDomain(pageUrl);
+  const pageDomains = new Set(
+    pageUrls.flatMap((url) => getRegistrableDomain(url) ?? []),
+  );
 
-  // the articles in the list that we will enqueue to be crawled.
-  const selected: SelectedArticle[] = [];
-
-  // if pageDomain cannot be determined, we exit early, as we will not be able
-  // to determine which articles in the list belong to the publisher.
-  if (pageDomain === undefined) {
-    // return an empty array
-    return selected;
+  if (pageDomains.size === 0) {
+    console.warn(
+      `discovery: no registrable domain for ${pageUrls.join(', ')}; ` +
+        'keeping no articles',
+    );
+    return [];
   }
 
-  // create a set to store URLs already seen in the list (as the list may
-  // have duplicates). this set is only used for de-duplication within
-  // the list, and is a convenience instead of looking up an object by URL in
-  // `selected`.
+  const selected: SelectedArticle[] = [];
   const seen = new Set<string>();
+  const droppedPerDomain = new Map<string, number>();
 
   for (let i = 0; i < items.length; i++) {
     const url = items[i].url;
+    if (!url || seen.has(url)) {
+      continue;
+    }
 
-    // if there's no URL, or the URL was already found in this list, or the URL
-    // points to a different publisher, move to the next iteration of the loop.
-    if (!url || seen.has(url) || getRegistrableDomain(url) !== pageDomain) {
+    // An unparseable URL keeps its article: Zyte still resolved it, and
+    // dropping it loses a story the publisher may well have written.
+    const domain = getRegistrableDomain(url);
+    if (domain !== undefined && !pageDomains.has(domain)) {
+      droppedPerDomain.set(domain, (droppedPerDomain.get(domain) ?? 0) + 1);
       continue;
     }
 
     seen.add(url);
-
     selected.push({ url, item: items[i], position: i + 1 });
+  }
+
+  if (droppedPerDomain.size > 0) {
+    const counts = [...droppedPerDomain];
+    const total = counts.reduce((sum, [, count]) => sum + count, 0);
+    const summary = counts.map(([domain, count]) => `${domain}=${count}`);
+    console.warn(
+      `discovery: dropped ${total} off-publisher articles for ` +
+        `${pageUrls[0]}: ${summary.join(', ')}`,
+    );
   }
 
   return selected;

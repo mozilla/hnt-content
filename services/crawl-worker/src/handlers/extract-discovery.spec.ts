@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from 'vitest';
 import type { ZyteArticleListItem, ZyteResponse } from 'zyte';
 
 vi.mock('zyte', async (importOriginal) => {
@@ -18,16 +26,21 @@ const extractListMock = vi.mocked(extractArticleList);
 /** Wrap article list items in the Zyte response envelope. */
 function listResponse(
   items: ZyteArticleListItem[],
+  finalUrl: string = DISCOVERY_MESSAGE.url,
 ): ZyteResponse<ZyteArticleListItem[]> {
-  return { data: items, url: DISCOVERY_MESSAGE.url, statusCode: 200 };
+  return { data: items, url: finalUrl, statusCode: 200 };
 }
 
 describe('handleArticleDiscovery', () => {
+  let warnSpy: MockInstance<typeof console.warn>;
+
   beforeEach(() => {
     extractListMock.mockResolvedValue(listResponse([ZYTE_LIST_ITEM]));
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
@@ -80,28 +93,72 @@ describe('handleArticleDiscovery', () => {
     expect(articleUrls).toEqual([ZYTE_LIST_ITEM.url]);
   });
 
-  it('drops cross-domain articles', async () => {
+  it.each([
+    ['the page domain', 'https://example.com/news/a'],
+    ['a subdomain of the page domain', 'https://blog.example.com/post'],
+    ['no parseable domain', 'not a url'],
+  ])('keeps an article with %s', async (_case, url) => {
+    extractListMock.mockResolvedValueOnce(
+      listResponse([{ ...ZYTE_LIST_ITEM, url }]),
+    );
+
+    const { articleUrls } = await handleArticleDiscovery(DISCOVERY_MESSAGE);
+
+    expect(articleUrls).toEqual([url]);
+  });
+
+  it('keeps articles on the domain the page redirects to', async () => {
+    const redirectedUrl = 'https://example-news.com/story';
+    extractListMock.mockResolvedValueOnce(
+      listResponse(
+        [{ ...ZYTE_LIST_ITEM, url: redirectedUrl }],
+        'https://example-news.com/news',
+      ),
+    );
+
+    const { articleUrls } = await handleArticleDiscovery(DISCOVERY_MESSAGE);
+
+    expect(articleUrls).toEqual([redirectedUrl]);
+  });
+
+  it('drops off-publisher articles and warns with their domain', async () => {
     extractListMock.mockResolvedValueOnce(
       listResponse([
         ZYTE_LIST_ITEM,
         { ...ZYTE_LIST_ITEM, url: 'https://other-site.com/story' },
+        { ...ZYTE_LIST_ITEM, url: 'https://other-site.com/story-2' },
       ]),
     );
 
     const { articleUrls } = await handleArticleDiscovery(DISCOVERY_MESSAGE);
 
     expect(articleUrls).toEqual([ZYTE_LIST_ITEM.url]);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'discovery: dropped 2 off-publisher articles for ' +
+        `${DISCOVERY_MESSAGE.url}: other-site.com=2`,
+    );
   });
 
-  it('keeps subdomain articles of the same registrable domain', async () => {
-    const subdomainUrl = 'https://blog.example.com/post';
+  it('warns when a page yields no articles', async () => {
+    const finalUrl = 'https://example.com/news-moved';
     extractListMock.mockResolvedValueOnce(
-      listResponse([{ ...ZYTE_LIST_ITEM, url: subdomainUrl }]),
+      listResponse(
+        [{ ...ZYTE_LIST_ITEM, url: 'https://other-site.com/story' }],
+        finalUrl,
+      ),
     );
 
-    const { articleUrls } = await handleArticleDiscovery(DISCOVERY_MESSAGE);
+    const { events, articleUrls } =
+      await handleArticleDiscovery(DISCOVERY_MESSAGE);
 
-    expect(articleUrls).toEqual([subdomainUrl]);
+    expect(events).toEqual([]);
+    expect(articleUrls).toEqual([]);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      `discovery: no articles selected for ${DISCOVERY_MESSAGE.url} ` +
+        `(final url ${finalUrl}, 1 raw items)`,
+    );
   });
 
   it('deduplicates repeated article URLs, keeping the first position', async () => {
@@ -155,8 +212,12 @@ describe('handleArticleDiscovery', () => {
 });
 
 describe('selectArticles', () => {
-  it('should return results with a valid list and pageDomain', () => {
-    expect(selectArticles([ZYTE_LIST_ITEM], 'example.com/latest')).toEqual([
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns matching items with their 1-based position', () => {
+    expect(selectArticles([ZYTE_LIST_ITEM], ['example.com/latest'])).toEqual([
       {
         url: ZYTE_LIST_ITEM.url,
         item: ZYTE_LIST_ITEM,
@@ -165,7 +226,13 @@ describe('selectArticles', () => {
     ]);
   });
 
-  it('should exit early if pageDomain cannot be determined', () => {
-    expect(selectArticles([ZYTE_LIST_ITEM], 'notadomain')).toEqual([]);
+  it('keeps nothing and warns when no page URL yields a domain', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(selectArticles([ZYTE_LIST_ITEM], ['notadomain'])).toEqual([]);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('no registrable domain for notadomain'),
+    );
   });
 });
