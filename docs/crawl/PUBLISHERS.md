@@ -39,8 +39,20 @@ A sheet whose name is prefixed `DRAFT ` is not found by the exporter, so a local
 
 Nothing validates the file at runtime. [`publishers.spec.ts`](../../services/crawl-scheduler/src/publishers.spec.ts) checks the committed copy in CI instead, because the file that is committed is the file that deploys.
 
+## How it is installed
+
+The exporter is [`publishers-app-script.js`](publishers-app-script.js), running as Apps Script bound to the spreadsheet. That Apps Script project also holds the exporter that writes `pages.py` for the legacy crawler, which [content-ml-services owns](https://github.com/mozilla/content-ml-services/blob/main/jobs/cloudfunctions/crawl/docs/sheets_app_script.js) and which lives in the project's `Code.gs`. Apps Script puts every file of a project in one global scope, so the two exporters share a namespace. Every name in ours is prefixed to keep them apart.
+
+Ours is therefore a **second file**, added under **Extensions > Apps Script** with File > New > Script and named `Publishers`. Do not paste it over `Code.gs`: that deletes the legacy exporter the production crawler still depends on, along with the menu.
+
+Our file defines no `onOpen`, because a bound script gets only one and `Code.gs` already has it. Two definitions would not error; one would silently win and the other menu would disappear. So the menu item is registered from `Code.gs` instead, by the line that sits under its "Generate Python" item:
+
+```js
+.addItem('Generate publishers.json', 'cmdShowPublishersJson')
+```
+
+A simple `onOpen` runs when the spreadsheet is opened and at no other time, so the menu only changes after reloading the spreadsheet tab. Saving the script is not enough. Once the legacy crawler is decommissioned and `Code.gs` goes away, this file takes over `onOpen` and owns the menu.
+
 ## Changing the exporter
 
-The exporter is [`publishers-app-script.js`](publishers-app-script.js), running as Apps Script bound to the spreadsheet. Edit it here and paste it over the live copy, never the other way around, so the two cannot drift. To do that, open **Extensions > Apps Script** on the spreadsheet, replace the contents of the `publishers` file, save, and run the export once to confirm it still works.
-
-That Apps Script project also holds the exporter that writes `pages.py` for the legacy crawler, which [content-ml-services owns](https://github.com/mozilla/content-ml-services/blob/main/jobs/cloudfunctions/crawl/docs/sheets_app_script.js). Apps Script puts every file of a project in one global scope, so the two exporters share a namespace: every name in ours is prefixed to keep them apart, and our menu item is registered from that file's `onOpen`, the only open hook a bound script gets. Once the legacy crawler is decommissioned and that file goes away, this one takes over `onOpen` and owns the menu.
+Edit the copy in this repository and paste it over the live one, never the other way around, so the two cannot drift. Open **Extensions > Apps Script**, replace the contents of the `Publishers` file, save, then run the export once to confirm it still works.
