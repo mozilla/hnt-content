@@ -37,10 +37,10 @@ export interface CrawlArticleMessage {
 }
 
 /**
- * Surface and topic a discovered page is crawled for, e.g.
- * surface_id 'NEW_TAB_EN_US' and topic 'BUSINESS'. A page can be
- * crawled for several surfaces, so each discovery job carries one
- * context per (surface, topic) pair.
+ * Surface and topic a discovered page is crawled for, e.g. surface_id
+ * 'NEW_TAB_EN_US' and topic 'tech'. The surface names one localized
+ * New Tab feed, and a page can serve several, so each discovery job
+ * carries one context per (surface, topic) pair.
  */
 export interface DiscoveryContext {
   surface_id: string;
@@ -60,9 +60,9 @@ export interface CrawlArticleDiscoveryMessage {
 }
 
 /**
- * A live (curated) article in the scheduler's publisher list. The
- * scheduler enqueues a crawl-article job carrying this corpus_item so
- * the worker can re-extract and sync editorial metadata.
+ * A live (curated) article the Corpus API reports as scheduled on New
+ * Tab. The scheduler enqueues a crawl-article job carrying this
+ * corpus_item so the worker can re-extract and sync editorial metadata.
  */
 export interface LiveArticle {
   url: string;
@@ -70,11 +70,10 @@ export interface LiveArticle {
 }
 
 /**
- * The scheduler's publisher list, loaded from JSON. pages drive
- * discovery crawls; live_articles are re-crawled directly to keep
- * curated metadata fresh. Phase 5 replaces this with the Corpus API.
+ * The scheduler's publisher list, loaded from JSON. Its pages drive the
+ * discovery crawls; live articles hold no place here because the
+ * scheduler reads those from the Corpus API.
  */
 export interface PublisherList {
   pages: CrawlArticleDiscoveryMessage[];
-  live_articles: LiveArticle[];
 }
