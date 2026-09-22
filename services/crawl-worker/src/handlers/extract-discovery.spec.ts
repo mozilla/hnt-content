@@ -26,9 +26,9 @@ const extractListMock = vi.mocked(extractArticleList);
 /** Wrap article list items in the Zyte response envelope. */
 function listResponse(
   items: ZyteArticleListItem[],
-  finalUrl: string = DISCOVERY_MESSAGE.url,
+  resolvedUrl: string = DISCOVERY_MESSAGE.url,
 ): ZyteResponse<ZyteArticleListItem[]> {
-  return { data: items, url: finalUrl, statusCode: 200 };
+  return { data: items, url: resolvedUrl, statusCode: 200 };
 }
 
 describe('handleArticleDiscovery', () => {
@@ -141,11 +141,11 @@ describe('handleArticleDiscovery', () => {
   });
 
   it('warns when a page yields no articles', async () => {
-    const finalUrl = 'https://example.com/news-moved';
+    const resolvedUrl = 'https://example.com/news-moved';
     extractListMock.mockResolvedValueOnce(
       listResponse(
         [{ ...ZYTE_LIST_ITEM, url: 'https://other-site.com/story' }],
-        finalUrl,
+        resolvedUrl,
       ),
     );
 
@@ -157,7 +157,7 @@ describe('handleArticleDiscovery', () => {
 
     expect(warnSpy).toHaveBeenCalledWith(
       `discovery: no articles selected for ${DISCOVERY_MESSAGE.url} ` +
-        `(final url ${finalUrl}, 1 raw items)`,
+        `(final url ${resolvedUrl}, 1 raw items)`,
     );
   });
 

@@ -115,6 +115,9 @@ export async function extractArticleList(
   }
   return {
     data: list.articles ?? [],
+    // we return data.url here (instead of the url parameter) because zyte may
+    // follow a redirect, resulting in a different url or domain  - e.g.
+    // if given bbc.com, zyte may be redirected to bbc.co.uk.
     url: data.url as string,
     statusCode,
   };

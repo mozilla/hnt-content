@@ -35,22 +35,30 @@ interface SelectedArticle {
 export async function handleArticleDiscovery(
   message: CrawlArticleDiscoveryMessage,
 ): Promise<DiscoveryResult> {
-  const { data: items, url: finalUrl } = await extractArticleList(message.url, {
-    extractFrom: resolveExtractFrom(message.url, 'articleList'),
-  });
+  // items are the articles returned from zyte's parsing.
+  // resolvedUrl is the url zyte actually scraped - which, due to redirects
+  // on the publisher side, may differ from the url contained in the message.
+  const { data: items, url: resolvedUrl } = await extractArticleList(
+    message.url,
+    {
+      extractFrom: resolveExtractFrom(message.url, 'articleList'),
+    },
+  );
 
   const crawledAt = new Date().toISOString();
+
   // A publisher that redirects to a new domain still serves its own
   // articles, so the post-redirect URL counts as the publisher too.
-  const articles = selectArticles(items, [message.url, finalUrl]);
+  const articles = selectArticles(items, [message.url, resolvedUrl]);
 
   if (articles.length === 0) {
     console.warn(
       `discovery: no articles selected for ${message.url} ` +
-        `(final url ${finalUrl}, ${items.length} raw items)`,
+        `(final url ${resolvedUrl}, ${items.length} raw items)`,
     );
   }
 
+  // if articles is empty, this will just give an empty array
   const events = articles.flatMap((article) =>
     message.contexts.map((context) =>
       mapToDiscoveryEvent(article, message.url, context, crawledAt),
@@ -80,28 +88,38 @@ export function selectArticles(
       `discovery: no registrable domain for ${pageUrls.join(', ')}; ` +
         'keeping no articles',
     );
+
     return [];
   }
 
+  // the articles that pass selection criteria wil be returned
   const selected: SelectedArticle[] = [];
-  const seen = new Set<string>();
+  // convenience set to de-deplicate URLs in the loop below
+  const seenUrls = new Set<string>();
+  // keep track of how many articles were dropped per non-allowed domain
   const droppedPerDomain = new Map<string, number>();
 
   for (let i = 0; i < items.length; i++) {
     const url = items[i].url;
-    if (!url || seen.has(url)) {
+
+    if (!url || seenUrls.has(url)) {
       continue;
     }
 
     // An unparseable URL keeps its article: Zyte still resolved it, and
     // dropping it loses a story the publisher may well have written.
     const domain = getRegistrableDomain(url);
+
+    // if the article has no domain or it's domain is not in the set of
+    // allowed domains, log the failure and skip.
     if (domain !== undefined && !pageDomains.has(domain)) {
       droppedPerDomain.set(domain, (droppedPerDomain.get(domain) ?? 0) + 1);
+
       continue;
     }
 
-    seen.add(url);
+    seenUrls.add(url);
+
     selected.push({ url, item: items[i], position: i + 1 });
   }
 
@@ -109,6 +127,7 @@ export function selectArticles(
     const counts = [...droppedPerDomain];
     const total = counts.reduce((sum, [, count]) => sum + count, 0);
     const summary = counts.map(([domain, count]) => `${domain}=${count}`);
+
     console.warn(
       `discovery: dropped ${total} off-publisher articles for ` +
         `${pageUrls[0]}: ${summary.join(', ')}`,
