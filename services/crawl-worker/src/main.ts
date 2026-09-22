@@ -22,7 +22,7 @@ initPubSubClient();
 if (config.workerRole === 'article') {
   await initCorpusApiClient();
   startArticleConsumer();
-} else {
+} else if (config.workerRole === 'discovery') {
   startDiscoveryConsumer();
 }
 

@@ -16,9 +16,9 @@ import { handleArticleDiscovery } from './handlers/extract-discovery.js';
 const MINUTES_PER_DAY = 24 * 60;
 
 /**
- * Build the crawl-article job for a discovered article. Editors do not
- * curate it, so it carries no corpus_item, and it has no cadence of its
- * own, so it inherits the worker's window for discovered articles. A
+ * Build the crawl-article job for a discovered article. Unlike live items,
+ * the refresh period is a long window measured in days, and newly
+ * discovered articles don't have a corpus item. A
  * fresh crawl_id ties the extraction back to this page crawl.
  */
 function buildCrawlArticleJob(
