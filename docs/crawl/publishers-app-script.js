@@ -112,11 +112,20 @@ function readPublisherRows_(source, sectionIds, byUrl, missingSheets) {
   if (!rows || rows.length < 2) return;
 
   const headers = rows[0].map(String);
-  const iTopic = publishersHeaderIndex_(headers, PUBLISHERS_CFG.topicHeader);
-  const iUrl = publishersHeaderIndex_(headers, PUBLISHERS_CFG.urlHeader);
+  const iTopic = publishersHeaderIndex_(
+    headers,
+    PUBLISHERS_CFG.topicHeader,
+    source.sheetName,
+  );
+  const iUrl = publishersHeaderIndex_(
+    headers,
+    PUBLISHERS_CFG.urlHeader,
+    source.sheetName,
+  );
   const iApproved = publishersHeaderIndex_(
     headers,
     PUBLISHERS_CFG.approvedHeader,
+    source.sheetName,
   );
   const surfaceId = 'NEW_TAB_' + source.locale.toUpperCase();
 
@@ -181,10 +190,12 @@ function loadSectionIds_() {
   const iDisplay = publishersHeaderIndex_(
     headers,
     PUBLISHERS_CFG.topicDisplayHeader,
+    PUBLISHERS_CFG.topicsSheetName,
   );
   const iSectionId = publishersHeaderIndex_(
     headers,
     PUBLISHERS_CFG.sectionIdHeader,
+    PUBLISHERS_CFG.topicsSheetName,
   );
 
   const sectionIds = new Map();
@@ -196,12 +207,26 @@ function loadSectionIds_() {
   return sectionIds;
 }
 
-/** Return a header's column index, or throw naming the header. */
-function publishersHeaderIndex_(headers, name) {
+/**
+ * Return a header's column index. Throws naming the sheet and the
+ * headers it did find, so a column that is missing or renamed is fixed
+ * from the message rather than from a stack trace.
+ */
+function publishersHeaderIndex_(headers, name, sheetName) {
   const i = headers.findIndex(
     (h) => String(h).trim().toLowerCase() === String(name).trim().toLowerCase(),
   );
-  if (i === -1) throw new Error('Missing required header: "' + name + '".');
+  if (i === -1) {
+    throw new Error(
+      'The "' +
+        sheetName +
+        '" sheet has no "' +
+        name +
+        '" column. Its columns are: ' +
+        headers.filter(String).join(', ') +
+        '.',
+    );
+  }
   return i;
 }
 
