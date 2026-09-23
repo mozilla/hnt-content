@@ -49,6 +49,10 @@ export default {
   // responses are held in memory. The library default of 1000 exhausts
   // the pod memory when the queue is long.
   maxMessages: 64,
+  // How often the discovery worker crawls a page again. A queued job
+  // is checked against this value when it is handled, and it is the
+  // main lever on Zyte cost. See docs/crawl/DEDUPLICATION.md.
+  pageRefreshMinutes: 20,
   // A discovered article carries no refresh window of its own, so this
   // value decides how long the worker leaves it alone. It must not
   // exceed the marker retention in redis-state, or the marker expires
