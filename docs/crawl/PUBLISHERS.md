@@ -1,48 +1,33 @@
 # Publisher pages
 
-The crawler discovers stories by crawling a fixed list of publisher section pages, such as a newspaper's technology or sports page. That list is [`services/crawl-scheduler/src/data/publishers.json`](../../services/crawl-scheduler/src/data/publishers.json), and the scheduler enqueues pages from it on every tick. For where it sits in the wider system, see [ARCHITECTURE.md](ARCHITECTURE.md).
-
-Editors decide which pages we crawl, not engineers. They maintain the [section URL spreadsheet](https://docs.google.com/spreadsheets/d/1xlZnDQjVnfhGvxuFhAvktRKaKdNIZBF1zypaOTdmnzQ/edit?gid=1566790416), one sheet per locale, and mark a row **Approved** once it is ready. The committed file is an export of that spreadsheet, so it is generated rather than written by hand.
+The crawler discovers stories from a fixed list of publisher section pages, such as a newspaper's technology or sports page. Editors maintain that list in the [section URL spreadsheet](https://docs.google.com/spreadsheets/d/1xlZnDQjVnfhGvxuFhAvktRKaKdNIZBF1zypaOTdmnzQ/edit?gid=1566790416), one sheet per locale, and mark a row **Approved** when it is ready to crawl. Its export is committed here as [`publishers.json`](../../services/crawl-scheduler/src/data/publishers.json), which the scheduler reads on every tick. For where it fits in the wider system, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Updating the list
 
-Open the spreadsheet and choose **Exporter > Generate publishers.json**. The dialog that opens carries the rest of the steps and the links they need.
+Choose **Exporter > Generate JSON** in the spreadsheet, then follow the two steps in the dialog.
 
-<!-- Screenshot: the Exporter menu, with "Generate publishers.json" selected. -->
+![The Exporter menu](exporter-menu.png)
 
-<!-- Screenshot: the generated publishers.json dialog, showing its copy button and steps. -->
+![The Generated JSON dialog](generated-json.png)
 
-A pull request that changes the list should be a plain re-export with nothing edited by hand, so that its diff shows exactly what editors changed.
+The menu is built by a script that runs when the spreadsheet opens, so give it a moment to appear. Generating takes a few seconds more, since it reads every locale sheet.
 
-## What the export produces
+**Generate Python** beside it writes `pages.py` for the older crawler, and stays until that pipeline is switched off.
 
-Each approved row becomes one context under its page URL, so a page approved for several locales or topics is a single entry:
+## What the export writes
 
-```json
-{
-  "pages": [
-    {
-      "url": "https://example.com/news/technology",
-      "contexts": [{ "surface_id": "NEW_TAB_EN_US", "topic": "tech" }]
-    }
-  ]
-}
-```
+Each approved row becomes one context under its page URL, so a page approved for several locales or topics is a single entry with several contexts.
 
-`url` comes from the **Section URL** column.
+The topic is a New Tab section id, taken from the **Section id** column of the "Topics" sheet, so the crawler records `tech` rather than the display value "Technology". A topic with no section id fails the export with an error naming it.
 
-`surface_id` is `NEW_TAB_` followed by the uppercased locale of the sheet the row came from, which is the `ScheduledSurfaceGUID` the Corpus API answers to. The "India" sheet is the locale `en_INTL`, so its rows carry `NEW_TAB_EN_INTL`.
+A sheet named `DRAFT FR` is not found, so a locale starts being crawled when editors drop the prefix. The dialog names any sheet it could not find.
 
-`topic` is the New Tab section id for the row's **Topic**, read from the **Section id** column of the "Topics" sheet. Section ids are what the recommendation pipeline keys on, so the crawler records `tech` rather than the display value "Technology". Use the unsuffixed id, as en-US spells it: the per-locale prospecting configs suffix theirs, but `surface_id` already carries the locale here. A topic with no section id fails the export with an error naming it, rather than quietly mislabelling articles.
-
-A sheet whose name is prefixed `DRAFT ` is not found by the exporter, so a locale starts being crawled when editors drop the prefix. The dialog lists any sheet it could not find. Pages sort by URL and contexts by surface then topic, so a re-export diffs cleanly.
-
-Nothing validates the file at runtime. [`publishers.spec.ts`](../../services/crawl-scheduler/src/publishers.spec.ts) checks the committed copy in CI instead, because the file that is committed is the file that deploys.
+Nothing checks the file at runtime. [`publishers.spec.ts`](../../services/crawl-scheduler/src/publishers.spec.ts) checks the committed copy in CI instead, because the file that is committed is the file that deploys.
 
 ## The script
 
-[`sheets-app-script.js`](sheets-app-script.js) is the entire Apps Script project bound to the spreadsheet, and this repository is its source of truth. It carries both exporters behind one Exporter menu: **Generate publishers.json**, which this crawler reads, and **Generate Python**, which writes `pages.py` for the crawler in [content-ml-services](https://github.com/mozilla/content-ml-services/blob/main/jobs/cloudfunctions/crawl/pages.py). One file means one copy of the sheet-reading code and one place to look, and decommissioning the legacy crawler then deletes the Python half rather than untangling it.
+[`sheets-app-script.js`](sheets-app-script.js) is the whole Apps Script project bound to the spreadsheet, and this repository is its source of truth. It holds both exports, and the Python half is deleted along with the crawler that needs it.
 
-To change it, edit the copy here and paste it over the live one, never the other way around, so the two cannot drift. Open **Extensions > Apps Script** on the spreadsheet, replace the contents of `Code.gs`, save, and run both exports once to confirm they still work. The menu is built by `onOpen`, a simple trigger that runs only when the spreadsheet is opened, so reload the spreadsheet tab to see a menu change. Saving the script is not enough.
+Edit it here and paste it over the spreadsheet's `Code.gs`, never the other way around. Save, reload the spreadsheet, and run both exports to check them. The menu is rebuilt only when the spreadsheet opens, so saving alone will not change it.
 
-The locale tabs the script reads are listed in its `sources`. A renamed tab is reported as missing in the export dialog, along with the tab names the spreadsheet actually has, so the fix is to correct `sources` here and paste again. Both exporters skip a tab they cannot find rather than failing, which is what lets a locale go live by renaming `DRAFT FR` to `FR`, so read that warning before shipping an export.
+The tabs it reads are listed in `sources`, each pairing a sheet name with the surface it feeds. A renamed tab is reported as missing in the dialog, along with the tabs the spreadsheet does have, so correct `sources` here and paste again.

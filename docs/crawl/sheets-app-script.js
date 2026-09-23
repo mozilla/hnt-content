@@ -19,25 +19,28 @@
  * rather than editing the live copy, and see PUBLISHERS.md.
  */
 const CFG = {
-  // One entry per source sheet; add more locales as needed.
+  // One entry per locale sheet. surfaceId is the New Tab surface the JSON
+  // export tags a page with, spelled out rather than derived so a surface
+  // that does not follow the pattern needs no special case. locale names
+  // the same feed for the Python export only, and goes away with it.
   // Convention: sheets prefixed with "DRAFT " are skipped. Editors drop the
   // prefix (e.g. "DRAFT FR" → "FR") once the locale is ready to be crawled.
   sources: [
-    { sheetName: 'US', locale: 'en_US' },
-    { sheetName: 'UK', locale: 'en_GB' },
-    { sheetName: 'CA', locale: 'en_CA' },
-    { sheetName: 'IE', locale: 'en_IE' },
-    { sheetName: 'DE', locale: 'de_DE' },
-    { sheetName: 'FR', locale: 'fr_FR' },
-    { sheetName: 'IT', locale: 'it_IT' },
-    { sheetName: 'AT', locale: 'de_AT' },
-    { sheetName: 'CH', locale: 'de_CH' },
-    { sheetName: 'BE', locale: 'fr_BE' },
-    { sheetName: 'ES', locale: 'es_ES' },
-    { sheetName: 'PL', locale: 'pl_PL' },
-    { sheetName: 'EN ROW', locale: 'en_XE' },
-    { sheetName: 'ES ROW', locale: 'es_XA' },
-    { sheetName: 'India', locale: 'en_INTL' }, // misleading name: en_INTL is the India feed
+    { sheetName: 'US', locale: 'en_US', surfaceId: 'NEW_TAB_EN_US' },
+    { sheetName: 'UK', locale: 'en_GB', surfaceId: 'NEW_TAB_EN_GB' },
+    { sheetName: 'CA', locale: 'en_CA', surfaceId: 'NEW_TAB_EN_CA' },
+    { sheetName: 'IE', locale: 'en_IE', surfaceId: 'NEW_TAB_EN_IE' },
+    { sheetName: 'DE', locale: 'de_DE', surfaceId: 'NEW_TAB_DE_DE' },
+    { sheetName: 'FR', locale: 'fr_FR', surfaceId: 'NEW_TAB_FR_FR' },
+    { sheetName: 'IT', locale: 'it_IT', surfaceId: 'NEW_TAB_IT_IT' },
+    { sheetName: 'AT', locale: 'de_AT', surfaceId: 'NEW_TAB_DE_AT' },
+    { sheetName: 'CH', locale: 'de_CH', surfaceId: 'NEW_TAB_DE_CH' },
+    { sheetName: 'BE', locale: 'fr_BE', surfaceId: 'NEW_TAB_FR_BE' },
+    { sheetName: 'ES', locale: 'es_ES', surfaceId: 'NEW_TAB_ES_ES' },
+    { sheetName: 'PL', locale: 'pl_PL', surfaceId: 'NEW_TAB_PL_PL' },
+    { sheetName: 'EN ROW', locale: 'en_XE', surfaceId: 'NEW_TAB_EN_XE' },
+    { sheetName: 'ES ROW', locale: 'es_XA', surfaceId: 'NEW_TAB_ES_XA' },
+    { sheetName: 'India', locale: 'en_INTL', surfaceId: 'NEW_TAB_EN_INTL' }, // misleading name: en_INTL is the India feed
   ],
 
   // Column headers present in each source sheet
@@ -98,9 +101,17 @@ function buildPublishersJson_(missingSheets) {
     );
   }
 
+  // ingestSourceSheet_ keys by locale, so map those back to surfaces.
+  const surfaceIds = new Map(
+    CFG.sources.map((src) => [src.locale, src.surfaceId]),
+  );
+
   return (
-    JSON.stringify(buildPublisherPages_(urlLocaleTopics, sectionMap), null, 2) +
-    '\n'
+    JSON.stringify(
+      buildPublisherPages_(urlLocaleTopics, sectionMap, surfaceIds),
+      null,
+      2,
+    ) + '\n'
   );
 }
 
@@ -110,7 +121,7 @@ function buildPublishersJson_(missingSheets) {
  * display value -> section id map. Throws when an approved row uses a topic
  * that has no section id.
  */
-function buildPublisherPages_(urlLocaleTopics, sectionMap) {
+function buildPublisherPages_(urlLocaleTopics, sectionMap, surfaceIds) {
   const pages = [];
 
   for (const [url, localeToTopics] of urlLocaleTopics) {
@@ -118,7 +129,7 @@ function buildPublisherPages_(urlLocaleTopics, sectionMap) {
     const contexts = [];
 
     for (const [locale, topicDisplays] of localeToTopics) {
-      const surfaceId = 'NEW_TAB_' + locale.toUpperCase();
+      const surfaceId = surfaceIds.get(locale);
       for (const display of topicDisplays) {
         const topic = sectionMap.get(display.toLowerCase());
         if (!topic) {
