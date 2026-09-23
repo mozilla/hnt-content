@@ -1179,15 +1179,6 @@
       ]
     },
     {
-      "url": "https://www.alfemminile.com/argomenti/campionesse/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "sports"
-        }
-      ]
-    },
-    {
       "url": "https://www.alfemminile.com/argomenti/musica/",
       "contexts": [
         {
@@ -1584,15 +1575,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "travel"
-        }
-      ]
-    },
-    {
-      "url": "https://www.ansa.it/sito/notizie/cultura/cultura.shtml",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
         }
       ]
     },
@@ -4913,15 +4895,6 @@
       ]
     },
     {
-      "url": "https://www.capital.fr/entreprises-marches",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_FR",
-          "topic": "business"
-        }
-      ]
-    },
-    {
       "url": "https://www.capital.fr/votre-argent",
       "contexts": [
         {
@@ -6190,15 +6163,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.corriere.it/spettacoli/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
         }
       ]
     },
@@ -9930,15 +9894,6 @@
       ]
     },
     {
-      "url": "https://www.elmundo.es/television.html",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_ES_ES",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.elmundo.es/viajes.html",
       "contexts": [
         {
@@ -11372,29 +11327,11 @@
       ]
     },
     {
-      "url": "https://www.fanpage.it/cultura/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.fanpage.it/innovazione/scienze/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.fanpage.it/innovazione/scienze/salute/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "health"
         }
       ]
     },
@@ -11417,47 +11354,11 @@
       ]
     },
     {
-      "url": "https://www.fanpage.it/sport/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "sports"
-        }
-      ]
-    },
-    {
-      "url": "https://www.fanpage.it/stile-e-trend/benessere/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "health"
-        }
-      ]
-    },
-    {
-      "url": "https://www.fanpage.it/stile-e-trend/casa/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "home"
-        }
-      ]
-    },
-    {
       "url": "https://www.fanpage.it/stile-e-trend/viaggi/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "travel"
-        }
-      ]
-    },
-    {
-      "url": "https://www.fanpage.it/wamily/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "society-parenting"
         }
       ]
     },
@@ -15546,15 +15447,6 @@
       ]
     },
     {
-      "url": "https://www.hobbyconsolas.com/videojuegos/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_ES_ES",
-          "topic": "hobbies"
-        }
-      ]
-    },
-    {
       "url": "https://www.hoerspielundfeature.de/",
       "contexts": [
         {
@@ -18603,6 +18495,15 @@
       ]
     },
     {
+      "url": "https://kurier.at/wissen/geschichte",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "education"
+        }
+      ]
+    },
+    {
       "url": "https://www.la-croix.com/art-de-vivre/idee-recette-cuisine-facile-rapide-menu-repas",
       "contexts": [
         {
@@ -18965,15 +18866,6 @@
       ]
     },
     {
-      "url": "https://www.larazon.es/espana/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_ES_ES",
-          "topic": "government"
-        }
-      ]
-    },
-    {
       "url": "https://www.larazon.es/salud/",
       "contexts": [
         {
@@ -19006,15 +18898,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "headlines"
-        }
-      ]
-    },
-    {
-      "url": "https://www.lastampa.it/cultura/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
         }
       ]
     },
@@ -23893,15 +23776,6 @@
       ]
     },
     {
-      "url": "https://www.news18.com/movies/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_INTL",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.news18.com/world/",
       "contexts": [
         {
@@ -25665,42 +25539,6 @@
       ]
     },
     {
-      "url": "https://www.pastemagazine.com/articles/movies/features",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.pastemagazine.com/articles/music/features",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.pastemagazine.com/articles/tv/features",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.pastemagazine.com/music",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "music"
-        }
-      ]
-    },
-    {
       "url": "https://patchmagazine.co.uk/blogs/features",
       "contexts": [
         {
@@ -26557,6 +26395,24 @@
       ]
     },
     {
+      "url": "https://www.profil.at/history",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "education"
+        }
+      ]
+    },
+    {
+      "url": "https://www.profil.at/themen/zeitgeschichte",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "education"
+        }
+      ]
+    },
+    {
       "url": "https://www.profil.at/wirtschaft",
       "contexts": [
         {
@@ -26845,15 +26701,6 @@
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.punto-informatico.it/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "tech"
         }
       ]
     },
@@ -32184,15 +32031,6 @@
       ]
     },
     {
-      "url": "https://www.stylist.co.uk/health",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_GB",
-          "topic": "health"
-        }
-      ]
-    },
-    {
       "url": "https://www.stylist.co.uk/home",
       "contexts": [
         {
@@ -32207,15 +32045,6 @@
         {
           "surface_id": "NEW_TAB_EN_INTL",
           "topic": "finance"
-        }
-      ]
-    },
-    {
-      "url": "https://www.stylist.co.uk/mental-health",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_GB",
-          "topic": "health"
         }
       ]
     },
@@ -32238,28 +32067,6 @@
       ]
     },
     {
-      "url": "https://www.stylist.co.uk/nutrition",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_GB",
-          "topic": "food"
-        },
-        {
-          "surface_id": "NEW_TAB_EN_GB",
-          "topic": "health"
-        }
-      ]
-    },
-    {
-      "url": "https://www.stylist.co.uk/relationships",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_GB",
-          "topic": "health"
-        }
-      ]
-    },
-    {
       "url": "https://www.stylist.co.uk/sleep",
       "contexts": [
         {
@@ -32274,24 +32081,6 @@
         {
           "surface_id": "NEW_TAB_EN_GB",
           "topic": "sports"
-        }
-      ]
-    },
-    {
-      "url": "https://www.stylist.co.uk/tag/workout",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_GB",
-          "topic": "health"
-        }
-      ]
-    },
-    {
-      "url": "https://www.stylist.co.uk/wellbeing",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_GB",
-          "topic": "health"
         }
       ]
     },
@@ -34055,15 +33844,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://tg24.sky.it/spettacolo",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
         }
       ]
     },
@@ -36306,15 +36086,6 @@
       ]
     },
     {
-      "url": "https://www.timesnownews.com/entertainment-news",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_INTL",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.timesnownews.com/india",
       "contexts": [
         {
@@ -36540,15 +36311,6 @@
       ]
     },
     {
-      "url": "https://www.today.it/film-serie-tv/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.today.it/politica/",
       "contexts": [
         {
@@ -36581,15 +36343,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "sports"
-        }
-      ]
-    },
-    {
-      "url": "https://www.today.it/tv/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
         }
       ]
     },
