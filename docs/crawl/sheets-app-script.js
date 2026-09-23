@@ -4,7 +4,8 @@
  * both exporters of the publisher page list, reachable from the Exporter
  * menu:
  *
- * - Generate publishers.json, read by the crawl scheduler in this repo.
+ * - Generate JSON, which writes the page list the crawl scheduler in
+ *   this repository reads.
  * - Generate Python, which writes pages.py for the crawler in
  *   mozilla/content-ml-services. It goes away with that crawler, leaving
  *   the JSON export behind.
