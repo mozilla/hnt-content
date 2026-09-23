@@ -38,6 +38,7 @@ export async function handleArticleDiscovery(
   // items are the articles returned from zyte's parsing.
   // resolvedUrl is the url zyte actually scraped - which, due to redirects
   // on the publisher side, may differ from the url contained in the message.
+  // NOTE - we are implicitly trusting a publisher domain's behavior here.
   const { data: items, url: resolvedUrl } = await extractArticleList(
     message.url,
     {
@@ -72,8 +73,8 @@ export async function handleArticleDiscovery(
  * Keep the publisher's own articles, deduplicated by URL (first
  * occurrence wins) and tagged with their 1-based position in the
  * original list. An article belongs to the publisher when its
- * registrable domain matches one of the given page URLs, or when its
- * URL yields no domain at all. Logs a summary of what it dropped.
+ * registrable domain matches one of the given pageUrls. Logs a
+ * summary of dropped articles grouped by domain.
  */
 export function selectArticles(
   items: ZyteArticleListItem[],
@@ -92,9 +93,9 @@ export function selectArticles(
     return [];
   }
 
-  // the articles that pass selection criteria wil be returned
+  // the articles that pass selection criteria will be returned
   const selected: SelectedArticle[] = [];
-  // convenience set to de-deplicate URLs in the loop below
+  // convenience set to de-duplicate URLs in the loop below
   const seenUrls = new Set<string>();
   // keep track of how many articles were dropped per non-allowed domain
   const droppedPerDomain = new Map<string, number>();
@@ -106,19 +107,22 @@ export function selectArticles(
       continue;
     }
 
-    // An unparseable URL keeps its article: Zyte still resolved it, and
-    // dropping it loses a story the publisher may well have written.
+    // track that we've seen the URL so we don't process it again
+    seenUrls.add(url);
+
+    // domain will either be a string or, in the case of an unparseable url
+    // (e.g. an IP address, inline javascript, anchor link), undefined.
     const domain = getRegistrableDomain(url);
 
-    // if the article has no domain or it's domain is not in the set of
-    // allowed domains, log the failure and skip.
-    if (domain !== undefined && !pageDomains.has(domain)) {
-      droppedPerDomain.set(domain, (droppedPerDomain.get(domain) ?? 0) + 1);
+    // if the domain is undefined or not in the set of allowed domains, log
+    // the failure for reporting.
+    if (domain === undefined || !pageDomains.has(domain)) {
+      const key = domain ?? '(unparseable)';
+
+      droppedPerDomain.set(key, (droppedPerDomain.get(key) ?? 0) + 1);
 
       continue;
     }
-
-    seenUrls.add(url);
 
     selected.push({ url, item: items[i], position: i + 1 });
   }
