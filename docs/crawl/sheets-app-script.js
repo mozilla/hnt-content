@@ -429,7 +429,7 @@ const PYTHON_STEPS = [
 ];
 const JSON_STEPS = [
   `<span>Paste it into</span>
-        <a href="https://github.com/mozilla/hnt-content/edit/main/services/crawl-scheduler/src/publishers.json" target="_blank" rel="noopener">publishers.json</a>
+        <a href="https://github.com/mozilla/hnt-content/edit/main/services/crawl-scheduler/src/data/publishers.json" target="_blank" rel="noopener">publishers.json</a>
         <span>in hnt-content and merge a PR to <code>main</code>, which deploys it.</span>`,
 ];
 

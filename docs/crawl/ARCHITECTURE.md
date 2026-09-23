@@ -50,7 +50,7 @@ flowchart TB
 ```
 
 Editors maintain the list of publisher pages to crawl in an [editorial spreadsheet](https://docs.google.com/spreadsheets/d/1xlZnDQjVnfhGvxuFhAvktRKaKdNIZBF1zypaOTdmnzQ/edit?gid=1566790416#gid=1566790416),
-which is exported to a [committed JSON file](https://github.com/mozilla/hnt-content/blob/main/services/crawl-scheduler/src/publishers.json)
+which is exported to a [committed JSON file](https://github.com/mozilla/hnt-content/blob/main/services/crawl-scheduler/src/data/publishers.json)
 that the scheduler reads on startup. The crawler never visits sites itself. It
 drives the Zyte API to fetch and extract those pages and the articles found on
 them, and the extracted fields flow back, without any HTML. The crawler streams

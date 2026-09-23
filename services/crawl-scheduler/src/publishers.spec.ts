@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PublisherList } from 'crawl-common';
-import publishers from './publishers.json' with { type: 'json' };
+import publishers from './data/publishers.json' with { type: 'json' };
 
 // The committed file is the deployed file: it is generated from the
 // editorial spreadsheet and never validated at startup, so these tests

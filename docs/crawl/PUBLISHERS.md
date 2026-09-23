@@ -1,6 +1,6 @@
 # Publisher pages
 
-The crawler discovers stories by crawling a fixed list of publisher section pages, such as a newspaper's technology or sports page. That list is [`services/crawl-scheduler/src/publishers.json`](../../services/crawl-scheduler/src/publishers.json), and the scheduler enqueues pages from it on every tick. For where it sits in the wider system, see [ARCHITECTURE.md](ARCHITECTURE.md).
+The crawler discovers stories by crawling a fixed list of publisher section pages, such as a newspaper's technology or sports page. That list is [`services/crawl-scheduler/src/data/publishers.json`](../../services/crawl-scheduler/src/data/publishers.json), and the scheduler enqueues pages from it on every tick. For where it sits in the wider system, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Editors decide which pages we crawl, not engineers. They maintain the [section URL spreadsheet](https://docs.google.com/spreadsheets/d/1xlZnDQjVnfhGvxuFhAvktRKaKdNIZBF1zypaOTdmnzQ/edit?gid=1566790416), one sheet per locale, and mark a row **Approved** once it is ready. The committed file is an export of that spreadsheet, so it is generated rather than written by hand.
 
