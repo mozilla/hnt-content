@@ -1045,15 +1045,6 @@
       ]
     },
     {
-      "url": "https://www.adnkronos.com/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
       "url": "https://www.adnkronos.com/economia/fintech/",
       "contexts": [
         {
@@ -16272,15 +16263,6 @@
       ]
     },
     {
-      "url": "https://www.ilfattoquotidiano.it/tecnologia/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "tech"
-        }
-      ]
-    },
-    {
       "url": "https://www.ilpost.it/",
       "contexts": [
         {
@@ -17301,15 +17283,6 @@
       ]
     },
     {
-      "url": "https://www.infor.pl/twoje-pieniadze/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_PL_PL",
-          "topic": "finance"
-        }
-      ]
-    },
-    {
       "url": "https://information.tv5monde.com/",
       "contexts": [
         {
@@ -17581,33 +17554,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "travel"
-        }
-      ]
-    },
-    {
-      "url": "https://www.iodonna.it/spettacoli/cinema/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.iodonna.it/spettacoli/libri/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.iodonna.it/spettacoli/musica/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
         }
       ]
     },
@@ -22014,15 +21960,6 @@
       ]
     },
     {
-      "url": "https://mojafirma.infor.pl/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_PL_PL",
-          "topic": "business"
-        }
-      ]
-    },
-    {
       "url": "https://money.com/",
       "contexts": [
         {
@@ -24069,15 +24006,6 @@
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "government"
-        }
-      ]
-    },
-    {
-      "url": "https://nieruchomosci.infor.pl/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_PL_PL",
-          "topic": "home"
         }
       ]
     },
@@ -27381,15 +27309,6 @@
       ]
     },
     {
-      "url": "https://www.repubblica.it/il-gusto/argomenti/Le_storie/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "food"
-        }
-      ]
-    },
-    {
       "url": "https://www.repubblica.it/politica/",
       "contexts": [
         {
@@ -28975,15 +28894,6 @@
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "food"
-        }
-      ]
-    },
-    {
-      "url": "https://samorzad.infor.pl/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_PL_PL",
-          "topic": "business"
         }
       ]
     },
@@ -33812,15 +33722,6 @@
       ]
     },
     {
-      "url": "https://tg24.sky.it/lifestyle/viaggi-on-the-road",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "travel"
-        }
-      ]
-    },
-    {
       "url": "https://tg24.sky.it/politica",
       "contexts": [
         {
@@ -37476,15 +37377,6 @@
     },
     {
       "url": "https://www.vanityfair.it/show/musica",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.vanityfair.it/show/tv-serie",
       "contexts": [
         {
           "surface_id": "NEW_TAB_IT_IT",
