@@ -39,8 +39,8 @@ const CFG = {
     { sheetName: 'BE', locale: 'fr_BE', surfaceId: 'NEW_TAB_FR_BE' },
     { sheetName: 'ES', locale: 'es_ES', surfaceId: 'NEW_TAB_ES_ES' },
     { sheetName: 'PL', locale: 'pl_PL', surfaceId: 'NEW_TAB_PL_PL' },
-    { sheetName: 'EN ROW', locale: 'en_ROW', surfaceId: 'NEW_TAB_EN_ROW' }, // ROW is rest-of-world
-    { sheetName: 'ES ROW', locale: 'es_ROW', surfaceId: 'NEW_TAB_ES_ROW' }, // ROW is rest-of-world
+    { sheetName: 'EN ROW', locale: 'en_ROW', surfaceId: 'NEW_TAB_EN_ROW' }, // English rest-of-world
+    { sheetName: 'ES ROW', locale: 'es_ROW', surfaceId: 'NEW_TAB_ES_ROW' }, // Spanish rest-of-world
     { sheetName: 'India', locale: 'en_INTL', surfaceId: 'NEW_TAB_EN_INTL' }, // misleading name: en_INTL is the India feed
   ],
 
