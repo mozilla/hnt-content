@@ -39,8 +39,8 @@ const CFG = {
     { sheetName: 'BE', locale: 'fr_BE', surfaceId: 'NEW_TAB_FR_BE' },
     { sheetName: 'ES', locale: 'es_ES', surfaceId: 'NEW_TAB_ES_ES' },
     { sheetName: 'PL', locale: 'pl_PL', surfaceId: 'NEW_TAB_PL_PL' },
-    { sheetName: 'EN ROW', locale: 'en_XE', surfaceId: 'NEW_TAB_EN_XE' },
-    { sheetName: 'ES ROW', locale: 'es_XA', surfaceId: 'NEW_TAB_ES_XA' },
+    { sheetName: 'EN ROW', locale: 'en_ROW', surfaceId: 'NEW_TAB_EN_ROW' }, // ROW is rest-of-world
+    { sheetName: 'ES ROW', locale: 'es_ROW', surfaceId: 'NEW_TAB_ES_ROW' }, // ROW is rest-of-world
     { sheetName: 'India', locale: 'en_INTL', surfaceId: 'NEW_TAB_EN_INTL' }, // misleading name: en_INTL is the India feed
   ],
 
@@ -55,10 +55,7 @@ const CFG = {
   topicIdHeader: 'Topic id',
   sectionIdHeader: 'Section id',
 
-  sortTopics: true,
-  sortPages: true,
-  sortLocales: true,
-  normalizeTrailingSlash: false,
+  // Longest line makePythonPageItem_ emits before it wraps, matching Black.
   blackMaxLen: 120,
 };
 
@@ -88,18 +85,11 @@ function buildPublishersJson_(missingSheets) {
 
   // url -> Map(locale -> Set(topic display values))
   const urlLocaleTopics = new Map();
-  const urlOrder = []; // Unused here: the JSON export always sorts by URL.
 
   // Ingest with an empty topic map so rows keep their topic display values;
   // buildPublisherPages_ resolves those to section ids.
   for (const src of CFG.sources) {
-    ingestSourceSheet_(
-      src,
-      new Map(),
-      urlLocaleTopics,
-      urlOrder,
-      missingSheets,
-    );
+    ingestSourceSheet_(src, new Map(), urlLocaleTopics, missingSheets);
   }
 
   // ingestSourceSheet_ keys by locale, so map those back to surfaces.
@@ -135,13 +125,8 @@ function buildPublisherPages_(urlLocaleTopics, sectionMap, surfaceIds) {
         const topic = sectionMap.get(display.toLowerCase());
         if (!topic) {
           throw new Error(
-            'Topic "' +
-              display +
-              '" has no "' +
-              CFG.sectionIdHeader +
-              '" in the "' +
-              CFG.topicsSheetName +
-              '" sheet.',
+            `Topic "${display}" has no "${CFG.sectionIdHeader}" in the ` +
+              `"${CFG.topicsSheetName}" sheet.`,
           );
         }
         const key = surfaceId + '\u0000' + topic;
@@ -193,32 +178,28 @@ function buildPythonList_(missingSheets) {
 
   // url -> Map(locale -> Set(topicIds))
   const urlLocaleTopics = new Map();
-  // Track first-seen URL order when CFG.sortPages=false
-  const urlOrder = [];
 
   for (const src of CFG.sources) {
-    ingestSourceSheet_(src, topicMap, urlLocaleTopics, urlOrder, missingSheets);
+    ingestSourceSheet_(src, topicMap, urlLocaleTopics, missingSheets);
   }
 
   if (urlLocaleTopics.size === 0) return '[]\n';
 
-  const urls = CFG.sortPages
-    ? Array.from(urlLocaleTopics.keys()).sort((a, b) =>
-        sortKeyForUrl_(a).localeCompare(sortKeyForUrl_(b)),
-      )
-    : urlOrder;
+  const urls = Array.from(urlLocaleTopics.keys()).sort((a, b) =>
+    sortKeyForUrl_(a).localeCompare(sortKeyForUrl_(b)),
+  );
 
   const items = [];
   for (const u of urls) {
     const localeToTopics = urlLocaleTopics.get(u); // Map(locale -> Set(topicIds))
     const locales = Array.from(localeToTopics.keys());
-    if (CFG.sortLocales) locales.sort();
+    locales.sort();
 
     const targetsData = [];
     for (const locale of locales) {
       const topicSet = localeToTopics.get(locale);
       const topics = Array.from(topicSet);
-      if (CFG.sortTopics) topics.sort();
+      topics.sort();
       targetsData.push({ locale, topics });
     }
 
@@ -229,13 +210,7 @@ function buildPythonList_(missingSheets) {
 }
 
 /** Ingest one source sheet (locale) into urlLocaleTopics map. */
-function ingestSourceSheet_(
-  src,
-  topicMap,
-  urlLocaleTopics,
-  urlOrder,
-  missingSheets,
-) {
+function ingestSourceSheet_(src, topicMap, urlLocaleTopics, missingSheets) {
   const sh = SpreadsheetApp.getActive().getSheetByName(src.sheetName);
   if (!sh) {
     missingSheets.push(src.sheetName);
@@ -267,9 +242,8 @@ function ingestSourceSheet_(
     const topicDisplay = String(rows[r][iTopic] || '').trim();
     if (!topicDisplay || /^https?:\/\//i.test(topicDisplay)) continue;
 
-    let url = readUrl_(rows[r][iUrl]);
+    const url = readUrl_(rows[r][iUrl]);
     if (!url) continue;
-    if (CFG.normalizeTrailingSlash) url = normalizeUrlTrailingSlash_(url);
 
     // Resolve display → id (case-insensitive, trimmed). Fallback to display if not found.
     const key = topicDisplay.toLowerCase();
@@ -277,7 +251,6 @@ function ingestSourceSheet_(
 
     if (!urlLocaleTopics.has(url)) {
       urlLocaleTopics.set(url, new Map()); // locale -> Set(topicIds)
-      urlOrder.push(url);
     }
 
     const localeToTopics = urlLocaleTopics.get(url);
@@ -352,7 +325,7 @@ function makePythonPageItem_(url, targetsData) {
   const targetChunks = [];
   for (const t of targetsData) {
     const localeS = pyString_(t.locale);
-    const topicsS = pyList_(t.topics.map(pyString_));
+    const topicsS = '[' + t.topics.map(pyString_).join(', ') + ']';
     targetChunks.push(`{"locale": ${localeS}, "topics": ${topicsS}}`);
   }
 
@@ -388,11 +361,6 @@ function pyString_(s) {
   return JSON.stringify(String(s));
 }
 
-/** Render list literal: ["A", "B"] */
-function pyList_(arr) {
-  return '[' + arr.join(', ') + ']';
-}
-
 /**
  * Return a header's column index. Throws naming the sheet and the columns
  * it does have, so a renamed or missing column is fixed from the message
@@ -404,14 +372,8 @@ function getRequiredHeaderIndex_(headers, name, sheetName) {
   );
   if (i === -1) {
     throw new Error(
-      'The "' +
-        sheetName +
-        '" sheet has no "' +
-        name +
-        '" column. Its ' +
-        'columns are: ' +
-        headers.filter(String).join(', ') +
-        '.',
+      `The "${sheetName}" sheet has no "${name}" column. ` +
+        `Its columns are: ${headers.filter(String).join(', ')}.`,
     );
   }
   return i;
@@ -433,18 +395,6 @@ function sortKeyForUrl_(u) {
   }
 }
 
-function normalizeUrlTrailingSlash_(u) {
-  try {
-    const url = new URL(u);
-    if (url.pathname.length > 1 && url.pathname.endsWith('/')) {
-      url.pathname = url.pathname.slice(0, -1);
-    }
-    return url.toString();
-  } catch (e) {
-    return u.endsWith('/') ? u.slice(0, -1) : u;
-  }
-}
-
 // What to do with the copied text, as HTML for the numbered steps after
 // "Copy". Each exporter passes its own list.
 const PYTHON_STEPS = [
@@ -463,10 +413,9 @@ const JSON_STEPS = [
 
 /** Modal: numbered instructions + generated text preview. */
 function showTextDialog_(title, text, missingSheets, steps) {
-  const sheetNames = () =>
-    SpreadsheetApp.getActive()
-      .getSheets()
-      .map((sheet) => sheet.getName());
+  const sheetNames = SpreadsheetApp.getActive()
+    .getSheets()
+    .map((sheet) => sheet.getName());
   const stepsHtml = (steps || PYTHON_STEPS)
     .map(
       (step) =>
@@ -643,7 +592,7 @@ function showTextDialog_(title, text, missingSheets, steps) {
 <script>
   const TEXT = ${JSON.stringify(text)};
   const MISSING = ${JSON.stringify(missingSheets || [])};
-  const SHEETS = ${JSON.stringify(sheetNames())};
+  const SHEETS = ${JSON.stringify(sheetNames)};
   const out = document.getElementById('out');
   out.textContent = TEXT;
 
