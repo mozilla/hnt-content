@@ -1275,7 +1275,7 @@
           "topic": "business"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         }
       ]
@@ -1690,11 +1690,11 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "education-science"
         }
       ]
@@ -1853,7 +1853,7 @@
       "url": "https://apnews.com/hub/noticias",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -1976,11 +1976,11 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "education-science"
         }
       ]
@@ -2035,7 +2035,7 @@
           "topic": "headlines"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -2697,7 +2697,7 @@
       "url": "https://asia.nikkei.com/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         }
       ]
@@ -3358,7 +3358,7 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -3384,7 +3384,7 @@
           "topic": "health"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -3406,7 +3406,7 @@
       "url": "https://www.bbc.com/mundo",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -3522,7 +3522,7 @@
           "topic": "headlines"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -3540,7 +3540,7 @@
       "url": "https://www.bbc.com/sport",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "sports"
         }
       ]
@@ -3571,7 +3571,7 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "tech"
         }
       ]
@@ -3783,11 +3783,11 @@
           "topic": "business"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "business"
         }
       ]
@@ -3833,11 +3833,11 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "education-science"
         }
       ]
@@ -4123,7 +4123,7 @@
       "url": "https://www.bloomberg.com/europe",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         }
       ]
@@ -4425,7 +4425,7 @@
       "url": "https://www.businessinsider.com/artificial-intelligence",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "tech"
         }
       ]
@@ -5266,7 +5266,7 @@
       "url": "https://www.channelnewsasia.com/world",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -5524,7 +5524,7 @@
       "url": "https://www.clarin.com/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -5533,7 +5533,7 @@
       "url": "https://www.clarin.com/deportes",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "sports"
         }
       ]
@@ -5542,7 +5542,7 @@
       "url": "https://www.clarin.com/economia",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "business"
         }
       ]
@@ -5551,7 +5551,7 @@
       "url": "https://www.clarin.com/politica",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -5560,7 +5560,7 @@
       "url": "https://www.clarin.com/tecnologia",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
@@ -5643,7 +5643,7 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "tech"
         }
       ]
@@ -5713,7 +5713,7 @@
       "url": "https://cnnespanol.cnn.com/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -5722,7 +5722,7 @@
       "url": "https://cnnespanol.cnn.com/ciencia",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "education-science"
         }
       ]
@@ -5731,7 +5731,7 @@
       "url": "https://cnnespanol.cnn.com/ciencia/tecnologia",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
@@ -5740,7 +5740,7 @@
       "url": "https://cnnespanol.cnn.com/clima-y-tiempo",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "education-science"
         }
       ]
@@ -5749,7 +5749,7 @@
       "url": "https://cnnespanol.cnn.com/deportes",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "sports"
         }
       ]
@@ -5758,7 +5758,7 @@
       "url": "https://cnnespanol.cnn.com/economia",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "business"
         }
       ]
@@ -5767,7 +5767,7 @@
       "url": "https://cnnespanol.cnn.com/latinoamerica",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -5776,7 +5776,7 @@
       "url": "https://cnnespanol.cnn.com/salud",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "health"
         }
       ]
@@ -8202,7 +8202,7 @@
       "url": "https://www.dw.com/en/business/s-1431",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         }
       ]
@@ -8211,7 +8211,7 @@
       "url": "https://www.dw.com/en/health/s-58123583",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -8237,7 +8237,7 @@
           "topic": "sports"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "sports"
         }
       ]
@@ -8637,7 +8637,7 @@
           "topic": "business"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "business"
         }
       ]
@@ -8659,7 +8659,7 @@
           "topic": "headlines"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -8703,7 +8703,7 @@
       "url": "https://elcomercio.pe/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -8811,7 +8811,7 @@
       "url": "https://www.elconfidencial.com/mundo/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -8865,7 +8865,7 @@
       "url": "https://www.elconfidencial.com/tags/temas/latam-america-latina-86/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "business"
         }
       ]
@@ -9780,7 +9780,7 @@
           "topic": "headlines"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -10019,7 +10019,7 @@
       "url": "https://www.eltiempo.com/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -10028,7 +10028,7 @@
       "url": "https://www.eluniversal.com.mx/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -10037,7 +10037,7 @@
       "url": "https://www.eluniversal.com.mx/cartera/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "business"
         }
       ]
@@ -10046,7 +10046,7 @@
       "url": "https://www.eluniversal.com.mx/ciencia-y-salud/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "education-science"
         }
       ]
@@ -10055,7 +10055,7 @@
       "url": "https://www.eluniversal.com.mx/deportes/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "sports"
         }
       ]
@@ -10233,7 +10233,7 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "education-science"
         }
       ]
@@ -10246,7 +10246,7 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
@@ -10268,7 +10268,7 @@
           "topic": "health"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "health"
         }
       ]
@@ -11197,7 +11197,7 @@
       "url": "https://www.expansion.com/latinoamerica.html?intcmp=MENUHOM24101&s_kw=latam",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "business"
         }
       ]
@@ -12872,7 +12872,7 @@
       "url": "https://www.france24.com/en/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -12881,7 +12881,7 @@
       "url": "https://www.france24.com/en/business-tech/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         }
       ]
@@ -12890,7 +12890,7 @@
       "url": "https://www.france24.com/en/environment/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -12899,7 +12899,7 @@
       "url": "https://www.france24.com/en/health",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -12908,7 +12908,7 @@
       "url": "https://www.france24.com/en/sport/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "sports"
         }
       ]
@@ -15159,11 +15159,11 @@
           "topic": "business"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "business"
         }
       ]
@@ -15300,7 +15300,7 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "education-science"
         }
       ]
@@ -15322,7 +15322,7 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
@@ -15335,7 +15335,7 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
@@ -15348,7 +15348,7 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
@@ -15361,7 +15361,7 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
@@ -16747,7 +16747,7 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -16765,7 +16765,7 @@
       "url": "https://www.independent.co.uk/news/world",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -18020,7 +18020,7 @@
       "url": "https://www.japantimes.co.jp/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -18698,7 +18698,7 @@
       "url": "https://www.lanacion.com.ar/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -18707,7 +18707,7 @@
       "url": "https://www.lanacion.com.ar/ciencia/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "education-science"
         }
       ]
@@ -18716,7 +18716,7 @@
       "url": "https://www.lanacion.com.ar/deportes/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "sports"
         }
       ]
@@ -18725,7 +18725,7 @@
       "url": "https://www.lanacion.com.ar/politica/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -18734,7 +18734,7 @@
       "url": "https://www.lanacion.com.ar/salud/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "health"
         }
       ]
@@ -18743,7 +18743,7 @@
       "url": "https://www.lanacion.com.ar/tecnologia/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
@@ -18932,7 +18932,7 @@
       "url": "https://www.latercera.com/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -19433,7 +19433,7 @@
       "url": "https://www.lemonde.fr/en/health/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -19442,7 +19442,7 @@
       "url": "https://www.lemonde.fr/en/international/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -19451,7 +19451,7 @@
       "url": "https://www.lemonde.fr/en/world-economy/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         }
       ]
@@ -20448,11 +20448,11 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "education-science"
         }
       ]
@@ -22374,7 +22374,7 @@
           "topic": "sports"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "sports"
         }
       ]
@@ -22682,7 +22682,7 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -22995,7 +22995,7 @@
       "url": "https://www.nature.com/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -23052,11 +23052,11 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "education-science"
         }
       ]
@@ -23644,7 +23644,7 @@
       "url": "https://news.sky.com/world",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -23743,7 +23743,7 @@
       "url": "https://www.newscientist.com/section/features/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -23752,7 +23752,7 @@
       "url": "https://www.newscientist.com/section/news/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -23795,7 +23795,7 @@
           "topic": "health"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -24630,7 +24630,7 @@
       "url": "https://www.nytimes.com/es/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -24639,7 +24639,7 @@
       "url": "https://www.nytimes.com/international/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -24728,7 +24728,7 @@
       "url": "https://www.nytimes.com/section/world",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -25977,7 +25977,7 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -27422,11 +27422,11 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "tech"
         }
       ]
@@ -27457,7 +27457,7 @@
       "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -27466,7 +27466,7 @@
       "url": "https://www.reuters.com/sports/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "sports"
         }
       ]
@@ -27488,7 +27488,7 @@
       "url": "https://www.reuters.com/world/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -27497,7 +27497,7 @@
       "url": "https://www.reuters.com/world/africa/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -28807,7 +28807,7 @@
           "topic": "headlines"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -28856,7 +28856,7 @@
           "topic": "headlines"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
         }
       ]
@@ -29112,7 +29112,7 @@
       "url": "https://www.sciencefocus.com/the-human-body/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -29727,7 +29727,7 @@
       "url": "https://www.skysports.com/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "sports"
         }
       ]
@@ -31506,7 +31506,7 @@
       "url": "https://www.statnews.com/topic/global-health/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -31841,7 +31841,7 @@
       "url": "https://www.straitstimes.com/world",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -33279,11 +33279,11 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "tech"
         }
       ]
@@ -33371,7 +33371,7 @@
       "url": "https://www.telegraph.co.uk/global-health/climate-and-people/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -34210,7 +34210,7 @@
       "url": "https://thediplomat.com/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         }
       ]
@@ -34457,7 +34457,7 @@
       "url": "https://www.theguardian.com/global-development/global-health",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -34577,11 +34577,11 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_US",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_US",
           "topic": "education-science"
         }
       ]
@@ -34705,7 +34705,7 @@
           "topic": "sports"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "sports"
         }
       ]
@@ -34871,7 +34871,7 @@
           "topic": "headlines"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -34970,7 +34970,7 @@
       "url": "https://www.thehindu.com/news/international/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -39057,7 +39057,7 @@
           "topic": "business"
         },
         {
-          "surface_id": "NEW_TAB_EN_XE",
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "business"
         }
       ]
@@ -39396,7 +39396,7 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "education-science"
         }
       ]
@@ -39418,7 +39418,7 @@
           "topic": "education-science"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "education-science"
         }
       ]
@@ -39431,7 +39431,7 @@
           "topic": "health"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "health"
         }
       ]
@@ -39444,7 +39444,7 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
@@ -39484,7 +39484,7 @@
           "topic": "tech"
         },
         {
-          "surface_id": "NEW_TAB_ES_XA",
+          "surface_id": "NEW_TAB_ES_ROW",
           "topic": "tech"
         }
       ]
