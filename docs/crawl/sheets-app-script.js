@@ -267,11 +267,8 @@ function ingestSourceSheet_(
     const topicDisplay = String(rows[r][iTopic] || '').trim();
     if (!topicDisplay || /^https?:\/\//i.test(topicDisplay)) continue;
 
-    const raw = String(rows[r][iUrl] || '').trim();
-    const m = raw.match(/https?:\/\/[^\s"')]+/i);
-    if (!m) continue;
-
-    let url = m[0];
+    let url = readUrl_(rows[r][iUrl]);
+    if (!url) continue;
     if (CFG.normalizeTrailingSlash) url = normalizeUrlTrailingSlash_(url);
 
     // Resolve display → id (case-insensitive, trimmed). Fallback to display if not found.
@@ -288,6 +285,25 @@ function ingestSourceSheet_(
       localeToTopics.set(src.locale, new Set());
     localeToTopics.get(src.locale).add(topicId);
   }
+}
+
+/**
+ * Read the page URL out of a Section URL cell, or return '' when the
+ * cell holds none. An explicit scheme is taken from anywhere in the
+ * cell, since editors sometimes leave a note beside the URL. A cell
+ * that is nothing but a host and path is assumed to be https: Sheets
+ * renders "grist.org" as a link, so data validation does not reject
+ * one, and the row would otherwise be approved and never crawled. The
+ * whole cell has to match for that, so a note is not read as a host.
+ */
+function readUrl_(raw) {
+  const cell = String(raw || '').trim();
+  const explicit = cell.match(/https?:\/\/[^\s"')]+/i);
+  if (explicit) return explicit[0];
+
+  const bare =
+    /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:[/?#]\S*)?$/i;
+  return bare.test(cell) ? 'https://' + cell : '';
 }
 
 /**

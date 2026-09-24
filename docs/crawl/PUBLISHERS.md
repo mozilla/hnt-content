@@ -18,6 +18,8 @@ The menu is built by a script that runs when the spreadsheet opens, so give it a
 
 Each approved row becomes one context under its page URL, so a page approved for several locales or topics is a single entry with several contexts.
 
+A Section URL cell holding only a host and path, such as `grist.org`, is read as https. Sheets renders one as a link and data validation does not reject it, so the row would otherwise be approved and never crawled.
+
 The topic is a New Tab section id, taken from the **Section id** column of the "Topics" sheet, so the crawler records `tech` rather than the display value "Technology". A topic with no section id fails the export with an error naming it.
 
 A sheet named `DRAFT FR` is not found, so a locale starts being crawled when editors drop the prefix. The dialog names any sheet it could not find.

@@ -14756,6 +14756,15 @@
       ]
     },
     {
+      "url": "https://grist.org",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_US",
+          "topic": "education-science"
+        }
+      ]
+    },
+    {
       "url": "https://gry.interia.pl/",
       "contexts": [
         {
@@ -22853,6 +22862,15 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "education-science"
+        }
+      ]
+    },
+    {
+      "url": "https://www.nationalobserver.com/sections/business",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "business"
         }
       ]
     },
