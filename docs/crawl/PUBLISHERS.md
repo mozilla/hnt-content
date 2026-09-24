@@ -6,9 +6,9 @@ The crawler discovers stories from a fixed list of publisher section pages, such
 
 Choose **Exporter > Generate JSON** in the spreadsheet, then follow the two steps in the dialog.
 
-![The Exporter menu](exporter-menu.png)
+![The Exporter menu](images/exporter-menu.png)
 
-![The Generated JSON dialog](generated-json.png)
+![The Generated JSON dialog](images/generated-json.png)
 
 The menu is built by a script that runs when the spreadsheet opens, so give it a moment to appear. Generating takes a few seconds more, since it reads every locale sheet.
 
