@@ -25,7 +25,7 @@ export default tseslint.config(
   {
     // The Exporter menu and the open trigger call these entry points by
     // name, so nothing inside the file references them.
-    files: ['tools/sheets-exporter/src/sheets-app-script.js'],
+    files: ['scripts/sheets-exporter/src/sheets-app-script.js'],
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',
