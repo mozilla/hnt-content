@@ -132,7 +132,9 @@ function buildPublisherPages_(urlLocaleTopics, topicIds, surfaceIds) {
           );
         }
         const key = surfaceId + '\u0000' + topic;
-        if (seen.has(key)) continue;
+        if (seen.has(key)) {
+          continue;
+        }
         seen.add(key);
         contexts.push({ surface_id: surfaceId, topic });
       }
@@ -185,7 +187,9 @@ function buildPythonList_(missingSheets) {
     ingestSourceSheet_(src, topicMap, urlLocaleTopics, missingSheets);
   }
 
-  if (urlLocaleTopics.size === 0) return '[]\n';
+  if (urlLocaleTopics.size === 0) {
+    return '[]\n';
+  }
 
   const urls = Array.from(urlLocaleTopics.keys()).sort((a, b) =>
     sortKeyForUrl_(a).localeCompare(sortKeyForUrl_(b)),
@@ -220,7 +224,9 @@ function ingestSourceSheet_(src, topicMap, urlLocaleTopics, missingSheets) {
   }
 
   const rows = sh.getDataRange().getDisplayValues();
-  if (!rows || rows.length < 2) return;
+  if (!rows || rows.length < 2) {
+    return;
+  }
 
   const headers = rows[0].map(String);
   const iTopic = getRequiredHeaderIndex_(
@@ -239,13 +245,19 @@ function ingestSourceSheet_(src, topicMap, urlLocaleTopics, missingSheets) {
     const approved = String(rows[r][iApproved] || '')
       .trim()
       .toLowerCase();
-    if (approved !== 'yes') continue;
+    if (approved !== 'yes') {
+      continue;
+    }
 
     const topicDisplay = String(rows[r][iTopic] || '').trim();
-    if (!topicDisplay || /^https?:\/\//i.test(topicDisplay)) continue;
+    if (!topicDisplay || /^https?:\/\//i.test(topicDisplay)) {
+      continue;
+    }
 
     const url = readUrl_(rows[r][iUrl]);
-    if (!url) continue;
+    if (!url) {
+      continue;
+    }
 
     // Resolve display → id (case-insensitive, trimmed). Fallback to display if not found.
     const key = topicDisplay.toLowerCase();
@@ -256,8 +268,9 @@ function ingestSourceSheet_(src, topicMap, urlLocaleTopics, missingSheets) {
     }
 
     const localeToTopics = urlLocaleTopics.get(url);
-    if (!localeToTopics.has(src.locale))
+    if (!localeToTopics.has(src.locale)) {
       localeToTopics.set(src.locale, new Set());
+    }
     localeToTopics.get(src.locale).add(topicId);
   }
 }
@@ -274,7 +287,9 @@ function ingestSourceSheet_(src, topicMap, urlLocaleTopics, missingSheets) {
 function readUrl_(raw) {
   const cell = String(raw || '').trim();
   const explicit = cell.match(/https?:\/\/[^\s"')]+/i);
-  if (explicit) return explicit[0];
+  if (explicit) {
+    return explicit[0];
+  }
 
   const bare =
     /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:[/?#]\S*)?$/i;
@@ -288,11 +303,14 @@ function readUrl_(raw) {
  */
 function loadTopicMap_(idHeader) {
   const sh = SpreadsheetApp.getActive().getSheetByName(CFG.topicsSheetName);
-  if (!sh) throw new Error('Sheet not found: ' + CFG.topicsSheetName);
+  if (!sh) {
+    throw new Error('Sheet not found: ' + CFG.topicsSheetName);
+  }
 
   const rows = sh.getDataRange().getDisplayValues();
-  if (!rows || rows.length < 2)
+  if (!rows || rows.length < 2) {
     throw new Error('Topics sheet has no data rows.');
+  }
 
   const headers = rows[0].map(String);
   const iDisplay = getRequiredHeaderIndex_(
@@ -306,7 +324,9 @@ function loadTopicMap_(idHeader) {
   for (let r = 1; r < rows.length; r++) {
     const display = String(rows[r][iDisplay] || '').trim();
     const id = String(rows[r][iId] || '').trim();
-    if (!display || !id) continue;
+    if (!display || !id) {
+      continue;
+    }
     map.set(display.toLowerCase(), id);
   }
   return map;
@@ -333,7 +353,9 @@ function makePythonPageItem_(url, targetsData) {
 
   const targetsInline = '[' + targetChunks.join(', ') + ']';
   const oneLine = `${indent4}{"url": ${urlS}, "targets": ${targetsInline}},\n`;
-  if (oneLine.length <= CFG.blackMaxLen) return oneLine;
+  if (oneLine.length <= CFG.blackMaxLen) {
+    return oneLine;
+  }
 
   // Multiline formatting
   let out = `${indent4}{\n`;
@@ -389,7 +411,7 @@ function sortKeyForUrl_(u) {
     const path = url.pathname || '';
     const query = url.search || '';
     return host + path + query;
-  } catch (e) {
+  } catch {
     return String(u)
       .replace(/^https?:\/\//i, '')
       .replace(/^www\./i, '')
@@ -623,7 +645,7 @@ function showTextDialog_(title, text, missingSheets, steps) {
       const s = document.getElementById('status');
       s.style.visibility = 'visible';
       setTimeout(() => s.style.visibility = 'hidden', 1200);
-    } catch (e) { alert('Copy failed: ' + e); }
+    } catch { alert('Copy failed: ' + e); }
   });
 </script>
 </body>

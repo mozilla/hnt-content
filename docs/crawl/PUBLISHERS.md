@@ -24,7 +24,7 @@ Only the sheets named in the script are read. Editorial prefixes a sheet with `D
 
 ## Deploying App Script changes
 
-[`sheets-app-script.js`](../../tools/sheets-exporter/sheets-app-script.js) is the script behind the Exporter menu, and this repository is its source of truth. It holds both exports, and the Python half is deleted along with the crawler that needs it. Edit the copy here and paste it over the live one, never the other way around, so the two cannot drift:
+[`sheets-app-script.js`](../../tools/sheets-exporter/src/sheets-app-script.js) is the script behind the Exporter menu, and this repository is its source of truth. It holds both exports, and the Python half is deleted along with the crawler that needs it. Edit the copy here and paste it over the live one, never the other way around, so the two cannot drift:
 
 1. Open **Extensions > Apps Script** in the spreadsheet.
 2. Replace the script with the copy from this repository, and save.

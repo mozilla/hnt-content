@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
-const SCRIPT_PATH = new URL('../sheets-app-script.js', import.meta.url);
+const SCRIPT_PATH = new URL('./sheets-app-script.js', import.meta.url);
 
 /** The exporter functions these tests reach into. */
 interface Exporter {
