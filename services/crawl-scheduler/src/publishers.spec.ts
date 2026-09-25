@@ -23,8 +23,9 @@ describe('publishers.json', () => {
     for (const { url, contexts } of pages) {
       expect(contexts.length, url).toBeGreaterThan(0);
       for (const { surface_id, topic } of contexts) {
-        // A surface is a localized New Tab feed, e.g. NEW_TAB_EN_INTL,
-        // and a topic is an ML section id, e.g. society-parenting.
+        // A surface_id follows the Corpus API's ScheduledSurfaceGUID
+        // format, and a topic is the id the spreadsheet maps its label
+        // to, such as society-parenting.
         expect(surface_id, url).toMatch(/^NEW_TAB_[A-Z]{2}_[A-Z]{2,4}$/);
         expect(topic, url).toMatch(/^[a-z][a-z-]*$/);
       }

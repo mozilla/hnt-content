@@ -38,9 +38,9 @@ export interface CrawlArticleMessage {
 
 /**
  * Surface and topic a discovered page is crawled for, e.g. surface_id
- * 'NEW_TAB_EN_US' and topic 'tech'. The surface names one localized
- * New Tab feed, and a page can serve several, so each discovery job
- * carries one context per (surface, topic) pair.
+ * 'NEW_TAB_EN_US' and topic 'tech'. surface_id is the Corpus API's
+ * ScheduledSurfaceGUID, and a page can be crawled for several, so each
+ * discovery job carries one context per (surface, topic) pair.
  */
 export interface DiscoveryContext {
   surface_id: string;
