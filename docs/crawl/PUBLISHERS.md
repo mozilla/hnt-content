@@ -4,32 +4,32 @@ The crawler discovers stories from a fixed list of publisher section pages, such
 
 ## Updating the list
 
-Choose **Exporter > Generate JSON** in the spreadsheet, then follow the two steps in the dialog.
+Choose **Exporter > Generate JSON** in the spreadsheet. The menu is built by a script that runs when the spreadsheet opens, so give it a moment to appear. **Generate Python** beside it writes the page list for the [older crawler](https://github.com/mozilla/content-ml-services/blob/main/jobs/cloudfunctions/crawl/pages.py), and stays until that pipeline is switched off.
 
 ![The Exporter menu](images/exporter-menu.png)
 
+Then follow the two steps in the dialog, which takes a few seconds to appear because it reads every locale sheet.
+
 ![The Generated JSON dialog](images/generated-json.png)
-
-The menu is built by a script that runs when the spreadsheet opens, so give it a moment to appear. Generating takes a few seconds more, since it reads every locale sheet.
-
-**Generate Python** beside it writes `pages.py` for the older crawler, and stays until that pipeline is switched off.
 
 ## What the export writes
 
 Each approved row becomes one context under its page URL, so a page approved for several locales or topics is a single entry with several contexts.
 
-A Section URL cell holding only a host and path, such as `grist.org`, is read as https. Sheets renders one as a link and data validation does not reject it, so the row would otherwise be approved and never crawled.
+The topic is an id rather than the label editors see, taken from the **Topic id** column of the "Topics" sheet, so the crawler records `tech` where the spreadsheet says "Technology". A topic with no id fails the export with an error naming it.
 
-The topic is a New Tab section id, taken from the **Section id** column of the "Topics" sheet, so the crawler records `tech` rather than the display value "Technology". A topic with no section id fails the export with an error naming it.
+Only the sheets named in the script are read. Editorial prefixes a sheet with `DRAFT` while a new market is being prepared, as in `DRAFT FR`, which keeps it out of the export until the prefix comes off. The dialog lists any named sheet it could not find.
 
-A sheet named `DRAFT FR` is not found, so a locale starts being crawled when editors drop the prefix. The dialog names any sheet it could not find.
+[`publishers.spec.ts`](../../services/crawl-scheduler/src/publishers.spec.ts) checks the committed file in CI, because the file that is committed is the file that deploys.
 
-Nothing checks the file at runtime. [`publishers.spec.ts`](../../services/crawl-scheduler/src/publishers.spec.ts) checks the committed copy in CI instead, because the file that is committed is the file that deploys.
+## Deploying App Script changes
 
-## The script
+[`sheets-app-script.js`](sheets-app-script.js) is the script behind the Exporter menu, and this repository is its source of truth. It holds both exports, and the Python half is deleted along with the crawler that needs it. Edit the copy here and paste it over the live one, never the other way around, so the two cannot drift:
 
-[`sheets-app-script.js`](sheets-app-script.js) is the whole Apps Script project bound to the spreadsheet, and this repository is its source of truth. It holds both exports, and the Python half is deleted along with the crawler that needs it.
+1. Open **Extensions > Apps Script** in the spreadsheet.
+2. Replace the script with the copy from this repository, and save.
+3. Reload the spreadsheet, which rebuilds the Exporter menu.
 
-Edit it here and paste it over the spreadsheet's `Code.gs`, never the other way around. Save, reload the spreadsheet, and run both exports to check them. The menu is rebuilt only when the spreadsheet opens, so saving alone will not change it.
+Then run both exports to confirm they still work.
 
-The tabs it reads are listed in `sources`, each pairing a sheet name with the surface it feeds. A renamed tab is reported as missing in the dialog, along with the tabs the spreadsheet does have, so correct `sources` here and paste again.
+The sheets the script reads are listed in its `sources`, each pairing a sheet name with the surface it feeds. A renamed sheet is reported as missing in the dialog, along with the sheets the spreadsheet does have, so correct `sources` here and paste again.

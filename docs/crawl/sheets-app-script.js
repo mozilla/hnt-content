@@ -12,9 +12,9 @@
  *
  * Both read the same Topic, Section URL and Approved columns from one sheet
  * per locale, and take only the rows marked Approved. They differ in how a
- * topic is named: the JSON export resolves it to a New Tab section id via
- * the Section id column of the Topics sheet, while the Python export
- * resolves it to a Topic id via that sheet's Topic id column.
+ * topic is named: the JSON export resolves it through the Topic id column
+ * of the Topics sheet, while the Python export resolves it through that
+ * sheet's Legacy topic id column and goes away with the older crawler.
  *
  * This file is the source of truth. Paste it over the project's Code.gs
  * rather than editing the live copy, and see PUBLISHERS.md.
@@ -53,7 +53,8 @@ const CFG = {
   topicsSheetName: 'Topics',
   topicDisplayHeader: 'Topic display value',
   topicIdHeader: 'Topic id',
-  sectionIdHeader: 'Section id',
+  // The older crawler labels a topic differently, so it reads its own column.
+  legacyTopicIdHeader: 'Legacy topic id',
 
   // Longest line makePythonPageItem_ emits before it wraps, matching Black.
   blackMaxLen: 120,
@@ -81,13 +82,13 @@ function cmdShowJson() {
 
 /** Build the publishers.json string read by the crawl scheduler. */
 function buildPublishersJson_(missingSheets) {
-  const sectionMap = loadTopicMap_(CFG.sectionIdHeader);
+  const topicIds = loadTopicMap_(CFG.topicIdHeader);
 
   // url -> Map(locale -> Set(topic display values))
   const urlLocaleTopics = new Map();
 
   // Ingest with an empty topic map so rows keep their topic display values;
-  // buildPublisherPages_ resolves those to section ids.
+  // buildPublisherPages_ resolves those to topic ids.
   for (const src of CFG.sources) {
     ingestSourceSheet_(src, new Map(), urlLocaleTopics, missingSheets);
   }
@@ -99,7 +100,7 @@ function buildPublishersJson_(missingSheets) {
 
   return (
     JSON.stringify(
-      buildPublisherPages_(urlLocaleTopics, sectionMap, surfaceIds),
+      buildPublisherPages_(urlLocaleTopics, topicIds, surfaceIds),
       null,
       2,
     ) + '\n'
@@ -109,10 +110,10 @@ function buildPublishersJson_(missingSheets) {
 /**
  * Convert ingested sheet data into the {"pages": [...]} object, given
  * url -> Map(locale -> Set(topic display values)) and a lowercased topic
- * display value -> section id map. Throws when an approved row uses a topic
- * that has no section id.
+ * display value -> topic id map. Throws when an approved row uses a topic
+ * that has no id.
  */
-function buildPublisherPages_(urlLocaleTopics, sectionMap, surfaceIds) {
+function buildPublisherPages_(urlLocaleTopics, topicIds, surfaceIds) {
   const pages = [];
 
   for (const [url, localeToTopics] of urlLocaleTopics) {
@@ -122,10 +123,10 @@ function buildPublisherPages_(urlLocaleTopics, sectionMap, surfaceIds) {
     for (const [locale, topicDisplays] of localeToTopics) {
       const surfaceId = surfaceIds.get(locale);
       for (const display of topicDisplays) {
-        const topic = sectionMap.get(display.toLowerCase());
+        const topic = topicIds.get(display.toLowerCase());
         if (!topic) {
           throw new Error(
-            `Topic "${display}" has no "${CFG.sectionIdHeader}" in the ` +
+            `Topic "${display}" has no "${CFG.topicIdHeader}" in the ` +
               `"${CFG.topicsSheetName}" sheet.`,
           );
         }
@@ -174,7 +175,7 @@ https://docs.google.com/spreadsheets/d/1xlZnDQjVnfhGvxuFhAvktRKaKdNIZBF1zypaOTdm
  *     {"url": ..., "targets": [{"locale": ..., "topics": [...]}, ...]}
  */
 function buildPythonList_(missingSheets) {
-  const topicMap = loadTopicMap_(CFG.topicIdHeader);
+  const topicMap = loadTopicMap_(CFG.legacyTopicIdHeader);
 
   // url -> Map(locale -> Set(topicIds))
   const urlLocaleTopics = new Map();
@@ -281,7 +282,7 @@ function readUrl_(raw) {
 
 /**
  * Load Topic display → id mapping from the Topics sheet, reading ids from the
- * given column (Topic id for Python, Section id for JSON). Keys are lowercased
+ * given column, which differs per export. Keys are lowercased
  * & trimmed for robust matching.
  */
 function loadTopicMap_(idHeader) {
