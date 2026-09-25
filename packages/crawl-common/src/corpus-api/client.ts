@@ -292,8 +292,8 @@ const SECTION_ITEMS_QUERY = `
  * Fetch the currently scheduled live articles for a New Tab surface via
  * the Corpus Admin API sections query, mirroring the legacy
  * HydrateSectionItems read. Flattens the items of each LIVE section to
- * LiveArticle, de-duplicated by URL (the agent's publisher list requires
- * unique URLs). Non-live sections (scheduled, disabled, expired) are
+ * LiveArticle, de-duplicated by URL (the scheduler must not enqueue the
+ * same article twice). Non-live sections (scheduled, disabled, expired) are
  * skipped, since the admin query, unlike the public one, does not
  * date-filter. scheduledSurfaceGuid is the bare surface string, e.g.
  * 'NEW_TAB_EN_US'.
