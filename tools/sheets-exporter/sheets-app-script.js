@@ -17,7 +17,8 @@
  * sheet's Legacy topic id column and goes away with the older crawler.
  *
  * This file is the source of truth. Paste it over the project's Code.gs
- * rather than editing the live copy, and see PUBLISHERS.md.
+ * rather than editing the live copy. Its tests sit beside it, and
+ * docs/crawl/PUBLISHERS.md explains how editors run it.
  */
 const CFG = {
   // One entry per locale sheet. surfaceId is the New Tab surface the JSON
