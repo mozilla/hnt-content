@@ -7,6 +7,7 @@ import {
 } from 'crawl-common';
 import { publishMessage } from 'pubsub';
 import config from './config.js';
+import { randomBatch } from './random-batch.js';
 
 /**
  * Enqueue a capped batch of the live articles scheduled on New Tab for
@@ -21,23 +22,10 @@ export async function enqueueLiveArticles(): Promise<number> {
   // do not know whether that is still what editorial wants; HNT-2426
   // tracks the question.
   const liveArticles = await getScheduledSectionItems('NEW_TAB_EN_US');
-  const batch = randomBatch(liveArticles);
+  const batch = randomBatch(liveArticles, config.liveArticlesPerTick);
   await Promise.all(batch.map(publishCrawlJob));
 
   return batch.length;
-}
-
-/**
- * Pick at most `liveArticlesPerTick` of the articles at random. This
- * runs in non-prod environments for now, where a random subset is the
- * simplest way to limit how many Zyte requests we make.
- */
-function randomBatch(liveArticles: LiveArticle[]): LiveArticle[] {
-  return liveArticles
-    .map((article) => ({ article, order: Math.random() }))
-    .sort((a, b) => a.order - b.order)
-    .slice(0, config.liveArticlesPerTick)
-    .map(({ article }) => article);
 }
 
 /**
