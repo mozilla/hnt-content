@@ -2,7 +2,10 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    // The publisher page list is imported as a JSON module, and tsc
+    // emits it into dist for the built service to read.
+    "resolveJsonModule": true
   },
   "include": ["src"],
   "exclude": ["src/**/*.spec.ts", "src/**/*.integration.ts"]

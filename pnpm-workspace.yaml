@@ -1,6 +1,7 @@
 packages:
   - services/*
   - packages/*
+  - scripts/*
 
 onlyBuiltDependencies:
   - esbuild

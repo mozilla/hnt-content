@@ -23,6 +23,17 @@ export default tseslint.config(
     },
   },
   {
+    // The Exporter menu and the open trigger call these entry points by
+    // name, so nothing inside the file references them.
+    files: ['scripts/sheets-exporter/src/sheets-app-script.js'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { vars: 'all', args: 'none', varsIgnorePattern: '^(onOpen|cmdShow)' },
+      ],
+    },
+  },
+  {
     ignores: ['**/dist/', '**/node_modules/', '**/.turbo/'],
   },
 );
