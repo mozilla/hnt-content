@@ -9,7 +9,7 @@ vi.mock('redis-state', async (importOriginal) => {
 });
 
 import { getTimestamp } from 'redis-state';
-import { withinMinutes } from './recency.js';
+import { isWithinMinutes } from './recency.js';
 
 describe('withinMinutes', () => {
   afterEach(() => {
@@ -18,16 +18,16 @@ describe('withinMinutes', () => {
 
   it('is true when the marker is within the window', async () => {
     vi.mocked(getTimestamp).mockResolvedValue(Date.now() - 5 * 60_000);
-    expect(await withinMinutes('k', 10)).toBe(true);
+    expect(await isWithinMinutes('k', 10)).toBe(true);
   });
 
   it('is false when the marker is older than the window', async () => {
     vi.mocked(getTimestamp).mockResolvedValue(Date.now() - 15 * 60_000);
-    expect(await withinMinutes('k', 10)).toBe(false);
+    expect(await isWithinMinutes('k', 10)).toBe(false);
   });
 
   it('is false when there is no marker', async () => {
     vi.mocked(getTimestamp).mockResolvedValue(null);
-    expect(await withinMinutes('k', 10)).toBe(false);
+    expect(await isWithinMinutes('k', 10)).toBe(false);
   });
 });
