@@ -5,7 +5,7 @@ import { getTimestamp } from 'redis-state';
  * `minutes`, so the worker can skip a page or article it processed
  * recently.
  */
-export async function withinMinutes(
+export async function isWithinMinutes(
   key: string,
   minutes: number,
 ): Promise<boolean> {

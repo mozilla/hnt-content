@@ -4,6 +4,17 @@ import {
   type ArticleDiscoveryEvent,
   type CrawlArticleDiscoveryMessage,
 } from 'crawl-common';
+import { publishMessage, startSubscriber } from 'pubsub';
+import {
+  acquireLock,
+  getTimestamp,
+  releaseLock,
+  setTimestamp,
+} from 'redis-state';
+import config from './config.js';
+import { startDiscoveryConsumer } from './discovery-consumer.js';
+import { handleArticleDiscovery } from './handlers/extract-discovery.js';
+import { DISCOVERY_MESSAGE, TEST_SOURCE_URL } from './handlers/test-helpers.js';
 
 vi.mock('pubsub', () => ({
   publishMessage: vi.fn(),
@@ -19,18 +30,6 @@ vi.mock('redis-state', () => ({
 vi.mock('./handlers/extract-discovery.js', () => ({
   handleArticleDiscovery: vi.fn(),
 }));
-
-import { publishMessage, startSubscriber } from 'pubsub';
-import {
-  acquireLock,
-  getTimestamp,
-  releaseLock,
-  setTimestamp,
-} from 'redis-state';
-import config from './config.js';
-import { startDiscoveryConsumer } from './discovery-consumer.js';
-import { handleArticleDiscovery } from './handlers/extract-discovery.js';
-import { DISCOVERY_MESSAGE, TEST_SOURCE_URL } from './handlers/test-helpers.js';
 
 const ARTICLE_URL = 'https://example.com/news/article-1';
 

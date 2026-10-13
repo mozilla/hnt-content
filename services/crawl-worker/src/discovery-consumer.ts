@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import {
   articleExtractedKey,
   crawlConfig,
-  pageFetchKey,
-  pageLockKey,
+  pageFetchKey as getRedisKeyForPageFetch,
+  pageLockKey as getRedisKeyForPageLock,
   type CrawlArticleDiscoveryMessage,
   type CrawlArticleMessage,
 } from 'crawl-common';
@@ -12,13 +12,17 @@ import {
   sentryPubSubErrorHandler,
   startSubscriber,
 } from 'pubsub';
-import { acquireLock, releaseLock, setTimestamp } from 'redis-state';
+import {
+  acquireLock as acquireRedisKeyLockToken,
+  releaseLock as releaseRedisKeyLock,
+  setTimestamp as setRedisKeyTimestampWithTTL,
+} from 'redis-state';
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
 import { handleArticleDiscovery } from './handlers/extract-discovery.js';
-import { withinMinutes } from './recency.js';
+import { isWithinMinutes } from './recency.js';
 
-const MINUTES_PER_DAY = 24 * 60;
+const MINUTES_PER_DAY = 1440;
 
 /**
  * Build the crawl-article job for a discovered article. Unlike live items,
@@ -43,8 +47,8 @@ function buildCrawlArticleJob(
 /**
  * Discover a page's articles, publish one `article-discoveries` event
  * per article and context, and enqueue a `crawl-article` job for each
- * unique article URL not extracted recently. A page crawled within
- * `pageRefreshMinutes` or locked by another worker is skipped and acked.
+ * unique article URL not extracted recently. A page attempted to crawled
+ * within `pageRefreshMinutes` or locked by another worker is skipped and acked.
  *
  * The `page:fetch` marker is claimed before the Zyte call, so a partial
  * failure (a failed publish, a crash) redelivers into a skip rather than
@@ -53,24 +57,30 @@ function buildCrawlArticleJob(
 async function handleMessage(
   message: CrawlArticleDiscoveryMessage,
 ): Promise<void> {
-  const fetchKey = pageFetchKey(message.url);
-  if (await withinMinutes(fetchKey, config.pageRefreshMinutes)) {
+  const pageFetchKey = getRedisKeyForPageFetch(message.url);
+  if (await isWithinMinutes(pageFetchKey, config.pageRefreshMinutes)) {
     return;
   }
 
-  const lockKey = pageLockKey(message.url);
-  const token = await acquireLock(lockKey, config.lockTtlSeconds);
-  if (token === null) {
+  const pageLockKey = getRedisKeyForPageLock(message.url);
+  const lockToken = await acquireRedisKeyLockToken(
+    pageLockKey,
+    config.lockTtlSeconds,
+  );
+  if (lockToken === null) {
     return;
   }
 
   try {
-    // Concurrent duplicates all pass the check above and then queue on
-    // the lock, so re-read the marker the first holder claimed.
-    if (await withinMinutes(fetchKey, config.pageRefreshMinutes)) {
+    // Duplicate requests can pass the check above and wait for the lock.
+    // Check the marker again in case the first request already claimed it.
+    if (await isWithinMinutes(pageFetchKey, config.pageRefreshMinutes)) {
       return;
     }
-    await setTimestamp(fetchKey);
+
+    // Set the current time stamp as a value for this redis key.
+    // Also sets a TTL for this which is the default (30 days) if not provided as an argument.
+    await setRedisKeyTimestampWithTTL(pageFetchKey);
 
     const { events, articleUrls } = await handleArticleDiscovery(message);
 
@@ -83,10 +93,10 @@ async function handleMessage(
       ...articleUrls.map((url) => enqueueUnlessExtracted(url, message.url)),
     ]);
   } finally {
-    // The lock expires on its own, so a failed release must not mask
-    // the outcome and nack a message that was handled.
-    await releaseLock(lockKey, token).catch((err) =>
-      console.error('failed to release lock', lockKey, err),
+    // The lock expires automatically, so a release failure should not
+    // cause an already handled message to be nacked.
+    await releaseRedisKeyLock(pageLockKey, lockToken).catch((err) =>
+      console.error('failed to release lock', pageLockKey, err),
     );
   }
 }
@@ -97,7 +107,7 @@ async function enqueueUnlessExtracted(
   sourceUrl: string,
 ): Promise<void> {
   const refreshMinutes = config.discoveredArticleRefreshDays * MINUTES_PER_DAY;
-  if (await withinMinutes(articleExtractedKey(url), refreshMinutes)) {
+  if (await isWithinMinutes(articleExtractedKey(url), refreshMinutes)) {
     return;
   }
   await publishMessage(
