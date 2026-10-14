@@ -6,13 +6,16 @@ import {
 } from 'crawl-common';
 import { publishMessage, startSubscriber } from 'pubsub';
 import {
-  acquireLock,
-  getTimestamp,
-  releaseLock,
-  setTimestamp,
+  acquireRedisKeyLockToken,
+  getRedisKeyTimestampValue,
+  releaseRedisKeyLock,
+  setRedisKeyTimestampWithTTL,
 } from 'redis-state';
 import config from './config.js';
-import { startDiscoveryConsumer } from './discovery-consumer.js';
+import {
+  startDiscoveryConsumer,
+  isWithinMinutes,
+} from './discovery-consumer.js';
 import { handleArticleDiscovery } from './handlers/extract-discovery.js';
 import { DISCOVERY_MESSAGE, TEST_SOURCE_URL } from './handlers/test-helpers.js';
 
@@ -22,10 +25,10 @@ vi.mock('pubsub', () => ({
   startSubscriber: vi.fn(),
 }));
 vi.mock('redis-state', () => ({
-  acquireLock: vi.fn(),
-  getTimestamp: vi.fn(),
-  releaseLock: vi.fn(),
-  setTimestamp: vi.fn(),
+  acquireRedisKeyLockToken: vi.fn(),
+  getRedisKeyTimestampValue: vi.fn(),
+  releaseRedisKeyLock: vi.fn(),
+  setRedisKeyTimestampWithTTL: vi.fn(),
 }));
 vi.mock('./handlers/extract-discovery.js', () => ({
   handleArticleDiscovery: vi.fn(),
@@ -64,12 +67,37 @@ function registeredHandler(): (
   return vi.mocked(startSubscriber).mock.calls[0]![0].handler;
 }
 
+describe('isWithinMinutes', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('is true when the marker is within the window', async () => {
+    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(
+      Date.now() - 5 * 60_000,
+    );
+    expect(await isWithinMinutes('k', 10)).toBe(true);
+  });
+
+  it('is false when the marker is older than the window', async () => {
+    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(
+      Date.now() - 15 * 60_000,
+    );
+    expect(await isWithinMinutes('k', 10)).toBe(false);
+  });
+
+  it('is false when there is no marker', async () => {
+    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(null);
+    expect(await isWithinMinutes('k', 10)).toBe(false);
+  });
+});
+
 describe('discovery consumer', () => {
   beforeEach(() => {
     // Page not crawled recently, lock free, articles not extracted.
-    vi.mocked(getTimestamp).mockResolvedValue(null);
-    vi.mocked(acquireLock).mockResolvedValue('lock-token');
-    vi.mocked(releaseLock).mockResolvedValue();
+    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(null);
+    vi.mocked(acquireRedisKeyLockToken).mockResolvedValue('lock-token');
+    vi.mocked(releaseRedisKeyLock).mockResolvedValue();
     vi.mocked(publishMessage).mockResolvedValue('message-id');
     vi.mocked(handleArticleDiscovery).mockResolvedValue({
       events: EVENTS,
@@ -111,23 +139,26 @@ describe('discovery consumer', () => {
       article_refresh_minutes: config.discoveredArticleRefreshDays * 24 * 60,
     });
     expect(publishMessage).toHaveBeenCalledTimes(3);
-    expect(setTimestamp).toHaveBeenCalledOnce();
-    expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
+    expect(setRedisKeyTimestampWithTTL).toHaveBeenCalledOnce();
+    expect(releaseRedisKeyLock).toHaveBeenCalledWith(
+      expect.any(String),
+      'lock-token',
+    );
   });
 
   it('skips a page crawled within its interval', async () => {
-    vi.mocked(getTimestamp).mockResolvedValue(Date.now());
+    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(Date.now());
 
     await registeredHandler()(DISCOVERY_MESSAGE);
 
-    expect(acquireLock).not.toHaveBeenCalled();
+    expect(acquireRedisKeyLockToken).not.toHaveBeenCalled();
     expect(handleArticleDiscovery).not.toHaveBeenCalled();
     expect(publishMessage).not.toHaveBeenCalled();
   });
 
   it('crawls a page whose last crawl is older than its interval', async () => {
     const stale = Date.now() - (config.pageRefreshMinutes + 1) * 60_000;
-    vi.mocked(getTimestamp).mockResolvedValue(stale);
+    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(stale);
 
     await registeredHandler()(DISCOVERY_MESSAGE);
 
@@ -135,34 +166,38 @@ describe('discovery consumer', () => {
   });
 
   it('skips when another worker holds the page lock', async () => {
-    vi.mocked(acquireLock).mockResolvedValue(null);
+    vi.mocked(acquireRedisKeyLockToken).mockResolvedValue(null);
 
     await registeredHandler()(DISCOVERY_MESSAGE);
 
     expect(handleArticleDiscovery).not.toHaveBeenCalled();
     expect(publishMessage).not.toHaveBeenCalled();
-    expect(setTimestamp).not.toHaveBeenCalled();
-    expect(releaseLock).not.toHaveBeenCalled();
+    expect(setRedisKeyTimestampWithTTL).not.toHaveBeenCalled();
+    expect(releaseRedisKeyLock).not.toHaveBeenCalled();
   });
 
   it('re-checks page:fetch under the lock and skips a concurrent duplicate', async () => {
     // The pre-lock check sees no marker, but the job that won the lock
     // first has since claimed page:fetch.
-    vi.mocked(getTimestamp)
+    vi.mocked(getRedisKeyTimestampValue)
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(Date.now());
 
     await registeredHandler()(DISCOVERY_MESSAGE);
 
-    expect(acquireLock).toHaveBeenCalled();
+    expect(acquireRedisKeyLockToken).toHaveBeenCalled();
     expect(handleArticleDiscovery).not.toHaveBeenCalled();
-    expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
+    expect(releaseRedisKeyLock).toHaveBeenCalledWith(
+      expect.any(String),
+      'lock-token',
+    );
   });
 
   it('claims the page marker before the Zyte call and publish fan-out', async () => {
     await registeredHandler()(DISCOVERY_MESSAGE);
 
-    const claimOrder = vi.mocked(setTimestamp).mock.invocationCallOrder[0]!;
+    const claimOrder = vi.mocked(setRedisKeyTimestampWithTTL).mock
+      .invocationCallOrder[0]!;
     const extractOrder = vi.mocked(handleArticleDiscovery).mock
       .invocationCallOrder[0]!;
     const publishOrder = vi.mocked(publishMessage).mock.invocationCallOrder[0]!;
@@ -171,8 +206,9 @@ describe('discovery consumer', () => {
   });
 
   it('publishes discovery events but skips the job for a recently extracted article', async () => {
-    vi.mocked(getTimestamp).mockImplementation(async (key: string) =>
-      key.startsWith('article:extracted') ? Date.now() : null,
+    vi.mocked(getRedisKeyTimestampValue).mockImplementation(
+      async (key: string) =>
+        key.startsWith('article:extracted') ? Date.now() : null,
     );
 
     await registeredHandler()(DISCOVERY_MESSAGE);
@@ -203,17 +239,20 @@ describe('discovery consumer', () => {
     const handler = registeredHandler();
 
     await expect(handler(DISCOVERY_MESSAGE)).rejects.toThrow('pubsub down');
-    expect(setTimestamp).toHaveBeenCalledOnce();
-    expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
+    expect(setRedisKeyTimestampWithTTL).toHaveBeenCalledOnce();
+    expect(releaseRedisKeyLock).toHaveBeenCalledWith(
+      expect.any(String),
+      'lock-token',
+    );
 
     // The redelivery sees the claim and does not call Zyte again.
-    vi.mocked(getTimestamp).mockResolvedValue(Date.now());
+    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(Date.now());
     await handler(DISCOVERY_MESSAGE);
     expect(handleArticleDiscovery).toHaveBeenCalledOnce();
   });
 
   it('does not nack a handled message when the lock release fails', async () => {
-    vi.mocked(releaseLock).mockRejectedValue(new Error('redis down'));
+    vi.mocked(releaseRedisKeyLock).mockRejectedValue(new Error('redis down'));
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(
@@ -229,6 +268,9 @@ describe('discovery consumer', () => {
       'zyte',
     );
     expect(publishMessage).not.toHaveBeenCalled();
-    expect(releaseLock).toHaveBeenCalledWith(expect.any(String), 'lock-token');
+    expect(releaseRedisKeyLock).toHaveBeenCalledWith(
+      expect.any(String),
+      'lock-token',
+    );
   });
 });

@@ -5,14 +5,14 @@ import {
 } from 'testcontainers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  acquireLock,
+  acquireRedisKeyLockToken,
   acquireRateLimitToken,
   getString,
-  getTimestamp,
+  getRedisKeyTimestampValue,
   initRedisClient,
-  releaseLock,
+  releaseRedisKeyLock,
   setString,
-  setTimestamp,
+  setRedisKeyTimestampWithTTL,
   shutdownRedis,
 } from './client.js';
 
@@ -64,31 +64,31 @@ describe('redis state client integration', () => {
 
   it('round-trips a timestamp', async () => {
     const before = Date.now();
-    await setTimestamp('page:fetch:x', 60);
-    const stored = await getTimestamp('page:fetch:x');
+    await setRedisKeyTimestampWithTTL('page:fetch:x', 60);
+    const stored = await getRedisKeyTimestampValue('page:fetch:x');
     expect(stored).not.toBeNull();
     expect(stored!).toBeGreaterThanOrEqual(before);
   });
 
   it('returns null for a missing timestamp', async () => {
-    expect(await getTimestamp('page:fetch:missing')).toBeNull();
+    expect(await getRedisKeyTimestampValue('page:fetch:missing')).toBeNull();
   });
 
   it('treats a non-numeric stored value as no timestamp', async () => {
     await setString('page:fetch:corrupt', 'not-a-number', 60);
-    expect(await getTimestamp('page:fetch:corrupt')).toBeNull();
+    expect(await getRedisKeyTimestampValue('page:fetch:corrupt')).toBeNull();
   });
 
   it('rejects a non-positive lock TTL', async () => {
-    await expect(acquireLock('article:lock:bad', 0)).rejects.toThrow(
-      /positive/,
-    );
+    await expect(
+      acquireRedisKeyLockToken('article:lock:bad', 0),
+    ).rejects.toThrow(/positive/);
   });
 
   it('expires a timestamp after its TTL', async () => {
-    await setTimestamp('page:fetch:ttl', 1);
+    await setRedisKeyTimestampWithTTL('page:fetch:ttl', 1);
     await new Promise((r) => setTimeout(r, 1_500));
-    expect(await getTimestamp('page:fetch:ttl')).toBeNull();
+    expect(await getRedisKeyTimestampValue('page:fetch:ttl')).toBeNull();
   });
 
   it('round-trips a string', async () => {
@@ -97,29 +97,31 @@ describe('redis state client integration', () => {
   });
 
   it('acquires a lock once and blocks a second acquirer', async () => {
-    const token = await acquireLock('article:lock:x', 60);
+    const token = await acquireRedisKeyLockToken('article:lock:x', 60);
     expect(token).not.toBeNull();
-    expect(await acquireLock('article:lock:x', 60)).toBeNull();
+    expect(await acquireRedisKeyLockToken('article:lock:x', 60)).toBeNull();
   });
 
   it('allows re-acquisition after release', async () => {
-    const token = await acquireLock('article:lock:y', 60);
-    await releaseLock('article:lock:y', token!);
-    expect(await acquireLock('article:lock:y', 60)).not.toBeNull();
+    const token = await acquireRedisKeyLockToken('article:lock:y', 60);
+    await releaseRedisKeyLock('article:lock:y', token!);
+    expect(await acquireRedisKeyLockToken('article:lock:y', 60)).not.toBeNull();
   });
 
   it('does not release a lock held with a different token', async () => {
-    const token = await acquireLock('article:lock:z', 60);
-    await releaseLock('article:lock:z', 'someone-elses-token');
+    const token = await acquireRedisKeyLockToken('article:lock:z', 60);
+    await releaseRedisKeyLock('article:lock:z', 'someone-elses-token');
     // The real holder still owns it, so a new acquire fails.
-    expect(await acquireLock('article:lock:z', 60)).toBeNull();
-    await releaseLock('article:lock:z', token!);
+    expect(await acquireRedisKeyLockToken('article:lock:z', 60)).toBeNull();
+    await releaseRedisKeyLock('article:lock:z', token!);
   });
 
   it('expires a lock after its TTL so it can be re-acquired', async () => {
-    await acquireLock('article:lock:ttl', 1);
+    await acquireRedisKeyLockToken('article:lock:ttl', 1);
     await new Promise((r) => setTimeout(r, 1_500));
-    expect(await acquireLock('article:lock:ttl', 60)).not.toBeNull();
+    expect(
+      await acquireRedisKeyLockToken('article:lock:ttl', 60),
+    ).not.toBeNull();
   });
 
   it('grants up to the burst, then throttles the token bucket', async () => {

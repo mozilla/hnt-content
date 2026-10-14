@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  articleContentKey,
-  articleEnqueuedKey,
-  articleExtractedKey,
-  articleLockKey,
+  buildRedisArticleContentKey,
+  buildRedisArticleEnqueuedKey,
+  buildRedisArticleExtractedKey,
+  buildRedisArticleLockKey,
   hashUrl,
-  pageEnqueuedKey,
-  pageFetchKey,
-  pageLockKey,
+  buildRedisPageEnqueuedKey,
+  buildRedisPageFetchKey,
+  buildRedisPageLockKey,
 } from './keys.js';
 
 const URL = 'https://example.com/news/article-1';
@@ -34,13 +34,13 @@ describe('key builders', () => {
   const hash = hashUrl(URL);
 
   it.each([
-    [pageFetchKey, 'page:fetch'],
-    [pageLockKey, 'page:lock'],
-    [pageEnqueuedKey, 'page:enqueued'],
-    [articleEnqueuedKey, 'article:enqueued'],
-    [articleExtractedKey, 'article:extracted'],
-    [articleLockKey, 'article:lock'],
-    [articleContentKey, 'article:content'],
+    [buildRedisPageFetchKey, 'page:fetch'],
+    [buildRedisPageLockKey, 'page:lock'],
+    [buildRedisPageEnqueuedKey, 'page:enqueued'],
+    [buildRedisArticleEnqueuedKey, 'article:enqueued'],
+    [buildRedisArticleExtractedKey, 'article:extracted'],
+    [buildRedisArticleLockKey, 'article:lock'],
+    [buildRedisArticleContentKey, 'article:content'],
   ])('%o builds the %s namespace', (build, prefix) => {
     expect(build(URL)).toBe(`${prefix}:${hash}`);
   });

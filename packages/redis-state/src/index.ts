@@ -1,12 +1,12 @@
 export {
   initRedisClient,
   shutdownRedis,
-  setTimestamp,
-  getTimestamp,
+  setRedisKeyTimestampWithTTL,
+  getRedisKeyTimestampValue,
   setString,
   getString,
-  acquireLock,
-  releaseLock,
+  acquireRedisKeyLockToken,
+  releaseRedisKeyLock,
   acquireRateLimitToken,
   DEFAULT_TTL_SECONDS,
 } from './client.js';
