@@ -1,13 +1,13 @@
 export { default as crawlConfig } from './config.js';
 export { getRegistrableDomain, normalizeText } from './utils/index.js';
 export {
-  pageFetchKey,
-  pageLockKey,
-  pageEnqueuedKey,
-  articleEnqueuedKey,
-  articleExtractedKey,
-  articleLockKey,
-  articleContentKey,
+  buildRedisPageFetchKey,
+  buildRedisPageLockKey,
+  buildRedisPageEnqueuedKey,
+  buildRedisArticleEnqueuedKey,
+  buildRedisArticleExtractedKey,
+  buildRedisArticleLockKey,
+  buildRedisArticleContentKey,
 } from './redis/index.js';
 export {
   initCorpusApiClient,

@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import {
-  articleExtractedKey,
+  buildRedisArticleExtractedKey,
   crawlConfig,
-  pageFetchKey as getRedisKeyForPageFetch,
-  pageLockKey as getRedisKeyForPageLock,
+  buildRedisPageFetchKey,
+  buildRedisPageLockKey,
   type CrawlArticleDiscoveryMessage,
   type CrawlArticleMessage,
 } from 'crawl-common';
@@ -13,14 +13,14 @@ import {
   startSubscriber,
 } from 'pubsub';
 import {
-  acquireLock as acquireRedisKeyLockToken,
-  releaseLock as releaseRedisKeyLock,
-  setTimestamp as setRedisKeyTimestampWithTTL,
+  acquireRedisKeyLockToken,
+  releaseRedisKeyLock,
+  setRedisKeyTimestampWithTTL,
+  getRedisKeyTimestampValue,
 } from 'redis-state';
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
 import { handleArticleDiscovery } from './handlers/extract-discovery.js';
-import { isWithinMinutes } from './recency.js';
 
 const MINUTES_PER_DAY = 1440;
 
@@ -45,6 +45,19 @@ function buildCrawlArticleJob(
 }
 
 /**
+ * Return whether the fetch/crawl marker at key was set within the last
+ * `minutes`, so the worker can skip a page or article it processed
+ * recently.
+ */
+export async function isWithinMinutes(
+  key: string,
+  minutes: number,
+): Promise<boolean> {
+  const markedAt = await getRedisKeyTimestampValue(key);
+  return markedAt !== null && Date.now() - markedAt < minutes * 60_000;
+}
+
+/**
  * Discover a page's articles, publish one `article-discoveries` event
  * per article and context, and enqueue a `crawl-article` job for each
  * unique article URL not extracted recently. A page attempted to crawled
@@ -57,12 +70,12 @@ function buildCrawlArticleJob(
 async function handleMessage(
   message: CrawlArticleDiscoveryMessage,
 ): Promise<void> {
-  const pageFetchKey = getRedisKeyForPageFetch(message.url);
+  const pageFetchKey = buildRedisPageFetchKey(message.url);
   if (await isWithinMinutes(pageFetchKey, config.pageRefreshMinutes)) {
     return;
   }
 
-  const pageLockKey = getRedisKeyForPageLock(message.url);
+  const pageLockKey = buildRedisPageLockKey(message.url);
   const lockToken = await acquireRedisKeyLockToken(
     pageLockKey,
     config.lockTtlSeconds,
@@ -107,7 +120,9 @@ async function enqueueUnlessExtracted(
   sourceUrl: string,
 ): Promise<void> {
   const refreshMinutes = config.discoveredArticleRefreshDays * MINUTES_PER_DAY;
-  if (await isWithinMinutes(articleExtractedKey(url), refreshMinutes)) {
+  if (
+    await isWithinMinutes(buildRedisArticleExtractedKey(url), refreshMinutes)
+  ) {
     return;
   }
   await publishMessage(
