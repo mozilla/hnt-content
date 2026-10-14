@@ -2,6 +2,7 @@ import {
   ArticleEvent,
   CorpusItem,
   CrawlArticleMessage,
+  getRegistrableDomain,
   normalizeText,
   updateApprovedCorpusItem,
   UpdateApprovedCorpusItemInput,
@@ -22,11 +23,12 @@ const EXCERPT_COMPARE_LENGTH = 255;
 export async function handleArticleExtraction(
   message: CrawlArticleMessage,
 ): Promise<ArticleEvent> {
-  const { data: article, url } = await extractArticle(message.url, {
-    extractFrom: resolveExtractFrom(message.url, 'article'),
-  });
+  const { data: article, url: resolvedUrl } = await extractArticle(
+    message.url,
+    { extractFrom: resolveExtractFrom(message.url, 'article') },
+  );
 
-  const event = mapToArticleEvent(article, url);
+  const event = mapToArticleEvent(article, message.url, resolvedUrl);
 
   if (message.corpus_item) {
     await detectAndSyncChanges(article, message.corpus_item);
@@ -35,10 +37,19 @@ export async function handleArticleExtraction(
   return event;
 }
 
-/** Map a Zyte article response to the BigQuery event schema. */
-function mapToArticleEvent(article: ZyteArticle, url: string): ArticleEvent {
+/**
+ * Map a Zyte article response to the BigQuery event schema. url is
+ * the requested URL, so it joins to article_discoveries.url even
+ * when the publisher redirects; resolvedUrl is where Zyte landed.
+ */
+function mapToArticleEvent(
+  article: ZyteArticle,
+  url: string,
+  resolvedUrl: string,
+): ArticleEvent {
   return {
     url,
+    canonical_url: toCanonicalUrl(article.canonicalUrl, url, resolvedUrl),
     extracted_at: new Date().toISOString(),
     headline: article.headline ?? undefined,
     description: article.description ?? undefined,
@@ -52,6 +63,34 @@ function mapToArticleEvent(article: ZyteArticle, url: string): ArticleEvent {
     })),
     language: article.inLanguage ?? undefined,
   };
+}
+
+/**
+ * The page's canonical URL, unless a domain change makes it
+ * untrustworthy (as in the legacy crawler, HNT-1377):
+ * - a redirect to another domain gives undefined, because the page
+ *   is not the article we asked for, and consumers drop it;
+ * - a canonical on another domain (e.g. syndication) gives the
+ *   requested URL, so the article keeps its publisher.
+ */
+export function toCanonicalUrl(
+  canonicalUrl: string | undefined,
+  url: string,
+  resolvedUrl: string,
+): string | undefined {
+  const domain = getRegistrableDomain(url);
+  const resolvedDomain = getRegistrableDomain(resolvedUrl);
+  if (domain && resolvedDomain && domain !== resolvedDomain) {
+    return undefined;
+  }
+  if (!canonicalUrl) {
+    return undefined;
+  }
+  const canonicalDomain = getRegistrableDomain(canonicalUrl);
+  if (domain && canonicalDomain && domain !== canonicalDomain) {
+    return url;
+  }
+  return canonicalUrl;
 }
 
 /**

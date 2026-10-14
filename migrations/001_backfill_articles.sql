@@ -16,7 +16,8 @@ INSERT INTO `crawl.articles` (
   body_truncated,
   published_at,
   breadcrumbs,
-  language
+  language,
+  canonical_url
 )
 SELECT
   canonical_url AS url,
@@ -57,7 +58,11 @@ SELECT
     ELSE []
   END AS breadcrumbs,
 
-  zyte_inLanguage AS language
+  zyte_inLanguage AS language,
+
+  -- The legacy crawler already applied the cross-domain rules that
+  -- toCanonicalUrl in extract-article.ts reproduces.
+  zyte_canonicalUrl AS canonical_url
 
 -- Duplicates are copied as-is; matches the at-least-once delivery
 -- model of the new pipeline. zyte_cached_at is UTC.

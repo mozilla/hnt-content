@@ -15,7 +15,11 @@ export interface ArticleBreadcrumb {
  * subscription.
  */
 export interface ArticleEvent {
+  // The requested URL; matches ArticleDiscoveryEvent.url.
   url: string;
+  // The page's own canonical URL, which consumers use as the
+  // article's identity. See toCanonicalUrl in extract-article.ts.
+  canonical_url?: string;
   // enqueued_at is a datetime string as required by BigQuery.
   extracted_at: string;
   headline?: string;
