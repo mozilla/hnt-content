@@ -103,10 +103,8 @@ describe('extract-article integration', () => {
       title: updatedHeadline,
       // Excerpt unchanged: extracted matches corpus_item.
       excerpt: CORPUS_ITEM.excerpt,
-      authors: [
-        { name: 'Author A', sortOrder: 0 },
-        { name: 'Author B', sortOrder: 1 },
-      ],
+      // Authors come from corpus_item, not from Zyte.
+      authors: [{ name: CORPUS_ITEM.authors[0].name, sortOrder: 0 }],
       status: CORPUS_ITEM.status,
       language: CORPUS_ITEM.language,
       publisher: CORPUS_ITEM.publisher,

@@ -98,7 +98,7 @@ async function detectAndSyncChanges(
       `for corpus item ${corpusItem.external_id}`,
   );
 
-  const input = buildUpdateInput(article, corpusItem, {
+  const input = buildUpdateInput(corpusItem, {
     title: titleChanged ? extractedTitle : undefined,
     excerpt: excerptChanged ? extractedExcerpt : undefined,
   });
@@ -112,27 +112,19 @@ async function detectAndSyncChanges(
  * overwriting curator edits with cosmetic differences.
  */
 function buildUpdateInput(
-  article: ZyteArticle,
   corpusItem: CorpusItem,
   changed: { title?: string; excerpt?: string },
 ): UpdateApprovedCorpusItemInput {
-  // Prefer extracted authors, fall back to corpus item.
-  const authors =
-    article.authors && article.authors.length > 0
-      ? article.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }))
-      : corpusItem.authors.map((a, i) => ({
-          name: a.name,
-          sortOrder: i,
-        }));
-
   return {
     externalId: corpusItem.external_id,
     title: changed.title?.trim() ?? corpusItem.title,
     excerpt: changed.excerpt?.trim() ?? corpusItem.excerpt,
-    authors,
+    // The mutation replaces the whole byline, and Zyte's authors are too
+    // unreliable to overwrite what a curator entered.
+    authors: corpusItem.authors.map((a, i) => ({
+      name: a.name,
+      sortOrder: i,
+    })),
     status: corpusItem.status,
     language: corpusItem.language,
     publisher: corpusItem.publisher,
