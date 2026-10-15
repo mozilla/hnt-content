@@ -309,7 +309,7 @@ sequenceDiagram
 ```
 
 Each page job is a [`CrawlArticleDiscoveryMessage`](https://github.com/mozilla/hnt-content/blob/main/packages/crawl-common/src/types/messages.ts)
-carrying the page URL, its crawl interval, and its contexts. A context is one
+carrying the page URL and its contexts. A context is one
 pairing of a surface (a localized New Tab feed) with a content topic the page
 was crawled under, such as `NEW_TAB_DE_DE` and `sports`. The discovery worker
 emits one [`ArticleDiscoveryEvent`](https://github.com/mozilla/hnt-content/blob/main/packages/crawl-common/src/types/events.ts)
