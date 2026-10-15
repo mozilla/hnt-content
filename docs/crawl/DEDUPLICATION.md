@@ -98,8 +98,8 @@ Because the scheduler is a single replica, a plain check-then-set is enough
 here, so no lock is needed.
 
 The discovery worker guards its page crawls with a freshness check and a lock of
-its own, and checks each discovered article against `article:extracted` so it
-does not queue a URL that was extracted recently.
+its own. It queues every discovered article and leaves the freshness check to
+the article worker.
 
 ## Redis state
 

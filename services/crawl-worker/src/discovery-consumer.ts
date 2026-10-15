@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import {
-  buildRedisArticleExtractedKey,
   crawlConfig,
   buildRedisPageFetchKey,
   buildRedisPageLockKey,
@@ -60,8 +59,8 @@ export async function isWithinMinutes(
 /**
  * Discover a page's articles, publish one `article-discoveries` event
  * per article and context, and enqueue a `crawl-article` job for each
- * unique article URL not extracted recently. A page attempted to crawled
- * within `pageRefreshMinutes` or locked by another worker is skipped and acked.
+ * unique article URL. A page crawled within `pageRefreshMinutes` or
+ * locked by another worker is skipped and acked.
  *
  * The `page:fetch` marker is claimed before the Zyte call, so a partial
  * failure (a failed publish, a crash) redelivers into a skip rather than
@@ -103,7 +102,12 @@ async function handleMessage(
       ...events.map((event) =>
         publishMessage(crawlConfig.articleDiscoveriesTopic, event),
       ),
-      ...articleUrls.map((url) => enqueueUnlessExtracted(url, message.url)),
+      ...articleUrls.map((url) =>
+        publishMessage(
+          crawlConfig.crawlArticleTopic,
+          buildCrawlArticleJob(url, message.url),
+        ),
+      ),
     ]);
   } finally {
     // The lock expires automatically, so a release failure should not
@@ -112,23 +116,6 @@ async function handleMessage(
       console.error('failed to release lock', pageLockKey, err),
     );
   }
-}
-
-/** Enqueue a discovered article unless it was extracted recently. */
-async function enqueueUnlessExtracted(
-  url: string,
-  sourceUrl: string,
-): Promise<void> {
-  const refreshMinutes = config.discoveredArticleRefreshDays * MINUTES_PER_DAY;
-  if (
-    await isWithinMinutes(buildRedisArticleExtractedKey(url), refreshMinutes)
-  ) {
-    return;
-  }
-  await publishMessage(
-    crawlConfig.crawlArticleTopic,
-    buildCrawlArticleJob(url, sourceUrl),
-  );
 }
 
 // A thrown error is captured with the page job's identifying fields,

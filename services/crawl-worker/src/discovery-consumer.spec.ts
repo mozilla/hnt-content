@@ -94,7 +94,7 @@ describe('isWithinMinutes', () => {
 
 describe('discovery consumer', () => {
   beforeEach(() => {
-    // Page not crawled recently, lock free, articles not extracted.
+    // Page not crawled recently, lock free.
     vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(null);
     vi.mocked(acquireRedisKeyLockToken).mockResolvedValue('lock-token');
     vi.mocked(releaseRedisKeyLock).mockResolvedValue();
@@ -203,18 +203,6 @@ describe('discovery consumer', () => {
     const publishOrder = vi.mocked(publishMessage).mock.invocationCallOrder[0]!;
     expect(claimOrder).toBeLessThan(extractOrder);
     expect(claimOrder).toBeLessThan(publishOrder);
-  });
-
-  it('publishes discovery events but skips the job for a recently extracted article', async () => {
-    vi.mocked(getRedisKeyTimestampValue).mockImplementation(
-      async (key: string) =>
-        key.startsWith('article:extracted') ? Date.now() : null,
-    );
-
-    await registeredHandler()(DISCOVERY_MESSAGE);
-
-    expect(publishesTo(crawlConfig.articleDiscoveriesTopic)).toHaveLength(2);
-    expect(publishesTo(crawlConfig.crawlArticleTopic)).toHaveLength(0);
   });
 
   it('enqueues one job per article URL with a distinct crawl_id', async () => {
