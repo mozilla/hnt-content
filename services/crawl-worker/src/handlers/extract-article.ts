@@ -18,17 +18,37 @@ const EXCERPT_COMPARE_LENGTH = 255;
 /**
  * Extract an article via Zyte, map it to the articles event
  * schema, and update the Curated Corpus API when a live
- * article's title or excerpt has changed.
+ * article's title or excerpt has changed. Returns undefined for
+ * an article that could never be recommended, so only eligible
+ * articles reach BigQuery.
  */
 export async function handleArticleExtraction(
   message: CrawlArticleMessage,
-): Promise<ArticleEvent> {
-  const { data: article, url: resolvedUrl } = await extractArticle(
-    message.url,
-    { extractFrom: resolveExtractFrom(message.url, 'article') },
-  );
+): Promise<ArticleEvent | undefined> {
+  const {
+    data: article,
+    url: resolvedUrl,
+    statusCode,
+  } = await extractArticle(message.url, {
+    extractFrom: resolveExtractFrom(message.url, 'article'),
+  });
 
-  const event = mapToArticleEvent(article, message.url, resolvedUrl);
+  const canonicalUrl = toCanonicalUrl(
+    article.canonicalUrl,
+    message.url,
+    resolvedUrl,
+  );
+  const event =
+    statusCode >= 200 && statusCode < 300 && canonicalUrl
+      ? mapToArticleEvent(article, message.url, canonicalUrl)
+      : undefined;
+  if (!event) {
+    console.warn(
+      `article: not publishing ineligible ${message.url} ` +
+        `(status ${statusCode}, final url ${resolvedUrl}, ` +
+        `canonical ${article.canonicalUrl ?? 'none'})`,
+    );
+  }
 
   if (message.corpus_item) {
     await detectAndSyncChanges(article, message.corpus_item);
@@ -40,16 +60,16 @@ export async function handleArticleExtraction(
 /**
  * Map a Zyte article response to the BigQuery event schema. url is
  * the requested URL, so it joins to article_discoveries.url even
- * when the publisher redirects; resolvedUrl is where Zyte landed.
+ * when the publisher redirects.
  */
 function mapToArticleEvent(
   article: ZyteArticle,
   url: string,
-  resolvedUrl: string,
+  canonicalUrl: string,
 ): ArticleEvent {
   return {
     url,
-    canonical_url: toCanonicalUrl(article.canonicalUrl, url, resolvedUrl),
+    canonical_url: canonicalUrl,
     extracted_at: new Date().toISOString(),
     headline: article.headline ?? undefined,
     description: article.description ?? undefined,
@@ -69,7 +89,7 @@ function mapToArticleEvent(
  * The page's canonical URL, unless a domain change makes it
  * untrustworthy (as in the legacy crawler, HNT-1377):
  * - a redirect to another domain gives undefined, because the page
- *   is not the article we asked for, and consumers drop it;
+ *   is not the article we asked for;
  * - a canonical on another domain (e.g. syndication) gives the
  *   requested URL, so the article keeps its publisher.
  */

@@ -72,8 +72,26 @@ describe('handleArticleExtraction', () => {
 
       const event = await handleArticleExtraction(BASE_MESSAGE);
 
-      expect(event.url).toBe(BASE_MESSAGE.url);
-      expect(event.canonical_url).toBe('https://example.com/moved');
+      expect(event?.url).toBe(BASE_MESSAGE.url);
+      expect(event?.canonical_url).toBe('https://example.com/moved');
+    });
+
+    it('returns no event for a page that is not a 2xx', async () => {
+      extractArticleMock.mockResolvedValue({
+        ...ZYTE_RESPONSE,
+        statusCode: 404,
+      });
+
+      expect(await handleArticleExtraction(BASE_MESSAGE)).toBeUndefined();
+    });
+
+    it('returns no event without a usable canonical URL', async () => {
+      extractArticleMock.mockResolvedValue({
+        ...ZYTE_RESPONSE,
+        data: { ...ZYTE_ARTICLE, canonicalUrl: undefined },
+      });
+
+      expect(await handleArticleExtraction(BASE_MESSAGE)).toBeUndefined();
     });
 
     it('calls extractArticle with browserHtml', async () => {

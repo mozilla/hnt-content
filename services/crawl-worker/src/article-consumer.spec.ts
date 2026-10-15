@@ -22,6 +22,7 @@ import { BASE_MESSAGE } from './handlers/test-helpers.js';
 
 const EVENT: ArticleEvent = {
   url: BASE_MESSAGE.url,
+  canonical_url: BASE_MESSAGE.url,
   extracted_at: '2026-01-01T00:00:00.000Z',
 };
 
@@ -54,6 +55,12 @@ describe('article consumer', () => {
       crawlConfig.articlesTopic,
       EVENT,
     );
+  });
+
+  it('publishes nothing for an ineligible article', async () => {
+    vi.mocked(handleArticleExtraction).mockResolvedValue(undefined);
+    await registeredHandler()(BASE_MESSAGE);
+    expect(publishMessage).not.toHaveBeenCalled();
   });
 
   it('rethrows an extraction error and publishes nothing', async () => {

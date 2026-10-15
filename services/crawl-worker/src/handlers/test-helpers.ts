@@ -18,6 +18,7 @@ export const ZYTE_ARTICLE: ZyteArticle = {
   articleBody: 'Full article body text here.',
   datePublished: '2025-06-01T12:00:00Z',
   breadcrumbs: [{ name: 'News', url: TEST_SOURCE_URL }],
+  canonicalUrl: TEST_URL,
   inLanguage: 'en',
   metadata: {
     probability: 0.95,
