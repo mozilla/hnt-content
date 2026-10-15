@@ -94,7 +94,7 @@ function mapToArticleEvent(
  *   requested URL, so the article keeps its publisher.
  */
 export function toCanonicalUrl(
-  canonicalUrl: string | undefined,
+  declaredCanonicalUrl: string | undefined,
   url: string,
   resolvedUrl: string,
 ): string | undefined {
@@ -103,14 +103,14 @@ export function toCanonicalUrl(
   if (domain && resolvedDomain && domain !== resolvedDomain) {
     return undefined;
   }
-  if (!canonicalUrl) {
+  if (!declaredCanonicalUrl) {
     return undefined;
   }
-  const canonicalDomain = getRegistrableDomain(canonicalUrl);
+  const canonicalDomain = getRegistrableDomain(declaredCanonicalUrl);
   if (domain && canonicalDomain && domain !== canonicalDomain) {
     return url;
   }
-  return canonicalUrl;
+  return declaredCanonicalUrl;
 }
 
 /**
