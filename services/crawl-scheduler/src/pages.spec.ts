@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { crawlConfig } from 'crawl-common';
-import type { CrawlArticleDiscoveryMessage } from 'crawl-common';
+import { type CrawlArticleDiscoveryMessage, crawlConfig } from 'crawl-common';
 
 const mocks = vi.hoisted(() => ({
   publishMessage:
@@ -16,7 +15,7 @@ vi.mock('pubsub', () => ({ publishMessage: mocks.publishMessage }));
 
 import config from './config.js';
 import { enqueuePages } from './pages.js';
-import publishers from './publishers.json' with { type: 'json' };
+import publishers from './data/publishers.json' with { type: 'json' };
 
 /** Return the message of every job published so far, in publish order. */
 function published(): CrawlArticleDiscoveryMessage[] {
@@ -28,10 +27,10 @@ beforeEach(() => {
   mocks.publishMessage.mockResolvedValue('message-id');
 });
 
-const CONFIGURED_CAP = config.pagesPerTick;
+const originalPagesPerTick = config.pagesPerTick;
 
 afterEach(() => {
-  config.pagesPerTick = CONFIGURED_CAP;
+  config.pagesPerTick = originalPagesPerTick;
   vi.clearAllMocks();
 });
 

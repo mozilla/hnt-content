@@ -54,10 +54,12 @@ process.on('SIGINT', shutdown);
  */
 async function tick() {
   setLastTickAt(Date.now());
+
   const [pages, liveArticles] = await Promise.all([
     enqueuePages(),
     enqueueLiveArticles(),
   ]);
+
   console.log(
     'tick',
     new Date().toISOString(),

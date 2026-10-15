@@ -63,4 +63,3 @@ Per MozCloud convention the pods run on a shared platform cluster in `moz-fx-web
 One image contains both entry points. The shared mozcloud Helm chart chooses which one each workload runs and sets `WORKER_ROLE` to select the discovery or article role, so all three workloads come from one build.
 
 For how the system fits together, see [docs/crawl/ARCHITECTURE.md](docs/crawl/ARCHITECTURE.md).
-
