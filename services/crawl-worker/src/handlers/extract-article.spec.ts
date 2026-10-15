@@ -76,7 +76,7 @@ describe('handleArticleExtraction', () => {
       expect(event?.canonical_url).toBe('https://example.com/moved');
     });
 
-    it('returns no event for a page that is not a 2xx', async () => {
+    it('returns no event for a page that is not a 200', async () => {
       extractArticleMock.mockResolvedValue({
         ...ZYTE_RESPONSE,
         statusCode: 404,

@@ -39,7 +39,7 @@ export async function handleArticleExtraction(
     resolvedUrl,
   );
   const event =
-    statusCode >= 200 && statusCode < 300 && canonicalUrl
+    statusCode === 200 && canonicalUrl
       ? mapToArticleEvent(article, message.url, canonicalUrl)
       : undefined;
   if (!event) {
