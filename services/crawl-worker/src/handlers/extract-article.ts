@@ -86,29 +86,37 @@ function mapToArticleEvent(
 }
 
 /**
- * The page's canonical URL, unless a domain change makes it
- * untrustworthy (as in the legacy crawler, HNT-1377):
- * - a redirect to another domain gives undefined, because the page
- *   is not the article we asked for;
- * - a canonical on another domain (e.g. syndication) gives the
- *   requested URL, so the article keeps its publisher.
+ * Return the URL to use as the article's identity, applying the
+ * legacy crawler's cross-domain rules (HNT-1377).
+ * @param declaredCanonicalUrl - Canonical URL the page declares, as
+ *   extracted by Zyte.
+ * @param requestedUrl - URL we asked Zyte to extract.
+ * @param resolvedUrl - URL Zyte landed on after following redirects.
+ * @returns undefined after a redirect to another domain, because the
+ *   page is not the article we asked for; requestedUrl when the
+ *   declared canonical is on another domain (e.g. syndication), so the
+ *   article keeps its publisher; otherwise declaredCanonicalUrl.
  */
 export function toCanonicalUrl(
   declaredCanonicalUrl: string | undefined,
-  url: string,
+  requestedUrl: string,
   resolvedUrl: string,
 ): string | undefined {
-  const domain = getRegistrableDomain(url);
+  const requestedDomain = getRegistrableDomain(requestedUrl);
   const resolvedDomain = getRegistrableDomain(resolvedUrl);
-  if (domain && resolvedDomain && domain !== resolvedDomain) {
+  if (requestedDomain && resolvedDomain && requestedDomain !== resolvedDomain) {
     return undefined;
   }
   if (!declaredCanonicalUrl) {
     return undefined;
   }
   const canonicalDomain = getRegistrableDomain(declaredCanonicalUrl);
-  if (domain && canonicalDomain && domain !== canonicalDomain) {
-    return url;
+  if (
+    requestedDomain &&
+    canonicalDomain &&
+    requestedDomain !== canonicalDomain
+  ) {
+    return requestedUrl;
   }
   return declaredCanonicalUrl;
 }
