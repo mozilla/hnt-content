@@ -8,10 +8,12 @@ import { withSentryHandler } from 'sentry';
 import config from './config.js';
 import { handleArticleExtraction } from './handlers/extract-article.js';
 
-/** Extract one article and publish it as an `articles` event. */
+/** Extract one article and publish it as an `articles` event if eligible. */
 async function handleMessage(message: CrawlArticleMessage): Promise<void> {
   const event = await handleArticleExtraction(message);
-  await publishMessage(crawlConfig.articlesTopic, event);
+  if (event) {
+    await publishMessage(crawlConfig.articlesTopic, event);
+  }
 }
 
 // A thrown error is captured with the job's identifying fields, then

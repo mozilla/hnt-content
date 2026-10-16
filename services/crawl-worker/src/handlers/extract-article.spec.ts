@@ -21,7 +21,7 @@ vi.mock('zyte', async (importOriginal) => {
 
 import { updateApprovedCorpusItem } from 'crawl-common';
 import { extractArticle } from 'zyte';
-import { handleArticleExtraction } from './extract-article.js';
+import { handleArticleExtraction, toCanonicalUrl } from './extract-article.js';
 import {
   BASE_MESSAGE,
   CORPUS_ITEM,
@@ -61,6 +61,37 @@ describe('handleArticleExtraction', () => {
       expect(event.breadcrumbs).toEqual(ZYTE_ARTICLE.breadcrumbs);
       expect(event.language).toBe(ZYTE_ARTICLE.inLanguage);
       expect(event.extracted_at).toBeDefined();
+    });
+
+    it('keeps the requested url when Zyte follows a redirect', async () => {
+      extractArticleMock.mockResolvedValue({
+        ...ZYTE_RESPONSE,
+        data: { ...ZYTE_ARTICLE, canonicalUrl: 'https://example.com/moved' },
+        url: 'https://example.com/moved',
+      });
+
+      const event = await handleArticleExtraction(BASE_MESSAGE);
+
+      expect(event?.url).toBe(BASE_MESSAGE.url);
+      expect(event?.canonical_url).toBe('https://example.com/moved');
+    });
+
+    it('returns no event for a page that is not a 200', async () => {
+      extractArticleMock.mockResolvedValue({
+        ...ZYTE_RESPONSE,
+        statusCode: 404,
+      });
+
+      expect(await handleArticleExtraction(BASE_MESSAGE)).toBeUndefined();
+    });
+
+    it('returns no event without a usable canonical URL', async () => {
+      extractArticleMock.mockResolvedValue({
+        ...ZYTE_RESPONSE,
+        data: { ...ZYTE_ARTICLE, canonicalUrl: undefined },
+      });
+
+      expect(await handleArticleExtraction(BASE_MESSAGE)).toBeUndefined();
     });
 
     it('calls extractArticle with browserHtml', async () => {
@@ -276,5 +307,29 @@ describe('handleArticleExtraction', () => {
         'Corpus API down',
       );
     });
+  });
+});
+
+describe('toCanonicalUrl', () => {
+  const url = 'https://news.example.co.uk/a?utm=x';
+
+  it('returns the canonical on the same registrable domain', () => {
+    expect(toCanonicalUrl('https://www.example.co.uk/a', url, url)).toBe(
+      'https://www.example.co.uk/a',
+    );
+  });
+
+  it('drops the article after a redirect to another domain', () => {
+    expect(
+      toCanonicalUrl('https://other.com/a', url, 'https://other.com/a'),
+    ).toBeUndefined();
+  });
+
+  it('keeps the requested url when the canonical is on another domain', () => {
+    expect(toCanonicalUrl('https://syndicator.com/a', url, url)).toBe(url);
+  });
+
+  it('returns undefined when the page has no canonical', () => {
+    expect(toCanonicalUrl(undefined, url, url)).toBeUndefined();
   });
 });

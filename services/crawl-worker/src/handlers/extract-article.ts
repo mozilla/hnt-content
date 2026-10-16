@@ -2,6 +2,7 @@ import {
   ArticleEvent,
   CorpusItem,
   CrawlArticleMessage,
+  getRegistrableDomain,
   normalizeText,
   updateApprovedCorpusItem,
   UpdateApprovedCorpusItemInput,
@@ -17,16 +18,37 @@ const EXCERPT_COMPARE_LENGTH = 255;
 /**
  * Extract an article via Zyte, map it to the articles event
  * schema, and update the Curated Corpus API when a live
- * article's title or excerpt has changed.
+ * article's title or excerpt has changed. Returns undefined for
+ * an article that could never be recommended, so only eligible
+ * articles reach BigQuery.
  */
 export async function handleArticleExtraction(
   message: CrawlArticleMessage,
-): Promise<ArticleEvent> {
-  const { data: article, url } = await extractArticle(message.url, {
+): Promise<ArticleEvent | undefined> {
+  const {
+    data: article,
+    url: resolvedUrl,
+    statusCode,
+  } = await extractArticle(message.url, {
     extractFrom: resolveExtractFrom(message.url, 'article'),
   });
 
-  const event = mapToArticleEvent(article, url);
+  const canonicalUrl = toCanonicalUrl(
+    article.canonicalUrl,
+    message.url,
+    resolvedUrl,
+  );
+  const event =
+    statusCode === 200 && canonicalUrl
+      ? mapToArticleEvent(article, message.url, canonicalUrl)
+      : undefined;
+  if (!event) {
+    console.warn(
+      `article: not publishing ineligible ${message.url} ` +
+        `(status ${statusCode}, final url ${resolvedUrl}, ` +
+        `canonical ${article.canonicalUrl ?? 'none'})`,
+    );
+  }
 
   if (message.corpus_item) {
     await detectAndSyncChanges(article, message.corpus_item);
@@ -35,10 +57,19 @@ export async function handleArticleExtraction(
   return event;
 }
 
-/** Map a Zyte article response to the BigQuery event schema. */
-function mapToArticleEvent(article: ZyteArticle, url: string): ArticleEvent {
+/**
+ * Map a Zyte article response to the BigQuery event schema. url is
+ * the requested URL, so it joins to article_discoveries.url even
+ * when the publisher redirects.
+ */
+function mapToArticleEvent(
+  article: ZyteArticle,
+  url: string,
+  canonicalUrl: string,
+): ArticleEvent {
   return {
     url,
+    canonical_url: canonicalUrl,
     extracted_at: new Date().toISOString(),
     headline: article.headline ?? undefined,
     description: article.description ?? undefined,
@@ -52,6 +83,42 @@ function mapToArticleEvent(article: ZyteArticle, url: string): ArticleEvent {
     })),
     language: article.inLanguage ?? undefined,
   };
+}
+
+/**
+ * Return the URL to use as the article's identity, applying the
+ * legacy crawler's cross-domain rules (HNT-1377).
+ * @param declaredCanonicalUrl - Canonical URL the page declares, as
+ *   extracted by Zyte.
+ * @param requestedUrl - URL we asked Zyte to extract.
+ * @param resolvedUrl - URL Zyte landed on after following redirects.
+ * @returns undefined after a redirect to another domain, because the
+ *   page is not the article we asked for; requestedUrl when the
+ *   declared canonical is on another domain (e.g. syndication), so the
+ *   article keeps its publisher; otherwise declaredCanonicalUrl.
+ */
+export function toCanonicalUrl(
+  declaredCanonicalUrl: string | undefined,
+  requestedUrl: string,
+  resolvedUrl: string,
+): string | undefined {
+  const requestedDomain = getRegistrableDomain(requestedUrl);
+  const resolvedDomain = getRegistrableDomain(resolvedUrl);
+  if (requestedDomain && resolvedDomain && requestedDomain !== resolvedDomain) {
+    return undefined;
+  }
+  if (!declaredCanonicalUrl) {
+    return undefined;
+  }
+  const canonicalDomain = getRegistrableDomain(declaredCanonicalUrl);
+  if (
+    requestedDomain &&
+    canonicalDomain &&
+    requestedDomain !== canonicalDomain
+  ) {
+    return requestedUrl;
+  }
+  return declaredCanonicalUrl;
 }
 
 /**

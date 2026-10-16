@@ -8,6 +8,7 @@
 
 INSERT INTO `crawl.articles` (
   url,
+  canonical_url,
   extracted_at,
   headline,
   description,
@@ -20,6 +21,9 @@ INSERT INTO `crawl.articles` (
 )
 SELECT
   canonical_url AS url,
+  -- The legacy crawler already applied the cross-domain rules that
+  -- toCanonicalUrl in extract-article.ts reproduces.
+  zyte_canonicalUrl AS canonical_url,
   CAST(zyte_cached_at AS TIMESTAMP) AS extracted_at,
   zyte_headline AS headline,
   zyte_description AS description,
@@ -62,4 +66,6 @@ SELECT
 -- Duplicates are copied as-is; matches the at-least-once delivery
 -- model of the new pipeline. zyte_cached_at is UTC.
 FROM `moz-fx-mozsoc-ml-prod.prod_articles.zyte_cache`
+-- Like the new crawler, keep only articles that could be recommended.
+WHERE zyte_canonicalUrl IS NOT NULL
 ;
