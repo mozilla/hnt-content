@@ -126,10 +126,10 @@ function assertPositiveTtl(ttlSeconds: number): void {
 
 /**
  * Store the current time (epoch milliseconds) at a key with a TTL
- * (default 30 days). Used for fetch and enqueue timestamps that
+ * (default if not provided). Used for fetch and enqueue timestamps that
  * callers compare against a freshness window.
  */
-export async function setTimestamp(
+export async function setRedisKeyTimestampWithTTL(
   key: string,
   ttlSeconds = defaultTtl,
 ): Promise<void> {
@@ -138,11 +138,13 @@ export async function setTimestamp(
 }
 
 /**
- * Read a timestamp (epoch milliseconds) written by setTimestamp.
+ * Read a timestamp (epoch milliseconds) written by setRedisKeyTimestampWithTTL.
  * Returns null if absent, expired, or not a number, so a corrupt
  * value fails open to "not recent" rather than a silent NaN.
  */
-export async function getTimestamp(key: string): Promise<number | null> {
+export async function getRedisKeyTimestampValue(
+  key: string,
+): Promise<number | null> {
   const value = await requireClient().get(key);
   if (value === null) {
     return null;
@@ -174,7 +176,7 @@ export async function getString(key: string): Promise<string | null> {
  * margin, so the lock clears just before the message redelivers and
  * the retry is not blocked by a stale lock.
  */
-export async function acquireLock(
+export async function acquireRedisKeyLockToken(
   key: string,
   ttlSeconds: number,
 ): Promise<string | null> {
@@ -189,7 +191,10 @@ export async function acquireLock(
  * token matches). A token from an expired-and-reacquired lock will
  * not match, so this never releases another holder's lock.
  */
-export async function releaseLock(key: string, token: string): Promise<void> {
+export async function releaseRedisKeyLock(
+  key: string,
+  token: string,
+): Promise<void> {
   await requireClient().eval(RELEASE_LOCK_SCRIPT, 1, key, token);
 }
 

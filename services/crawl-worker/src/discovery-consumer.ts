@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import {
   crawlConfig,
+  buildRedisPageFetchKey,
+  buildRedisPageLockKey,
   type CrawlArticleDiscoveryMessage,
   type CrawlArticleMessage,
 } from 'crawl-common';
@@ -9,11 +11,17 @@ import {
   sentryPubSubErrorHandler,
   startSubscriber,
 } from 'pubsub';
+import {
+  acquireRedisKeyLockToken,
+  releaseRedisKeyLock,
+  setRedisKeyTimestampWithTTL,
+  getRedisKeyTimestampValue,
+} from 'redis-state';
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
 import { handleArticleDiscovery } from './handlers/extract-discovery.js';
 
-const MINUTES_PER_DAY = 24 * 60;
+const MINUTES_PER_DAY = 1440;
 
 /**
  * Build the crawl-article job for a discovered article. Unlike live items,
@@ -36,28 +44,85 @@ function buildCrawlArticleJob(
 }
 
 /**
+ * Return whether the fetch/crawl marker at key was set within the last
+ * `minutes`, so the worker can skip a page or article it processed
+ * recently.
+ */
+export function isWithinMinutes(
+  timeStampValue: number | null,
+  refreshMinutesLimit: number,
+): boolean {
+  return (
+    timeStampValue !== null &&
+    Date.now() - timeStampValue < refreshMinutesLimit * 60_000
+  );
+}
+
+/**
  * Discover a page's articles, publish one `article-discoveries` event
- * per article and context, and enqueue one `crawl-article` job per
- * unique article URL.
+ * per article and context, and enqueue a `crawl-article` job for each
+ * unique article URL not extracted recently. A page attempted to crawled
+ * within `pageRefreshMinutes` or locked by another worker is skipped and acked.
+ *
+ * The `page:fetch` marker is claimed before the Zyte call, so a partial
+ * failure (a failed publish, a crash) redelivers into a skip rather than
+ * a second paid crawl. The missing rows return on the next crawl.
  */
 async function handleMessage(
   message: CrawlArticleDiscoveryMessage,
 ): Promise<void> {
-  const { events, articleUrls } = await handleArticleDiscovery(message);
+  const pageFetchKey = buildRedisPageFetchKey(message.url);
+  const pageFetchKeyTimestampValue =
+    await getRedisKeyTimestampValue(pageFetchKey);
 
-  // Events and jobs go to different topics and neither depends on the
-  // other, so publish them together.
-  await Promise.all([
-    ...events.map((event) =>
-      publishMessage(crawlConfig.articleDiscoveriesTopic, event),
-    ),
-    ...articleUrls.map((url) =>
-      publishMessage(
-        crawlConfig.crawlArticleTopic,
-        buildCrawlArticleJob(url, message.url),
+  if (isWithinMinutes(pageFetchKeyTimestampValue, config.pageRefreshMinutes)) {
+    return;
+  }
+
+  const pageLockKey = buildRedisPageLockKey(message.url);
+  const lockToken = await acquireRedisKeyLockToken(
+    pageLockKey,
+    config.lockTtlSeconds,
+  );
+  if (lockToken === null) {
+    return;
+  }
+
+  try {
+    // Duplicate requests can pass the check above and wait for the lock.
+    // Check the marker again in case the first request already claimed it.
+    if (
+      isWithinMinutes(pageFetchKeyTimestampValue, config.pageRefreshMinutes)
+    ) {
+      return;
+    }
+
+    // Set the current time stamp as a value for this redis key.
+    // Also sets a TTL for this which is the default (30 days) if not provided as an argument.
+    await setRedisKeyTimestampWithTTL(pageFetchKey);
+
+    const { events, articleUrls } = await handleArticleDiscovery(message);
+
+    // Events and jobs go to different topics and neither depends on the
+    // other, so publish them together to hold the lock briefly.
+    await Promise.all([
+      ...events.map((event) =>
+        publishMessage(crawlConfig.articleDiscoveriesTopic, event),
       ),
-    ),
-  ]);
+      ...articleUrls.map((url) =>
+        publishMessage(
+          crawlConfig.crawlArticleTopic,
+          buildCrawlArticleJob(url, message.url),
+        ),
+      ),
+    ]);
+  } finally {
+    // The lock expires automatically, so a release failure should not
+    // cause an already handled message to be nacked.
+    await releaseRedisKeyLock(pageLockKey, lockToken).catch((err) =>
+      console.error('failed to release lock', pageLockKey, err),
+    );
+  }
 }
 
 // A thrown error is captured with the page job's identifying fields,
