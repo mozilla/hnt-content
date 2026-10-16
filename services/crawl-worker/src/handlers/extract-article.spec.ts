@@ -243,13 +243,13 @@ describe('handleArticleExtraction', () => {
       expect(input.excerpt).toBe('Completely different excerpt.');
     });
 
-    it('prefers extracted authors over corpus_item', async () => {
+    it('keeps the corpus_item authors whatever Zyte extracts', async () => {
       extractArticleMock.mockResolvedValueOnce({
         ...ZYTE_RESPONSE,
         data: {
           ...ZYTE_ARTICLE,
           headline: 'New Headline',
-          authors: [{ name: 'New Author One' }, { name: 'New Author Two' }],
+          authors: [{ name: 'New Author' }, { name: '' }],
         },
       });
 
@@ -258,26 +258,8 @@ describe('handleArticleExtraction', () => {
       const input = updateCorpusMock.mock
         .calls[0][0] as UpdateApprovedCorpusItemInput;
       expect(input.authors).toEqual([
-        { name: 'New Author One', sortOrder: 0 },
-        { name: 'New Author Two', sortOrder: 1 },
+        { name: CORPUS_ITEM.authors[0].name, sortOrder: 0 },
       ]);
-    });
-
-    it('falls back to corpus_item authors when extracted is empty', async () => {
-      extractArticleMock.mockResolvedValueOnce({
-        ...ZYTE_RESPONSE,
-        data: {
-          ...ZYTE_ARTICLE,
-          headline: 'New Headline',
-          authors: [],
-        },
-      });
-
-      await handleArticleExtraction(liveMessage);
-
-      const input = updateCorpusMock.mock
-        .calls[0][0] as UpdateApprovedCorpusItemInput;
-      expect(input.authors).toEqual([{ name: 'Jane Doe', sortOrder: 0 }]);
     });
 
     it('throws when Corpus API update fails', async () => {
