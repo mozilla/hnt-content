@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import {
-  buildRedisArticleExtractedKey,
   crawlConfig,
   buildRedisPageFetchKey,
   buildRedisPageLockKey,
@@ -49,12 +48,14 @@ function buildCrawlArticleJob(
  * `minutes`, so the worker can skip a page or article it processed
  * recently.
  */
-export async function isWithinMinutes(
-  key: string,
-  minutes: number,
-): Promise<boolean> {
-  const markedAt = await getRedisKeyTimestampValue(key);
-  return markedAt !== null && Date.now() - markedAt < minutes * 60_000;
+export function isWithinMinutes(
+  timeStampValue: number | null,
+  refreshMinutesLimit: number,
+): boolean {
+  return (
+    timeStampValue !== null &&
+    Date.now() - timeStampValue < refreshMinutesLimit * 60_000
+  );
 }
 
 /**
@@ -71,7 +72,10 @@ async function handleMessage(
   message: CrawlArticleDiscoveryMessage,
 ): Promise<void> {
   const pageFetchKey = buildRedisPageFetchKey(message.url);
-  if (await isWithinMinutes(pageFetchKey, config.pageRefreshMinutes)) {
+  const pageFetchKeyTimestampValue =
+    await getRedisKeyTimestampValue(pageFetchKey);
+
+  if (isWithinMinutes(pageFetchKeyTimestampValue, config.pageRefreshMinutes)) {
     return;
   }
 
@@ -87,7 +91,9 @@ async function handleMessage(
   try {
     // Duplicate requests can pass the check above and wait for the lock.
     // Check the marker again in case the first request already claimed it.
-    if (await isWithinMinutes(pageFetchKey, config.pageRefreshMinutes)) {
+    if (
+      isWithinMinutes(pageFetchKeyTimestampValue, config.pageRefreshMinutes)
+    ) {
       return;
     }
 
@@ -103,7 +109,12 @@ async function handleMessage(
       ...events.map((event) =>
         publishMessage(crawlConfig.articleDiscoveriesTopic, event),
       ),
-      ...articleUrls.map((url) => enqueueUnlessExtracted(url, message.url)),
+      ...articleUrls.map((url) =>
+        publishMessage(
+          crawlConfig.crawlArticleTopic,
+          buildCrawlArticleJob(url, message.url),
+        ),
+      ),
     ]);
   } finally {
     // The lock expires automatically, so a release failure should not
@@ -112,23 +123,6 @@ async function handleMessage(
       console.error('failed to release lock', pageLockKey, err),
     );
   }
-}
-
-/** Enqueue a discovered article unless it was extracted recently. */
-async function enqueueUnlessExtracted(
-  url: string,
-  sourceUrl: string,
-): Promise<void> {
-  const refreshMinutes = config.discoveredArticleRefreshDays * MINUTES_PER_DAY;
-  if (
-    await isWithinMinutes(buildRedisArticleExtractedKey(url), refreshMinutes)
-  ) {
-    return;
-  }
-  await publishMessage(
-    crawlConfig.crawlArticleTopic,
-    buildCrawlArticleJob(url, sourceUrl),
-  );
 }
 
 // A thrown error is captured with the page job's identifying fields,
