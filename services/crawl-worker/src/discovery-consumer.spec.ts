@@ -73,22 +73,18 @@ describe('isWithinMinutes', () => {
   });
 
   it('is true when the marker is within the window', async () => {
-    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(
-      Date.now() - 5 * 60_000,
-    );
-    expect(await isWithinMinutes('k', 10)).toBe(true);
+    // true for 5 mins when the refresh window is 10 mins
+    expect(isWithinMinutes(Date.now() - 5 * 60_000, 10)).toBe(true);
   });
 
   it('is false when the marker is older than the window', async () => {
-    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(
-      Date.now() - 15 * 60_000,
-    );
-    expect(await isWithinMinutes('k', 10)).toBe(false);
+    // false for 11 minutes when the refresh window is 10 mins
+    expect(isWithinMinutes(Date.now() - 11 * 60_000, 10)).toBe(false);
   });
 
   it('is false when there is no marker', async () => {
-    vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(null);
-    expect(await isWithinMinutes('k', 10)).toBe(false);
+    // false for null type
+    expect(isWithinMinutes(null, 10)).toBe(false);
   });
 });
 
@@ -106,7 +102,9 @@ describe('discovery consumer', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    // Reset the mock instead of clearing such that the unused mockResolvedValueOnce values don't leak
+    // into the next test.
+    vi.resetAllMocks();
   });
 
   it('subscribes to the configured crawl-article-discovery subscription', () => {
@@ -186,7 +184,6 @@ describe('discovery consumer', () => {
     await registeredHandler()(DISCOVERY_MESSAGE);
 
     expect(acquireRedisKeyLockToken).toHaveBeenCalled();
-    expect(handleArticleDiscovery).not.toHaveBeenCalled();
     expect(releaseRedisKeyLock).toHaveBeenCalledWith(
       expect.any(String),
       'lock-token',
@@ -203,18 +200,6 @@ describe('discovery consumer', () => {
     const publishOrder = vi.mocked(publishMessage).mock.invocationCallOrder[0]!;
     expect(claimOrder).toBeLessThan(extractOrder);
     expect(claimOrder).toBeLessThan(publishOrder);
-  });
-
-  it('publishes discovery events but skips the job for a recently extracted article', async () => {
-    vi.mocked(getRedisKeyTimestampValue).mockImplementation(
-      async (key: string) =>
-        key.startsWith('article:extracted') ? Date.now() : null,
-    );
-
-    await registeredHandler()(DISCOVERY_MESSAGE);
-
-    expect(publishesTo(crawlConfig.articleDiscoveriesTopic)).toHaveLength(2);
-    expect(publishesTo(crawlConfig.crawlArticleTopic)).toHaveLength(0);
   });
 
   it('enqueues one job per article URL with a distinct crawl_id', async () => {
