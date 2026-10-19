@@ -72,10 +72,13 @@ async function handleMessage(
   message: CrawlArticleDiscoveryMessage,
 ): Promise<void> {
   const pageFetchKey = buildRedisPageFetchKey(message.url);
-  const pageFetchKeyTimestampValue =
-    await getRedisKeyTimestampValue(pageFetchKey);
 
-  if (isWithinMinutes(pageFetchKeyTimestampValue, config.pageRefreshMinutes)) {
+  if (
+    isWithinMinutes(
+      await getRedisKeyTimestampValue(pageFetchKey),
+      config.pageRefreshMinutes,
+    )
+  ) {
     return;
   }
 
@@ -84,6 +87,8 @@ async function handleMessage(
     pageLockKey,
     config.lockTtlSeconds,
   );
+
+  // A null token means another worker has the lock.
   if (lockToken === null) {
     return;
   }
@@ -92,7 +97,10 @@ async function handleMessage(
     // Duplicate requests can pass the check above and wait for the lock.
     // Check the marker again in case the first request already claimed it.
     if (
-      isWithinMinutes(pageFetchKeyTimestampValue, config.pageRefreshMinutes)
+      isWithinMinutes(
+        await getRedisKeyTimestampValue(pageFetchKey),
+        config.pageRefreshMinutes,
+      )
     ) {
       return;
     }

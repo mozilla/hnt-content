@@ -184,6 +184,10 @@ describe('discovery consumer', () => {
     await registeredHandler()(DISCOVERY_MESSAGE);
 
     expect(acquireRedisKeyLockToken).toHaveBeenCalled();
+    expect(getRedisKeyTimestampValue).toHaveBeenCalledTimes(2);
+    expect(setRedisKeyTimestampWithTTL).not.toHaveBeenCalled();
+    expect(handleArticleDiscovery).not.toHaveBeenCalled();
+    expect(publishMessage).not.toHaveBeenCalled();
     expect(releaseRedisKeyLock).toHaveBeenCalledWith(
       expect.any(String),
       'lock-token',
