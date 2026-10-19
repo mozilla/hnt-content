@@ -3,6 +3,7 @@ import './sentry-init.js';
 
 import { initCorpusApiClient } from 'crawl-common';
 import { initPubSubClient, shutdownPubSub } from 'pubsub';
+import { initRedisClient, shutdownRedis } from 'redis-state';
 import { shutdownSentry } from 'sentry';
 import { initZyteClient } from 'zyte';
 import { app } from './app.js';
@@ -16,13 +17,15 @@ const server = app.listen(config.port, () => {
 
 // Each client reads its own credentials from its package config, so
 // none takes an argument here. Only the article worker syncs curated
-// metadata, so only it needs the Corpus API.
+// metadata, so only it needs the Corpus API. Only the discovery worker
+// guards its crawls with Redis so far.
 initZyteClient();
 initPubSubClient();
 if (config.workerRole === 'article') {
   await initCorpusApiClient();
   startArticleConsumer();
 } else if (config.workerRole === 'discovery') {
+  initRedisClient();
   startDiscoveryConsumer();
 }
 
@@ -45,6 +48,7 @@ function shutdown() {
   console.log('Shutting down');
   server.close(async () => {
     await shutdownPubSub();
+    await shutdownRedis();
     await shutdownSentry();
     process.exit(0);
   });

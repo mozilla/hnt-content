@@ -1,10 +1,10 @@
 export {
   hashUrl,
-  pageFetchKey,
-  pageLockKey,
-  pageEnqueuedKey,
-  articleEnqueuedKey,
-  articleExtractedKey,
-  articleLockKey,
-  articleContentKey,
+  buildRedisPageFetchKey,
+  buildRedisPageLockKey,
+  buildRedisPageEnqueuedKey,
+  buildRedisArticleEnqueuedKey,
+  buildRedisArticleExtractedKey,
+  buildRedisArticleLockKey,
+  buildRedisArticleContentKey,
 } from './keys.js';
