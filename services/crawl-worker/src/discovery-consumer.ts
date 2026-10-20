@@ -22,6 +22,8 @@ import config from './config.js';
 import { handleArticleDiscovery } from './handlers/extract-discovery.js';
 
 const MINUTES_PER_DAY = 1440;
+const MIN_PAGE_REFRESH_MINUTES =
+  crawlConfig.pageRefreshMinutes * config.minPageRefreshFraction;
 
 /**
  * Build the crawl-article job for a discovered article. Unlike live items,
@@ -61,8 +63,8 @@ export function isWithinMinutes(
 /**
  * Discover a page's articles, publish one `article-discoveries` event
  * per article and context, and enqueue a `crawl-article` job for each
- * unique article URL not extracted recently. A page attempted to crawled
- * within `pageRefreshMinutes` or locked by another worker is skipped and acked.
+ * unique article URL not extracted recently. A page crawled within its
+ * duplicate window or locked by another worker is skipped and acked.
  *
  * The `page:fetch` marker is claimed before the Zyte call, so a partial
  * failure (a failed publish, a crash) redelivers into a skip rather than
@@ -76,7 +78,7 @@ async function handleMessage(
   if (
     isWithinMinutes(
       await getRedisKeyTimestampValue(pageFetchKey),
-      config.pageRefreshMinutes,
+      MIN_PAGE_REFRESH_MINUTES,
     )
   ) {
     return;
@@ -99,7 +101,7 @@ async function handleMessage(
     if (
       isWithinMinutes(
         await getRedisKeyTimestampValue(pageFetchKey),
-        config.pageRefreshMinutes,
+        MIN_PAGE_REFRESH_MINUTES,
       )
     ) {
       return;

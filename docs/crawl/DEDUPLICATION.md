@@ -76,7 +76,8 @@ first page crawl after the hour is up.
 
 | Variable | What it sets | Default | Shorter | Longer |
 |---|---|---|---|---|
-| `pageRefreshMinutes` | How often a page is crawled again | 20 min | Faster discovery | Main lever to lower Zyte cost |
+| `pageRefreshMinutes` | How often the scheduler enqueues a page | 20 min | Faster discovery | Main lever to lower Zyte cost |
+| `minPageRefreshFraction` | Skips a page crawled within this fraction of `pageRefreshMinutes` | 0.5 (10 min) | Duplicate deliveries more likely to be crawled again | Scheduled crawls skipped when the queue lags |
 | `discoveredArticleRefreshDays` | How long an extracted article is left alone | 30 days | Less Redis memory usage | Slightly fewer Zyte calls |
 | `liveArticleRefreshMinutes` | How often a curated article is re-extracted | 15 min | Fresher headlines | Fewer Zyte calls |
 | `articleAttemptTtlMinutes` | How long a failed attempt blocks the next one | 60 min | Faster recovery from a block | Fewer requests on URLs that keep failing |
@@ -90,12 +91,11 @@ window, so the check falls back to `discoveredArticleRefreshDays`.
 
 ## The scheduler and the discovery worker
 
-The scheduler keeps its own pair of markers, recording when it last enqueued
-each page or live article rather than when one was last fetched. It ticks every
-minute over the whole list and skips anything whose marker is younger than its
-interval, so each item goes out once per interval instead of once per tick.
-Because the scheduler is a single replica, a plain check-then-set is enough
-here, so no lock is needed.
+The scheduler keeps no state for pages. Each page is crawled every
+`pageRefreshMinutes` at an offset derived from a hash of its URL, and every
+minute the scheduler enqueues the pages whose offset matches. A restart keeps
+every page at the same offset. A new scheduler starts at the next minute, so a
+deploy that takes longer than that delays the pages it skipped by one interval.
 
 The discovery worker guards its page crawls with a freshness check and a lock of
 its own, and checks each discovered article against `article:extracted` so it
@@ -105,8 +105,6 @@ does not queue a URL that was extracted recently.
 
 | Key | Written by | Purpose |
 |---|---|---|
-| `page:enqueued` | Crawl Scheduler | Last time a page was enqueued for discovery |
-| `article:enqueued` | Crawl Scheduler | Last time a live article was enqueued |
 | `page:fetch` | Discovery Worker | Last time a page crawl started |
 | `page:lock` | Discovery Worker | Guard against concurrent page crawls |
 | `article:extracted` | Article Worker | Last time an article extraction finished |

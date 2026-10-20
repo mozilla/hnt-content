@@ -14,7 +14,7 @@ const server = app.listen(config.port, () => {
   console.log(`crawl-scheduler listening on port ${config.port}`);
 });
 
-// Cancels the inter-tick delay in run() during shutdown.
+// Cancels the wait between ticks during shutdown.
 const ac = new AbortController();
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -48,62 +48,82 @@ function shutdown() {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
+const MINUTE_MS = 60_000;
+
 /**
- * Execute a single crawl cycle, enqueueing a batch of publisher pages
- * and a batch of live articles.
+ * Wait for the next epoch minute to begin and return it, or return null
+ * if shutdown cut the wait short.
  */
-async function tick() {
+async function waitForNextMinute(): Promise<number | null> {
+  const nextMinute = Math.floor(Date.now() / MINUTE_MS) + 1;
+  const msUntilNextMinute = nextMinute * MINUTE_MS - Date.now();
+  try {
+    await delay(msUntilNextMinute, undefined, { signal: ac.signal });
+    return nextMinute;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/** Enqueue the publisher pages due in the given epoch minute. */
+async function tickPages(epochMinute: number) {
   setLastTickAt(Date.now());
+  const pages = await enqueuePages(epochMinute);
+  console.log('tick', new Date().toISOString(), `pages=${pages}`);
+}
 
-  const [pages, liveArticles] = await Promise.all([
-    enqueuePages(),
-    enqueueLiveArticles(),
-  ]);
-
+/** Enqueue a batch of live articles. */
+async function tickLiveArticles() {
+  const liveArticles = await enqueueLiveArticles();
   console.log(
     'tick',
     new Date().toISOString(),
-    `pages=${pages} live_articles=${liveArticles}`,
+    `live_articles=${liveArticles}`,
   );
 }
 
-// tick() wrapped to report its errors to Sentry with startedAt context.
-const tickWithSentry = withSentryHandler<{ startedAt: string }>(
-  ({ startedAt }) => ({ context: { startedAt } }),
-  tick,
-);
+/** Call tick at the start of every minute until shutdown. */
+async function runEveryMinute(tick: (epochMinute: number) => Promise<void>) {
+  const tickWithSentry = withSentryHandler<{
+    epochMinute: number;
+    startedAt: string;
+  }>(
+    (context) => ({ context }),
+    ({ epochMinute }) => tick(epochMinute),
+  );
+
+  while (isRunning()) {
+    const epochMinute = await waitForNextMinute();
+    if (epochMinute === null) {
+      break;
+    }
+    try {
+      await tickWithSentry({
+        epochMinute,
+        startedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      // Sentry already has the error, so log it and move on to the next tick.
+      console.error('tick failed:', err);
+    }
+  }
+}
 
 /**
- * Run the tick loop at the configured interval until the
- * process is signalled to stop.
+ * Run the page and live article loops until the process is signalled
+ * to stop. They run separately so a slow Corpus API, which only live
+ * articles call, cannot delay page crawls.
  */
 async function run() {
   await initCorpusApiClient();
   initPubSubClient();
-  while (isRunning()) {
-    const start = Date.now();
-    const startedAt = new Date(start).toISOString();
-    try {
-      // Wrap tick() with a Sentry emission helper because it's the
-      // outermost frame that bubbles errors up before the catch swallows them.
-      await tickWithSentry({ startedAt });
-    } catch (err) {
-      // tickWithSentry already captured the error and rethrew so
-      // the loop sees it; swallowing here keeps a single failed
-      // tick from killing the scheduler.
-      console.error('tick failed:', err);
-    }
-    const elapsed = Date.now() - start;
-    const remainingMs = Math.max(0, config.tickIntervalMs - elapsed);
-    try {
-      await delay(remainingMs, undefined, { signal: ac.signal });
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        break;
-      }
-      throw err;
-    }
-  }
+  await Promise.all([
+    runEveryMinute(tickPages),
+    runEveryMinute(tickLiveArticles),
+  ]);
 }
 
 run().catch((err) => {
