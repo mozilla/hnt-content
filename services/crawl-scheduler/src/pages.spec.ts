@@ -59,7 +59,8 @@ describe('duePages', () => {
     const counts = minutes.map((minute) => duePages(minute).length);
 
     const average = pages.length / crawlConfig.pageRefreshMinutes;
-    // A hash spreads the list within about 10% of the average per minute.
+    // A hash keeps each minute within about 10% of the average; the 1.5x
+    // bound leaves room for list changes.
     expect(Math.max(...counts)).toBeLessThan(1.5 * average);
   });
 
