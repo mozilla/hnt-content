@@ -14,91 +14,91 @@ const mocks = vi.hoisted(() => ({
 vi.mock('pubsub', () => ({ publishMessage: mocks.publishMessage }));
 
 import config from './config.js';
-import { enqueuePages } from './pages.js';
+import { duePages, enqueuePages, pageOffset } from './pages.js';
 import publishers from './data/publishers.json' with { type: 'json' };
+
+const { pages } = publishers;
 
 beforeEach(() => {
   // Stand in for Pub/Sub accepting a job and handing back its id.
   mocks.publishMessage.mockResolvedValue('message-id');
+  config.maxPagesPerTick = null;
 });
 
-const originalPagesPerTick = config.pagesPerTick;
+const originalMaxPagesPerTick = config.maxPagesPerTick;
 
 afterEach(() => {
-  config.pagesPerTick = originalPagesPerTick;
+  config.maxPagesPerTick = originalMaxPagesPerTick;
   vi.clearAllMocks();
 });
 
-// Copy the pages so we can verify enqueuePages publishes them unaltered.
-const pages = structuredClone(publishers.pages);
-
-/** Enqueue the pages due in an epoch minute and return what was published. */
-async function enqueuePagesAndCaptureMessages(
-  epochMinute: number,
-): Promise<CrawlArticleDiscoveryMessage[]> {
-  mocks.publishMessage.mockClear();
-  await enqueuePages(epochMinute);
-  return mocks.publishMessage.mock.calls.map(([, page]) => page);
-}
-
-/** Return the pages published in each minute of the first interval. */
-async function enqueueIntervalAndCaptureMessages(): Promise<
-  CrawlArticleDiscoveryMessage[][]
-> {
-  const perMinute = [];
-  for (let minute = 0; minute < crawlConfig.pageRefreshMinutes; minute++) {
-    perMinute.push(await enqueuePagesAndCaptureMessages(minute));
-  }
-  return perMinute;
-}
-
-describe('enqueuePages', () => {
-  beforeEach(() => {
-    config.pagesPerTick = null;
+describe('pageOffset', () => {
+  it.each([
+    ['https://apnews.com/world-news', 3],
+    ['https://www.bbc.com/news', 9],
+    ['https://www.theguardian.com/world', 12],
+  ])('crawls %s at minute %i of each interval', (url, offset) => {
+    expect(pageOffset(url)).toBe(offset);
   });
+});
 
-  it('publishes a due page unchanged to the discovery topic', async () => {
-    await enqueuePages(0);
+describe('duePages', () => {
+  it('returns every page once per interval', () => {
+    const minutes = [...Array(crawlConfig.pageRefreshMinutes).keys()];
 
-    const [topic, page] = mocks.publishMessage.mock.calls[0];
-    expect(topic).toBe(crawlConfig.crawlArticleDiscoveryTopic);
-    expect(pages).toContainEqual(page);
-  });
+    const urls = minutes
+      .flatMap((minute) => duePages(minute))
+      .map((page) => page.url);
 
-  it('publishes every page once per interval', async () => {
-    const messagesPerMinute = await enqueueIntervalAndCaptureMessages();
-
-    const urls = messagesPerMinute.flat().map((page) => page.url);
     expect(urls.sort()).toEqual(pages.map((page) => page.url).sort());
   });
 
-  it('spreads pages across the minutes of the interval', async () => {
-    const messagesPerMinute = await enqueueIntervalAndCaptureMessages();
+  it('spreads pages across the minutes of the interval', () => {
+    const minutes = [...Array(crawlConfig.pageRefreshMinutes).keys()];
 
-    const counts = messagesPerMinute.map((messages) => messages.length);
+    const counts = minutes.map((minute) => duePages(minute).length);
+
     const average = pages.length / crawlConfig.pageRefreshMinutes;
     // A hash spreads the list within about 10% of the average per minute.
     expect(Math.max(...counts)).toBeLessThan(1.5 * average);
   });
 
-  it('publishes a page at the same minute every interval', async () => {
+  it('returns the same pages every interval', () => {
     const minute = 7;
     const laterMinute = minute + crawlConfig.pageRefreshMinutes;
 
-    const messages = await enqueuePagesAndCaptureMessages(minute);
-    const laterMessages = await enqueuePagesAndCaptureMessages(laterMinute);
-
-    expect(laterMessages).toEqual(messages);
+    expect(duePages(laterMinute)).toEqual(duePages(minute));
   });
 
-  it.each([0, 1, 2])(
-    'publishes pagesPerTick pages a tick when it is %i',
-    async (pagesPerTick) => {
-      config.pagesPerTick = pagesPerTick;
+  it.each([0, 1, 2, null])(
+    'returns at most maxPagesPerTick pages when it is %s',
+    (max) => {
+      config.maxPagesPerTick = max;
+      const dueAtZero = pages.filter((page) => pageOffset(page.url) === 0);
 
-      const messages = await enqueuePagesAndCaptureMessages(0);
-
-      expect(messages).toHaveLength(pagesPerTick);
+      expect(duePages(0)).toHaveLength(max ?? dueAtZero.length);
     },
   );
+});
+
+describe('enqueuePages', () => {
+  it('publishes every due page to the discovery topic', async () => {
+    const due = duePages(0);
+
+    await enqueuePages(0);
+
+    expect(mocks.publishMessage.mock.calls).toEqual(
+      due.map((page) => [crawlConfig.crawlArticleDiscoveryTopic, page]),
+    );
+  });
+
+  it('leaves the page list unmodified', async () => {
+    const original = structuredClone(publishers.pages);
+
+    await enqueuePages(0);
+
+    // enqueuePages must not modify the page list. It is one module-level
+    // object shared by every tick, so a change would carry into the next.
+    expect(publishers.pages).toEqual(original);
+  });
 });

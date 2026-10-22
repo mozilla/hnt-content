@@ -1,26 +1,26 @@
 // Initialize Sentry first to capture errors from other modules.
 import './sentry-init.js';
 
-import { setTimeout as delay } from 'node:timers/promises';
 import { initCorpusApiClient } from 'crawl-common';
 import { initPubSubClient, shutdownPubSub } from 'pubsub';
-import { shutdownSentry, withSentryHandler } from 'sentry';
-import { app, isRunning, setLastTickAt, stopRunning } from './app.js';
+import { shutdownSentry } from 'sentry';
+import { app, setLastTickAt } from './app.js';
 import config from './config.js';
 import { enqueueLiveArticles } from './live-articles.js';
 import { enqueuePages } from './pages.js';
+import { runEveryMinute } from './run-every-minute.js';
 
 const server = app.listen(config.port, () => {
   console.log(`crawl-scheduler listening on port ${config.port}`);
 });
 
-// Cancels the wait between ticks during shutdown.
+// Aborting it during shutdown stops both tick loops.
 const ac = new AbortController();
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 let shuttingDown = false;
 /**
- * Initiate graceful shutdown: stop the tick loop, close the server,
+ * Initiate graceful shutdown: stop the tick loops, close the server,
  * drain Pub/Sub, flush Sentry, and force-exit after a timeout.
  */
 function shutdown() {
@@ -29,7 +29,6 @@ function shutdown() {
   }
   shuttingDown = true;
   console.log('Shutting down');
-  stopRunning();
   ac.abort();
   server.close(async () => {
     // Draining Pub/Sub first flushes a batch the last tick published.
@@ -48,26 +47,6 @@ function shutdown() {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-const MINUTE_MS = 60_000;
-
-/**
- * Wait for the next epoch minute to begin and return it, or return null
- * if shutdown cut the wait short.
- */
-async function waitForNextMinute(): Promise<number | null> {
-  const nextMinute = Math.floor(Date.now() / MINUTE_MS) + 1;
-  const msUntilNextMinute = nextMinute * MINUTE_MS - Date.now();
-  try {
-    await delay(msUntilNextMinute, undefined, { signal: ac.signal });
-    return nextMinute;
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      return null;
-    }
-    throw err;
-  }
-}
-
 /** Enqueue the publisher pages due in the given epoch minute. */
 async function tickPages(epochMinute: number) {
   setLastTickAt(Date.now());
@@ -85,33 +64,6 @@ async function tickLiveArticles() {
   );
 }
 
-/** Call tick at the start of every minute until shutdown. */
-async function runEveryMinute(tick: (epochMinute: number) => Promise<void>) {
-  const tickWithSentry = withSentryHandler<{
-    epochMinute: number;
-    startedAt: string;
-  }>(
-    (context) => ({ context }),
-    ({ epochMinute }) => tick(epochMinute),
-  );
-
-  while (isRunning()) {
-    const epochMinute = await waitForNextMinute();
-    if (epochMinute === null) {
-      break;
-    }
-    try {
-      await tickWithSentry({
-        epochMinute,
-        startedAt: new Date().toISOString(),
-      });
-    } catch (err) {
-      // Sentry already has the error, so log it and move on to the next tick.
-      console.error('tick failed:', err);
-    }
-  }
-}
-
 /**
  * Run the page and live article loops until the process is signalled
  * to stop. They run separately so a slow Corpus API, which only live
@@ -121,8 +73,8 @@ async function run() {
   await initCorpusApiClient();
   initPubSubClient();
   await Promise.all([
-    runEveryMinute(tickPages),
-    runEveryMinute(tickLiveArticles),
+    runEveryMinute(tickPages, ac.signal),
+    runEveryMinute(tickLiveArticles, ac.signal),
   ]);
 }
 
