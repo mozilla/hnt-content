@@ -7,30 +7,23 @@ vi.mock('node:timers/promises', () => ({ setTimeout: mocks.delay }));
 
 import { runEveryMinute, waitForNextMinute } from './run-every-minute.js';
 
+// A start partway through a minute shows the wait runs to the next one.
 const START = new Date('2026-10-22T12:00:30Z');
-const START_MINUTE = Math.floor(START.getTime() / 60_000);
+const NEXT_MINUTE = new Date('2026-10-22T12:01:00Z');
+const NEXT_EPOCH_MINUTE = NEXT_MINUTE.getTime() / 60_000;
 let controller: AbortController;
-
-/**
- * Let the first `waits` sleeps finish by moving the clock forward, then
- * abort the next one, as shutdown would.
- */
-function abortAfterWaits(waits: number) {
-  let calls = 0;
-  mocks.delay.mockImplementation(async (ms: number) => {
-    if (calls++ === waits) {
-      controller.abort();
-      throw Object.assign(new Error('aborted'), { name: 'AbortError' });
-    }
-    vi.setSystemTime(Date.now() + ms);
-  });
-}
 
 beforeEach(() => {
   controller = new AbortController();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(START);
-  abortAfterWaits(Infinity);
+  // Behave like the real delay: fail once aborted, else let time pass.
+  mocks.delay.mockImplementation(
+    async (ms: number, _: unknown, { signal }: { signal: AbortSignal }) => {
+      signal.throwIfAborted();
+      vi.setSystemTime(Date.now() + ms);
+    },
+  );
 });
 
 afterEach(() => {
@@ -42,35 +35,44 @@ describe('waitForNextMinute', () => {
   it('waits until the next minute begins', async () => {
     await waitForNextMinute(controller.signal);
 
-    expect(mocks.delay).toHaveBeenCalledWith(30_000, undefined, {
-      signal: controller.signal,
-    });
+    expect(mocks.delay).toHaveBeenCalledWith(
+      NEXT_MINUTE.getTime() - START.getTime(),
+      undefined,
+      { signal: controller.signal },
+    );
   });
 
   it('returns the epoch minute it waited for', async () => {
     const epochMinute = await waitForNextMinute(controller.signal);
 
-    expect(epochMinute).toBe(START_MINUTE + 1);
+    expect(epochMinute).toBe(NEXT_EPOCH_MINUTE);
   });
 });
 
 describe('runEveryMinute', () => {
   it('calls the tick with each minute until the signal aborts', async () => {
-    const tick = vi.fn().mockResolvedValue(undefined);
-    abortAfterWaits(2);
+    const tick = vi.fn(async () => {
+      if (tick.mock.calls.length === 2) {
+        controller.abort();
+      }
+    });
 
     await runEveryMinute(tick, controller.signal);
 
-    expect(tick.mock.calls).toEqual([[START_MINUTE + 1], [START_MINUTE + 2]]);
+    expect(tick.mock.calls).toEqual([
+      [NEXT_EPOCH_MINUTE],
+      [NEXT_EPOCH_MINUTE + 1],
+    ]);
   });
 
   it('keeps ticking after a tick fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const tick = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('tick failed'))
-      .mockResolvedValue(undefined);
-    abortAfterWaits(2);
+    const tick = vi.fn(async () => {
+      if (tick.mock.calls.length === 1) {
+        throw new Error('tick failed');
+      }
+      controller.abort();
+    });
 
     await runEveryMinute(tick, controller.signal);
 
