@@ -8,18 +8,6 @@ export const app: Express = express();
 app.disable('x-powered-by');
 
 let lastTickAt = 0;
-let running = true;
-
-/** Return whether the crawl loop should continue ticking. */
-export function isRunning() {
-  return running;
-}
-
-/** Signal the crawl loop to stop after the current tick. */
-export function stopRunning() {
-  running = false;
-}
-
 export function getLastTickAt() {
   return lastTickAt;
 }

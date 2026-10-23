@@ -2,7 +2,6 @@ export {
   hashUrl,
   buildRedisPageFetchKey,
   buildRedisPageLockKey,
-  buildRedisPageEnqueuedKey,
   buildRedisArticleEnqueuedKey,
   buildRedisArticleExtractedKey,
   buildRedisArticleLockKey,
