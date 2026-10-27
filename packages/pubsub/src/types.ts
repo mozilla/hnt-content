@@ -55,18 +55,13 @@ export interface SubscriberOptions<T> {
    */
   validate?: (raw: unknown) => T;
   /**
-   * Cap on how long the SDK will keep extending a healthy
-   * message's ack deadline while the handler runs. Effectively
-   * the maximum time a single message can be processed before
-   * being redelivered. Independent of the subscription's
-   * ack_deadline_seconds, which sets the lease granularity and
-   * is what a crashed worker's message redelivers around. The
-   * SDK default of 1 hour is far longer than article extraction
-   * needs (well under 2 min even on slow sites). Setting this too
-   * high means a stuck handler keeps its message for the full
-   * window before another worker can retry. The handler's
-   * per-message lock TTL is derived from the ack deadline, not
-   * this value, so the lock clears around redelivery time.
+   * Cap on how long the SDK will keep extending a message's ack
+   * deadline while the handler runs. Past it, Pub/Sub redelivers
+   * the message even if the handler is still running, so set it
+   * above the longest handler run. Setting it too high means a
+   * stuck handler keeps its message for the full window. The
+   * subscription's ack_deadline_seconds plays no part: streaming
+   * pull starts each deadline at 10s and extends it as needed.
    */
   maxExtensionSeconds: number;
   /**

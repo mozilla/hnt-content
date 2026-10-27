@@ -15,14 +15,6 @@ afterEach(() => {
 });
 
 describe('crawl-worker config', () => {
-  it('derives the lock TTL from the ack deadline', async () => {
-    const config = await loadConfig({});
-    expect(config.lockTtlSeconds).toBe(config.ackDeadlineSeconds - 30);
-    expect(config.maxExtensionSeconds).toBeLessThanOrEqual(
-      config.ackDeadlineSeconds,
-    );
-  });
-
   it.each([undefined, '', 'bogus'])(
     'rejects WORKER_ROLE %s',
     async (workerRole) => {

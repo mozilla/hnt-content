@@ -27,24 +27,22 @@ function requireWorkerRole(value: string | undefined): WorkerRole {
   );
 }
 
-// This value must match ack_deadline_seconds on the subscriptions in
-// hnt/tf/modules/pubsub. Pub/Sub redelivers a message about this long
-// after a worker stops acknowledging it.
-const ACK_DEADLINE_SECONDS = 300;
-
-// Subtracting this margin clears the lock just before redelivery, so
-// the next worker can take a lock that a stopped worker still holds.
-const LOCK_TTL_ACK_SECONDS_DELTA = 30;
+// The longest a job can run: four Zyte attempts at the 90s timeout plus
+// backoff (about 6 minutes), then for a live article five Corpus API
+// attempts at the 30s timeout plus backoff (about 3 minutes), rounded up.
+const MAX_JOB_SECONDS = 600;
 
 export default {
   service: 'crawl-worker',
   port: Number(process.env.PORT ?? '8080'),
   workerRole: requireWorkerRole(process.env.WORKER_ROLE),
-  ackDeadlineSeconds: ACK_DEADLINE_SECONDS,
-  lockTtlSeconds: ACK_DEADLINE_SECONDS - LOCK_TTL_ACK_SECONDS_DELTA,
-  // Article extraction takes well under two minutes, so a cap below the
-  // ack deadline releases a stuck message sooner.
-  maxExtensionSeconds: ACK_DEADLINE_SECONDS - LOCK_TTL_ACK_SECONDS_DELTA,
+  // The fetch marker, written before the Zyte call, already stops
+  // duplicate jobs. A lock that outlasts the job keeps them out on its own
+  // if that order ever changes.
+  lockTtlSeconds: MAX_JOB_SECONDS,
+  // The Pub/Sub client keeps extending the ack deadline for this long, so
+  // a slow job keeps its message rather than a copy going to another pod.
+  maxExtensionSeconds: MAX_JOB_SECONDS,
   // This caps how many handlers run at once, and so how many Zyte
   // responses are held in memory. The library default of 1000 exhausts
   // the pod memory when the queue is long.

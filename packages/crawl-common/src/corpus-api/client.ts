@@ -26,9 +26,9 @@ const JWT_GROUPS = ['mozilliansorg_pocket_scheduled_surface_curator_full'];
 export const TOKEN_REFRESH_WINDOW_MS =
   JWT_TTL_SECONDS * JWT_REFRESH_BUFFER * 1000;
 
-// 4 retries (5 attempts total) with exponential backoff
-// designed to complete well within the 300s Pub/Sub ack
-// deadline: ~2s + ~4s + ~8s + ~16s = ~30s worst case.
+// 4 retries (5 attempts total) with exponential backoff.
+// With the 30s request timeout, the worst case is about 3
+// minutes: five timeouts plus ~2s + ~4s + ~8s + ~16s.
 const MAX_RETRIES = 4;
 const RETRY_MIN_TIMEOUT_MS = 2_000;
 

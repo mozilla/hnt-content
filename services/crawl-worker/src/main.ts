@@ -30,7 +30,8 @@ if (config.workerRole === 'article') {
 }
 
 // Shorter than the 25s Pub/Sub drain, so a slow in-flight extraction is
-// cut off and redelivered. HNT-2896 aligns this with the pod grace period.
+// cut off. Its message is redelivered, but where the fetch marker was
+// already written, the copy skips and the URL waits for it to expire.
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 let shuttingDown = false;
