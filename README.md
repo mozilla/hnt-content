@@ -31,7 +31,7 @@ pnpm --filter crawl-worker dev
 
 See the [Article Crawler Technical Spec](https://mozilla-hub.atlassian.net/wiki/spaces/FPS/pages/1737064449) for the full design. In brief:
 
-- **Crawl Scheduler** runs a tick loop every 60s, checking which publisher pages and live articles need crawling based on Redis state, then enqueues jobs to Pub/Sub.
+- **Crawl Scheduler** runs a tick loop every minute, enqueueing the publisher pages due that minute, staggered across the crawl interval by a hash of each URL, and a batch of live articles to Pub/Sub.
 - **Crawl Worker** consumes from two Pub/Sub queues: `crawl-article-discovery` (page crawling) and `crawl-article` (article extraction). Results stream to BigQuery via Pub/Sub subscriptions.
 - **Redis** (Memorystore) tracks crawl timestamps, prevents duplicate fetches, and provides distributed locking.
 

@@ -15,6 +15,10 @@ export default {
   // Each of these topics has a subscription that writes to BigQuery.
   articlesTopic: `${environment}-articles`,
   articleDiscoveriesTopic: `${environment}-article-discoveries`,
+  // pageRefreshMinutes is the time between two crawls of a publisher
+  // page. We kept the legacy pipeline's 20 minutes. The scheduler
+  // staggers pages across this time.
+  pageRefreshMinutes: 20,
   corpusApi: {
     // Only a production deploy may reach the production corpus. A local
     // run can override the endpoint.

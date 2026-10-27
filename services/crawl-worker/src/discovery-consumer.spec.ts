@@ -154,8 +154,11 @@ describe('discovery consumer', () => {
     expect(publishMessage).not.toHaveBeenCalled();
   });
 
-  it('crawls a page whose last crawl is older than its interval', async () => {
-    const stale = Date.now() - (config.pageRefreshMinutes + 1) * 60_000;
+  it('crawls a page whose last crawl is outside the duplicate window', async () => {
+    const stale =
+      Date.now() -
+      (crawlConfig.pageRefreshMinutes * config.minPageRefreshFraction + 1) *
+        60_000;
     vi.mocked(getRedisKeyTimestampValue).mockResolvedValue(stale);
 
     await registeredHandler()(DISCOVERY_MESSAGE);

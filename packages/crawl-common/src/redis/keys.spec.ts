@@ -5,7 +5,6 @@ import {
   buildRedisArticleExtractedKey,
   buildRedisArticleLockKey,
   hashUrl,
-  buildRedisPageEnqueuedKey,
   buildRedisPageFetchKey,
   buildRedisPageLockKey,
 } from './keys.js';
@@ -36,7 +35,6 @@ describe('key builders', () => {
   it.each([
     [buildRedisPageFetchKey, 'page:fetch'],
     [buildRedisPageLockKey, 'page:lock'],
-    [buildRedisPageEnqueuedKey, 'page:enqueued'],
     [buildRedisArticleEnqueuedKey, 'article:enqueued'],
     [buildRedisArticleExtractedKey, 'article:extracted'],
     [buildRedisArticleLockKey, 'article:lock'],

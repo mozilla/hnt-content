@@ -3,7 +3,6 @@ export { getRegistrableDomain, normalizeText } from './utils/index.js';
 export {
   buildRedisPageFetchKey,
   buildRedisPageLockKey,
-  buildRedisPageEnqueuedKey,
   buildRedisArticleEnqueuedKey,
   buildRedisArticleExtractedKey,
   buildRedisArticleLockKey,

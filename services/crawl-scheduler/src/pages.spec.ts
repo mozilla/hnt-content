@@ -14,50 +14,92 @@ const mocks = vi.hoisted(() => ({
 vi.mock('pubsub', () => ({ publishMessage: mocks.publishMessage }));
 
 import config from './config.js';
-import { enqueuePages } from './pages.js';
+import { duePages, enqueuePages, pageOffset } from './pages.js';
 import publishers from './data/publishers.json' with { type: 'json' };
 
-/** Return the message of every job published so far, in publish order. */
-function published(): CrawlArticleDiscoveryMessage[] {
-  return mocks.publishMessage.mock.calls.map(([, message]) => message);
-}
+const { pages } = publishers;
 
 beforeEach(() => {
   // Stand in for Pub/Sub accepting a job and handing back its id.
   mocks.publishMessage.mockResolvedValue('message-id');
+  config.maxPagesPerTick = null;
 });
 
-const originalPagesPerTick = config.pagesPerTick;
+const originalMaxPagesPerTick = config.maxPagesPerTick;
 
 afterEach(() => {
-  config.pagesPerTick = originalPagesPerTick;
+  config.maxPagesPerTick = originalMaxPagesPerTick;
   vi.clearAllMocks();
 });
 
+describe('pageOffset', () => {
+  it.each([
+    ['https://apnews.com/world-news', 3],
+    ['https://www.bbc.com/news', 9],
+    ['https://www.theguardian.com/world', 12],
+  ])('crawls %s at minute %i of each interval', (url, offset) => {
+    expect(pageOffset(url)).toBe(offset);
+  });
+});
+
+describe('duePages', () => {
+  it('returns every page once per interval', () => {
+    const minutes = [...Array(crawlConfig.pageRefreshMinutes).keys()];
+
+    const urls = minutes
+      .flatMap((minute) => duePages(minute))
+      .map((page) => page.url);
+
+    expect(urls.sort()).toEqual(pages.map((page) => page.url).sort());
+  });
+
+  it('spreads pages across the minutes of the interval', () => {
+    const minutes = [...Array(crawlConfig.pageRefreshMinutes).keys()];
+
+    const counts = minutes.map((minute) => duePages(minute).length);
+
+    const average = pages.length / crawlConfig.pageRefreshMinutes;
+    // A hash keeps each minute within about 10% of the average; the 1.5x
+    // bound leaves room for list changes.
+    expect(Math.max(...counts)).toBeLessThan(1.5 * average);
+  });
+
+  it('returns the same pages every interval', () => {
+    const minute = 7;
+    const laterMinute = minute + crawlConfig.pageRefreshMinutes;
+
+    expect(duePages(laterMinute)).toEqual(duePages(minute));
+  });
+
+  it.each([0, 1, 2, null])(
+    'returns at most maxPagesPerTick pages when it is %s',
+    (max) => {
+      config.maxPagesPerTick = max;
+      const dueAtZero = pages.filter((page) => pageOffset(page.url) === 0);
+
+      expect(duePages(0)).toHaveLength(max ?? dueAtZero.length);
+    },
+  );
+});
+
 describe('enqueuePages', () => {
-  it('publishes a page from the publisher list unchanged', async () => {
-    config.pagesPerTick = 1;
+  it('publishes every due page to the discovery topic', async () => {
+    const due = duePages(0);
 
-    expect(await enqueuePages()).toBe(1);
-    expect(mocks.publishMessage).toHaveBeenCalledOnce();
-    const [topic] = mocks.publishMessage.mock.calls[0];
-    expect(topic).toBe(crawlConfig.crawlArticleDiscoveryTopic);
-    // A deep match against the list holds the scheduler to publishing
-    // an entry with its url and contexts intact and nothing added.
-    expect(publishers.pages).toContainEqual(published()[0]);
+    await enqueuePages(0);
+
+    expect(mocks.publishMessage.mock.calls).toEqual(
+      due.map((page) => [crawlConfig.crawlArticleDiscoveryTopic, page]),
+    );
   });
 
-  it('publishes up to the cap and never the same page twice', async () => {
-    config.pagesPerTick = 5;
+  it('leaves the page list unmodified', async () => {
+    const original = structuredClone(publishers.pages);
 
-    expect(await enqueuePages()).toBe(5);
-    expect(new Set(published().map((page) => page.url)).size).toBe(5);
-  });
+    await enqueuePages(0);
 
-  it('enqueues nothing when the cap is zero, as in production', async () => {
-    config.pagesPerTick = 0;
-
-    expect(await enqueuePages()).toBe(0);
-    expect(mocks.publishMessage).not.toHaveBeenCalled();
+    // enqueuePages must not modify the page list. It is one module-level
+    // object shared by every tick, so a change would carry into the next.
+    expect(publishers.pages).toEqual(original);
   });
 });

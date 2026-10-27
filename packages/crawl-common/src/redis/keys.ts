@@ -27,11 +27,6 @@ export function buildRedisPageLockKey(url: string): string {
   return `page:lock:${hashUrl(url)}`;
 }
 
-/** Return the key for a page's last enqueue by the scheduler. */
-export function buildRedisPageEnqueuedKey(url: string): string {
-  return `page:enqueued:${hashUrl(url)}`;
-}
-
 /** Return the key for a live article's last enqueue by the scheduler. */
 export function buildRedisArticleEnqueuedKey(url: string): string {
   return `article:enqueued:${hashUrl(url)}`;
