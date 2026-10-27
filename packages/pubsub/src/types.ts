@@ -55,15 +55,14 @@ export interface SubscriberOptions<T> {
    */
   validate?: (raw: unknown) => T;
   /**
-   * Cap on how long the SDK will keep extending a message's ack
-   * deadline while the handler runs. Past it, the SDK stops
-   * extending and Pub/Sub redelivers the message even though the
-   * handler is still running, so set it above the longest handler
-   * run. Setting it too high means a stuck handler keeps its
-   * message for the full window. The subscription's
-   * ack_deadline_seconds does not apply: the SDK starts each
-   * deadline at 10s and adapts it to observed handler times, up
-   * to 10 minutes.
+   * Cap on how long the SDK will keep extending a healthy
+   * message's ack deadline while the handler runs. This is
+   * effectively the maximum time a single message can be
+   * processed before being redelivered. The subscription's
+   * ack_deadline_seconds does not change it. The SDK default of
+   * 1 hour is far longer than our handlers need. Setting this too
+   * high means a stuck handler keeps its message for the full
+   * window before another worker can retry.
    */
   maxExtensionSeconds: number;
   /**
