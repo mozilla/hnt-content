@@ -29,9 +29,10 @@ if (config.workerRole === 'article') {
   startDiscoveryConsumer();
 }
 
-// Shorter than the 25s Pub/Sub drain, so a slow in-flight extraction is
-// cut off. Its message is redelivered, but where the fetch marker was
-// already written, the copy skips and the URL waits for it to expire.
+// Shorter than the 25s Pub/Sub drain: a job still running at this point
+// is cut off and its message redelivered. The article worker then
+// extracts the article again, and the discovery worker skips the page
+// while its fetch marker is fresh.
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 let shuttingDown = false;

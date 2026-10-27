@@ -27,18 +27,18 @@ function requireWorkerRole(value: string | undefined): WorkerRole {
   );
 }
 
-// The longest a job can run: four Zyte attempts at the 90s timeout plus
-// backoff (about 6 minutes), then for a live article five Corpus API
-// attempts at the 30s timeout plus backoff (about 3 minutes), rounded up.
+// The longest a job can run, rounded up to leave room for publishing:
+// four Zyte attempts at the 90s timeout plus backoff (about 6 minutes),
+// then five Corpus API attempts at the 30s timeout plus backoff for a
+// live article (about 3 minutes).
 const MAX_JOB_SECONDS = 600;
 
 export default {
   service: 'crawl-worker',
   port: Number(process.env.PORT ?? '8080'),
   workerRole: requireWorkerRole(process.env.WORKER_ROLE),
-  // The fetch marker, written before the Zyte call, already stops
-  // duplicate jobs. A lock that outlasts the job keeps them out on its own
-  // if that order ever changes.
+  // A worker holds the lock until its job finishes, so the lock must not
+  // expire sooner. A crashed worker's lock clears after this long.
   lockTtlSeconds: MAX_JOB_SECONDS,
   // The Pub/Sub client keeps extending the ack deadline for this long, so
   // a slow job keeps its message rather than a copy going to another pod.
