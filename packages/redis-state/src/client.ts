@@ -172,9 +172,7 @@ export async function getString(key: string): Promise<string | null> {
  * Try to acquire a lock at a key for ttlSeconds. Returns an opaque
  * token to pass to releaseLock on success, or null if another
  * holder has the lock. The TTL bounds how long a crashed holder can
- * block others, so set it to the Pub/Sub ack deadline minus a
- * margin, so the lock clears just before the message redelivers and
- * the retry is not blocked by a stale lock.
+ * block others, so set it to outlast the work it guards.
  */
 export async function acquireRedisKeyLockToken(
   key: string,
