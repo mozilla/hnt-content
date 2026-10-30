@@ -4,6 +4,7 @@ import {
   DiscoveryContext,
   getRegistrableDomain,
 } from 'crawl-common';
+import { count } from 'metrics';
 import { extractArticleList, ZyteArticleListItem } from 'zyte';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
@@ -45,6 +46,8 @@ export async function handleArticleDiscovery(
       extractFrom: resolveExtractFrom(message.url, 'articleList'),
     },
   );
+  // Zyte bills each successful response, whatever the page's own status.
+  count('crawl_zyte_requests', 1, { item_type: 'article_list' });
 
   const crawledAt = new Date().toISOString();
 
