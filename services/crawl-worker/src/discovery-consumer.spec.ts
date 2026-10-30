@@ -107,11 +107,11 @@ describe('discovery consumer', () => {
     vi.resetAllMocks();
   });
 
-  it('subscribes to the configured crawl-article-discovery subscription', () => {
+  it('subscribes to the configured crawl-article-discovery topic', () => {
     startDiscoveryConsumer();
     expect(startSubscriber).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: crawlConfig.crawlArticleDiscoverySubscription,
+        subscriptionName: crawlConfig.crawlArticleDiscoveryPubSub.subscription,
         maxMessages: config.maxMessages,
       }),
     );
@@ -127,15 +127,18 @@ describe('discovery consumer', () => {
         event,
       );
     }
-    expect(publishMessage).toHaveBeenCalledWith(crawlConfig.crawlArticleTopic, {
-      url: ARTICLE_URL,
-      source_url: DISCOVERY_MESSAGE.url,
-      crawl_id: expect.any(String),
-      enqueued_at: expect.any(String),
-      // A discovered article has no cadence of its own, so the job
-      // carries the worker's window for discovered articles.
-      article_refresh_minutes: config.discoveredArticleRefreshDays * 24 * 60,
-    });
+    expect(publishMessage).toHaveBeenCalledWith(
+      crawlConfig.crawlArticlePubSub.topic,
+      {
+        url: ARTICLE_URL,
+        source_url: DISCOVERY_MESSAGE.url,
+        crawl_id: expect.any(String),
+        enqueued_at: expect.any(String),
+        // A discovered article has no cadence of its own, so the job
+        // carries the worker's window for discovered articles.
+        article_refresh_minutes: config.discoveredArticleRefreshDays * 24 * 60,
+      },
+    );
     expect(publishMessage).toHaveBeenCalledTimes(3);
     expect(setRedisKeyTimestampWithTTL).toHaveBeenCalledOnce();
     expect(releaseRedisKeyLock).toHaveBeenCalledWith(
@@ -218,7 +221,7 @@ describe('discovery consumer', () => {
 
     await registeredHandler()(DISCOVERY_MESSAGE);
 
-    const jobs = publishesTo(crawlConfig.crawlArticleTopic) as {
+    const jobs = publishesTo(crawlConfig.crawlArticlePubSub.topic) as {
       url: string;
       crawl_id: string;
     }[];

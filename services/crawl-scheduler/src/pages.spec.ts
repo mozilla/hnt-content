@@ -89,7 +89,7 @@ describe('enqueuePages', () => {
     await enqueuePages(0);
 
     expect(mocks.publishMessage.mock.calls).toEqual(
-      due.map((page) => [crawlConfig.crawlArticleDiscoveryTopic, page]),
+      due.map((page) => [crawlConfig.crawlArticleDiscoveryPubSub.topic, page]),
     );
   });
 
