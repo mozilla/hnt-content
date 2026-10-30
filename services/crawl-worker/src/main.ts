@@ -2,6 +2,7 @@
 import './sentry-init.js';
 
 import { initCorpusApiClient } from 'crawl-common';
+import { initMetrics, shutdownMetrics } from 'metrics';
 import { initPubSubClient, shutdownPubSub } from 'pubsub';
 import { initRedisClient, shutdownRedis } from 'redis-state';
 import { shutdownSentry } from 'sentry';
@@ -19,6 +20,7 @@ const server = app.listen(config.port, () => {
 // none takes an argument here. Only the article worker syncs curated
 // metadata, so only it needs the Corpus API. Only the discovery worker
 // guards its crawls with Redis so far.
+initMetrics({ service: config.service, workerRole: config.workerRole });
 initZyteClient();
 initPubSubClient();
 if (config.workerRole === 'article') {
@@ -36,7 +38,7 @@ const SHUTDOWN_TIMEOUT_MS = 10_000;
 let shuttingDown = false;
 /**
  * Initiate graceful shutdown: close the server, drain Pub/Sub, flush
- * Sentry, and force-exit after a timeout. K8s sends SIGTERM before pod
+ * metrics and Sentry, and force-exit after a timeout. K8s sends SIGTERM before pod
  * termination; a clean shutdown prevents duplicate Pub/Sub message
  * processing and ensures captured errors reach Sentry.
  */
@@ -49,7 +51,7 @@ function shutdown() {
   server.close(async () => {
     await shutdownPubSub();
     await shutdownRedis();
-    await shutdownSentry();
+    await Promise.all([shutdownMetrics(), shutdownSentry()]);
     process.exit(0);
   });
   // The close callback above can stall on a lingering connection or a

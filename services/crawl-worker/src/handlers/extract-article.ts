@@ -7,6 +7,7 @@ import {
   updateApprovedCorpusItem,
   UpdateApprovedCorpusItemInput,
 } from 'crawl-common';
+import { count } from 'metrics';
 import { extractArticle, ZyteArticle } from 'zyte';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 
@@ -32,6 +33,8 @@ export async function handleArticleExtraction(
   } = await extractArticle(message.url, {
     extractFrom: resolveExtractFrom(message.url, 'article'),
   });
+  // Zyte bills each successful response, whatever the page's own status.
+  count('crawl_zyte_requests', 1, { item_type: 'article' });
 
   const canonicalUrl = toCanonicalUrl(
     article.canonicalUrl,
