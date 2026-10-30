@@ -123,7 +123,7 @@ async function handleMessage(
       // articleUrls messages are consumed by the crawl worker in "article" mode
       ...articleUrls.map((url) =>
         publishMessage(
-          crawlConfig.crawlArticleTopic,
+          crawlConfig.crawlArticlePubSub.topic,
           buildCrawlArticleJob(url, message.url),
         ),
       ),
@@ -158,10 +158,12 @@ const handleWithSentry = withSentryHandler<CrawlArticleDiscoveryMessage>(
  */
 export function startDiscoveryConsumer(): void {
   startSubscriber<CrawlArticleDiscoveryMessage>({
-    subscriptionName: crawlConfig.crawlArticleDiscoveryTopic,
+    subscriptionName: crawlConfig.crawlArticleDiscoveryPubSub.subscription,
     maxExtensionSeconds: config.maxExtensionSeconds,
     maxMessages: config.maxMessages,
     handler: handleWithSentry,
-    onError: sentryPubSubErrorHandler(crawlConfig.crawlArticleDiscoveryTopic),
+    onError: sentryPubSubErrorHandler(
+      crawlConfig.crawlArticleDiscoveryPubSub.subscription,
+    ),
   });
 }

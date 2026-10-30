@@ -5,11 +5,24 @@
 // Each service checks that this value is set before using it.
 const environment = process.env.ENVIRONMENT ?? '';
 
+// ids for both pubsub topics and subscriptions
+// the ids are identical by convention - see the pubsub module in infra:
+// https://github.com/mozilla/webservices-infra/blob/ed77e0f7aa2cef30b9af3ce21c0c91924ad78b94/hnt/tf/modules/pubsub/main.tf#L13
+const crawlArticlePubSubId = `${environment}-crawl-article`;
+const crawlArticleDiscoveryPubSubId = `${environment}-crawl-article-discovery`;
+
 export default {
   environment,
-  // Subscription and topic are given matching names in Terraform.
-  crawlArticleTopic: `${environment}-crawl-article`,
-  crawlArticleDiscoveryTopic: `${environment}-crawl-article-discovery`,
+  // Subscription and topic are given matching names in Terraform. Configure
+  // distinct config values to make it clear there are 2 underlying resources.
+  crawlArticlePubSub: {
+    topic: crawlArticlePubSubId,
+    subscription: crawlArticlePubSubId,
+  },
+  crawlArticleDiscoveryPubSub: {
+    topic: crawlArticleDiscoveryPubSubId,
+    subscription: crawlArticleDiscoveryPubSubId,
+  },
   // Each of these topics has a subscription that writes to BigQuery.
   articlesTopic: `${environment}-articles`,
   articleDiscoveriesTopic: `${environment}-article-discoveries`,

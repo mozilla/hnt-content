@@ -46,7 +46,7 @@ export async function enqueuePages(epochMinute: number): Promise<number> {
 
   await Promise.all(
     due.map((page) =>
-      publishMessage(crawlConfig.crawlArticleDiscoveryTopic, page),
+      publishMessage(crawlConfig.crawlArticleDiscoveryPubSub.topic, page),
     ),
   );
 

@@ -75,7 +75,7 @@ describe('enqueueLiveArticles', () => {
     );
     expect(mocks.publishMessage).toHaveBeenCalledOnce();
     expect(mocks.publishMessage).toHaveBeenCalledWith(
-      crawlConfig.crawlArticleTopic,
+      crawlConfig.crawlArticlePubSub.topic,
       {
         url: LIVE_ARTICLE.url,
         // A live article has no publisher page, so it is its own source.

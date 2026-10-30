@@ -17,7 +17,7 @@ afterEach(() => {
 describe('crawl-common config', () => {
   it('prefixes Pub/Sub names with the environment', async () => {
     const config = await loadConfig('dev');
-    expect(config.crawlArticleTopic).toBe('dev-crawl-article');
+    expect(config.crawlArticlePubSub.topic).toBe('dev-crawl-article');
     expect(config.articlesTopic).toBe('dev-articles');
   });
 
