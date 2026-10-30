@@ -107,11 +107,11 @@ describe('discovery consumer', () => {
     vi.resetAllMocks();
   });
 
-  it('subscribes to the configured crawl-article-discovery subscription', () => {
+  it('subscribes to the configured crawl-article-discovery topic', () => {
     startDiscoveryConsumer();
     expect(startSubscriber).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: crawlConfig.crawlArticleDiscoverySubscription,
+        subscriptionName: crawlConfig.crawlArticleDiscoveryTopic,
         maxMessages: config.maxMessages,
       }),
     );

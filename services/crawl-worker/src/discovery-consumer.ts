@@ -116,9 +116,11 @@ async function handleMessage(
     // Events and jobs go to different topics and neither depends on the
     // other, so publish them together to hold the lock briefly.
     await Promise.all([
+      // events messages are consumed by BigQuery
       ...events.map((event) =>
         publishMessage(crawlConfig.articleDiscoveriesTopic, event),
       ),
+      // articleUrls messages are consumed by the crawl worker in "article" mode
       ...articleUrls.map((url) =>
         publishMessage(
           crawlConfig.crawlArticleTopic,
@@ -156,12 +158,10 @@ const handleWithSentry = withSentryHandler<CrawlArticleDiscoveryMessage>(
  */
 export function startDiscoveryConsumer(): void {
   startSubscriber<CrawlArticleDiscoveryMessage>({
-    subscriptionName: crawlConfig.crawlArticleDiscoverySubscription,
+    subscriptionName: crawlConfig.crawlArticleDiscoveryTopic,
     maxExtensionSeconds: config.maxExtensionSeconds,
     maxMessages: config.maxMessages,
     handler: handleWithSentry,
-    onError: sentryPubSubErrorHandler(
-      crawlConfig.crawlArticleDiscoverySubscription,
-    ),
+    onError: sentryPubSubErrorHandler(crawlConfig.crawlArticleDiscoveryTopic),
   });
 }

@@ -9,9 +9,7 @@ export default {
   environment,
   // Subscription and topic are given matching names in Terraform.
   crawlArticleTopic: `${environment}-crawl-article`,
-  crawlArticleSubscription: `${environment}-crawl-article`,
   crawlArticleDiscoveryTopic: `${environment}-crawl-article-discovery`,
-  crawlArticleDiscoverySubscription: `${environment}-crawl-article-discovery`,
   // Each of these topics has a subscription that writes to BigQuery.
   articlesTopic: `${environment}-articles`,
   articleDiscoveriesTopic: `${environment}-article-discoveries`,

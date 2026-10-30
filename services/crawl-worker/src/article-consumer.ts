@@ -39,10 +39,10 @@ const handleWithSentry = withSentryHandler<CrawlArticleMessage>(
  */
 export function startArticleConsumer(): void {
   startSubscriber<CrawlArticleMessage>({
-    subscriptionName: crawlConfig.crawlArticleSubscription,
+    subscriptionName: crawlConfig.crawlArticleTopic,
     maxExtensionSeconds: config.maxExtensionSeconds,
     maxMessages: config.maxMessages,
     handler: handleWithSentry,
-    onError: sentryPubSubErrorHandler(crawlConfig.crawlArticleSubscription),
+    onError: sentryPubSubErrorHandler(crawlConfig.crawlArticleTopic),
   });
 }

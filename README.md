@@ -2,6 +2,46 @@
 
 Article crawling and extraction pipeline for [Firefox New Tab](https://support.mozilla.org/en-US/kb/customize-your-new-tab-page) content recommendations. Crawls publisher pages, discovers articles, extracts content via Zyte, and streams results to BigQuery for ML ranking.
 
+## System Summary
+
+The system is comprised of two services:
+
+1. **Crawl Scheduler** - every minute, sends PubSub messages to the Crawl Worker containing either a live Curated Corpus API article URL or a publisher article list page URL (think a landing page listing many articles).
+
+2. **Crawl Worker** - polls PubSub for messages sent by the Crawl Scheduler and processes them, eventually getting metadata for each URL (live Corpus Item or publisher article) from Zyte, which is in turn sent in a PubSub message to be consumed by (and inserted into) BigQuery.
+
+(For a more in-depth overview, see the [architecture doc](docs/crawl/ARCHITECTURE.md).)
+
+### Crawl Scheduler
+
+When this service starts, two infinite loops ("pages" and "live articles") are spun up, each "ticking" every minute. Notably, as the service load is low and predictable, this service only has a single replica (no worrying about concurrency).
+
+#### Pages Loop
+
+On each "tick", chooses a subset of publisher landing pages (hardcoded in a JSON file) to be processed by the Crawl Worker. For each publisher landing page chosen, sends a PubSub message to the `${env}-crawl-article-discovery` topic (which is consumed by the Crawl Worker). Purpose is to find newly published articles.
+
+#### Live Articles Loop
+
+Retrieves all articles present in live sections (currently `NEW_TAB_EN_US` only) from the Corpus. Sends each article to the `${environment}-crawl-article` PubSub topic to be processed by the Crawl Worker. Purpose is to update `title` and `excerpt` on existing Corpus items.
+
+### Crawl Worker
+
+This is a scaling service that subscribes to PubSub messages received from the Crawl Scheduler. Additionally, this service runs under two "modes" (defined via an env var set in K8s): "discovery" and "article".
+
+#### Discovery Mode
+
+In "discovery" mode, the Crawl Worker consumes messages sent by the Crawl Scheduler "Pages" loop. Calls Zyte to scrape the publisher landing page for individual articles, and sends each article found to the `${environment}-crawl-article` PubSub topic to be processed by "article" mode.
+
+Additionally, for each publisher landing page crawled, sends a PubSub message to the `${environment}-article-discoveries` topic, which is consumed by BigQuery.
+
+#### Article Mode
+
+"Article" mode consumes messages from the `${environment}-crawl-article` PubSub topic. For each message, calls Zyte to get metadata (title, authors, image url, etc).
+
+If the PubSub message defines a `corpus_id`, updates the item's `title` and or `excerpt` in the Corpus (only if changed).
+
+For each article, sends a message to the `${environment}-articles` PubSub topic, which is consumed by BigQuery.
+
 ## Development
 
 ```sh

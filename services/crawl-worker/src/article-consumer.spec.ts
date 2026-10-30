@@ -41,7 +41,7 @@ describe('article consumer', () => {
     startArticleConsumer();
     expect(startSubscriber).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: crawlConfig.crawlArticleSubscription,
+        subscriptionName: crawlConfig.crawlArticleTopic,
         maxMessages: config.maxMessages,
       }),
     );
