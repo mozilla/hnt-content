@@ -43,5 +43,5 @@ async function publishCrawlJob(article: LiveArticle): Promise<void> {
     article_refresh_minutes: config.liveArticleRefreshMinutes,
     corpus_item: article.corpus_item,
   };
-  await publishMessage(crawlConfig.crawlArticleTopic, message);
+  await publishMessage(crawlConfig.crawlArticlePubSub.topic, message);
 }

@@ -166,7 +166,7 @@ than dropped altogether.
 
 ## Components
 
-The whole system lives in one TypeScript monorepo with two entry points: the
+The whole system lives in one TypeScript monorepo with two services: the
 scheduler and the worker. The worker deploys in two roles, so the running system
 has three Kubernetes workloads. Shared packages hold their common code.
 

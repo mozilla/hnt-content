@@ -71,7 +71,9 @@ async function tickLiveArticles() {
  */
 async function run() {
   await initCorpusApiClient();
+
   initPubSubClient();
+
   await Promise.all([
     runEveryMinute(tickPages, ac.signal),
     runEveryMinute(tickLiveArticles, ac.signal),

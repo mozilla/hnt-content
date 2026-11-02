@@ -20,7 +20,9 @@ const server = app.listen(config.port, () => {
 // metadata, so only it needs the Corpus API. Only the discovery worker
 // guards its crawls with Redis so far.
 initZyteClient();
+
 initPubSubClient();
+
 if (config.workerRole === 'article') {
   await initCorpusApiClient();
   startArticleConsumer();
