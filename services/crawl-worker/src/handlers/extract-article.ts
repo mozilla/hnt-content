@@ -75,7 +75,7 @@ function mapToArticleEvent(
     description: article.description ?? undefined,
     authors: toEventAuthors(article.authors),
     main_image_url: article.mainImage?.url ?? undefined,
-    body_truncated: article.articleBody?.slice(0, BODY_TRUNCATE_LENGTH),
+    body_truncated: article.articleBody && truncateBody(article.articleBody),
     published_at: toEventTimestamp(article.datePublished),
     breadcrumbs: article.breadcrumbs?.map((b) => ({
       name: b.name,
@@ -83,6 +83,20 @@ function mapToArticleEvent(
     })),
     language: article.inLanguage ?? undefined,
   };
+}
+
+/**
+ * Keep the first BODY_TRUNCATE_LENGTH characters of an article body, as
+ * valid text that BigQuery accepts.
+ */
+export function truncateBody(body: string): string {
+  // Array.from splits by character rather than UTF-16 unit, so an emoji
+  // is never cut in half. toWellFormed replaces any broken character
+  // already in Zyte's text with U+FFFD.
+  return Array.from(body)
+    .slice(0, BODY_TRUNCATE_LENGTH)
+    .join('')
+    .toWellFormed();
 }
 
 /**

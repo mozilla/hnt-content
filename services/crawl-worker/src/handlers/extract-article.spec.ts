@@ -21,7 +21,11 @@ vi.mock('zyte', async (importOriginal) => {
 
 import { updateApprovedCorpusItem } from 'crawl-common';
 import { extractArticle } from 'zyte';
-import { handleArticleExtraction, toCanonicalUrl } from './extract-article.js';
+import {
+  handleArticleExtraction,
+  toCanonicalUrl,
+  truncateBody,
+} from './extract-article.js';
 import {
   BASE_MESSAGE,
   CORPUS_ITEM,
@@ -331,5 +335,28 @@ describe('toCanonicalUrl', () => {
 
   it('returns undefined when the page has no canonical', () => {
     expect(toCanonicalUrl(undefined, url, url)).toBeUndefined();
+  });
+});
+
+describe('truncateBody', () => {
+  it.each([
+    ['keeps a short body unchanged', 'short body', 'short body'],
+    [
+      'cuts a long body to 2,000 characters',
+      'x'.repeat(2005),
+      'x'.repeat(2000),
+    ],
+    [
+      'keeps an emoji at the cut whole',
+      'x'.repeat(1999) + '😱 rest',
+      'x'.repeat(1999) + '😱',
+    ],
+    [
+      'replaces a lone surrogate in the source',
+      'before \ud83d after',
+      'before \ufffd after',
+    ],
+  ])('%s', (_, body, expected) => {
+    expect(truncateBody(body)).toBe(expected);
   });
 });
