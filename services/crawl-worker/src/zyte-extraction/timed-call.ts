@@ -1,4 +1,4 @@
-import { duration, type Outcome } from 'metrics';
+import { timing, type Outcome } from 'metrics';
 import { ZyteError } from 'zyte';
 
 /**
@@ -22,10 +22,10 @@ export async function timeZyteCall<T>(
       err instanceof ZyteError ? String(err.status) : (err as Error).name;
     throw err;
   } finally {
-    duration(
-      'crawl_zyte_request_duration',
-      (performance.now() - start) / 1000,
-      { item_type: itemType, outcome, error_type: errorType },
-    );
+    timing('crawl_zyte_request_duration', (performance.now() - start) / 1000, {
+      item_type: itemType,
+      outcome,
+      error_type: errorType,
+    });
   }
 }

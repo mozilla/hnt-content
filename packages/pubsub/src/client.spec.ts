@@ -45,10 +45,10 @@ vi.mock('@google-cloud/pubsub', () => ({
   },
 }));
 
-vi.mock('metrics', () => ({ duration: vi.fn() }));
+vi.mock('metrics', () => ({ timing: vi.fn() }));
 
 import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
-import { duration } from 'metrics';
+import { timing } from 'metrics';
 import {
   flushTopics,
   initPubSubClient,
@@ -510,7 +510,7 @@ describe('message metrics', () => {
     'records handler duration and first-delivery queue wait: $name',
     async (c) => {
       vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.mocked(duration).mockClear();
+      vi.mocked(timing).mockClear();
       // The handler appears to take 2.5s.
       vi.spyOn(performance, 'now')
         .mockReturnValueOnce(1_000)
@@ -531,7 +531,7 @@ describe('message metrics', () => {
 
       const recorded = (metric: string) =>
         vi
-          .mocked(duration)
+          .mocked(timing)
           .mock.calls.filter(([name]) => name === metric)
           .map(([, seconds, tags]) => ({ seconds, tags }));
       expect(recorded('pubsub_queue_wait')).toEqual(

@@ -28,7 +28,7 @@
  * Tests and local dev point at a Pub/Sub emulator by passing
  * `apiEndpoint` and `useEmulator: true` to `initPubSubClient`.
  */
-import { duration, type Outcome } from 'metrics';
+import { timing, type Outcome } from 'metrics';
 import config from './config.js';
 import {
   Duration,
@@ -252,7 +252,7 @@ async function processMessage<T>(
     // Clamp, since the histogram drops the negative waits that clock skew
     // between Pub/Sub and the pod can produce.
     const waitMs = Math.max(0, Date.now() - message.publishTime.getTime());
-    duration('pubsub_queue_wait', waitMs / 1000, {
+    timing('pubsub_queue_wait', waitMs / 1000, {
       subscription: subscriptionName,
     });
   }
@@ -290,7 +290,7 @@ async function processMessage<T>(
     );
   } finally {
     const seconds = (performance.now() - start) / 1000;
-    duration('pubsub_handler_duration', seconds, {
+    timing('pubsub_handler_duration', seconds, {
       subscription: subscriptionName,
       outcome,
     });
