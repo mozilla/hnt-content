@@ -472,12 +472,21 @@ describe('shutdownPubSub', () => {
 });
 
 describe('job metrics', () => {
+  // waits lists the queue waits expected; a future publishTime (clock
+  // skew) clamps to 0.
   it.each([
-    { fails: false, deliveryAttempt: 0, outcome: 'success', waits: true },
-    { fails: true, deliveryAttempt: 1, outcome: 'failure', waits: true },
-    { fails: false, deliveryAttempt: 2, outcome: 'success', waits: false },
+    {
+      fails: false,
+      attempt: 0,
+      agoMs: 30_000,
+      outcome: 'success',
+      waits: [30],
+    },
+    { fails: true, attempt: 1, agoMs: 30_000, outcome: 'failure', waits: [30] },
+    { fails: false, attempt: 1, agoMs: -5_000, outcome: 'success', waits: [0] },
+    { fails: false, attempt: 2, agoMs: 30_000, outcome: 'success', waits: [] },
   ])(
-    'records job duration, and queue wait on first delivery ($deliveryAttempt)',
+    'records job duration, and queue wait on first delivery ($attempt)',
     async (c) => {
       vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.mocked(duration).mockClear();
@@ -490,17 +499,25 @@ describe('job metrics', () => {
 
       const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
       const message = createMockMessage(TEST_PAYLOAD);
-      message.publishTime = new Date(Date.now() - 30_000);
-      message.deliveryAttempt = c.deliveryAttempt;
+      message.publishTime = new Date(Date.now() - c.agoMs);
+      message.deliveryAttempt = c.attempt;
       sub.emit('message', message);
       await message.settled;
 
-      const calls = vi.mocked(duration).mock.calls;
-      const wait = calls.find(([name]) => name === 'crawl_job_queue_wait');
-      const job = calls.find(([name]) => name === 'crawl_job_duration');
-      expect(wait?.[1] ?? 0).toBeGreaterThanOrEqual(c.waits ? 30 : 0);
-      expect(wait !== undefined).toBe(c.waits);
-      expect(job?.[3]).toEqual({ outcome: c.outcome });
+      const recorded = (metric: string) =>
+        vi
+          .mocked(duration)
+          .mock.calls.filter(([name]) => name === metric)
+          .map(([, seconds, , tags]) => ({ seconds, tags }));
+      expect(recorded('crawl_job_queue_wait')).toEqual(
+        c.waits.map((s) => ({
+          seconds: expect.closeTo(s, 0),
+          tags: undefined,
+        })),
+      );
+      expect(recorded('crawl_job_duration')).toEqual([
+        { seconds: expect.any(Number), tags: { outcome: c.outcome } },
+      ]);
     },
   );
 });

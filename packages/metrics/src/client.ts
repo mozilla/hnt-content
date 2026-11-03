@@ -54,13 +54,9 @@ let meter: Meter = createNoopMeter();
  * as a distinct label set.
  */
 function definedTags(tags?: Tags): Attributes {
-  const defined: Attributes = {};
-  for (const [key, value] of Object.entries(tags ?? {})) {
-    if (value !== undefined) {
-      defined[key] = value;
-    }
-  }
-  return defined;
+  return Object.fromEntries(
+    Object.entries(tags ?? {}).filter(([, value]) => value !== undefined),
+  );
 }
 
 /**
