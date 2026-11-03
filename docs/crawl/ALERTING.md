@@ -65,21 +65,22 @@ Zyte cost goes up.
 
 ## Which alert catches which outage
 
-Each row is a way the crawler can fail. A dot marks each alert that catches it.
+Each row is a way the crawler can fail, from most to least serious. A dot marks
+each alert that catches it.
 
 | Outage | No New<br>Discoveries | No New<br>Extractions | BigQuery<br>Writes Failing | Zyte Spend<br>Surge | Workers<br>Falling Behind | Container<br>Memory | Redis<br>Memory | New Sentry<br>Issue | Other monitoring |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| Zyte outage | 🔵 | 🔵 |  |  |  |  |  |  |  |
 | Crawler hung | 🔵 |  |  |  |  |  |  |  |  |
 | Crawler OOM | 🔵 |  |  |  |  | 🔵 |  |  |  |
-| Zyte outage | 🔵 | 🔵 |  |  |  |  |  |  |  |
-| Publisher blocked |  |  |  |  |  |  |  |  | Dashboard |
-| ML sections stuck |  |  |  |  |  |  |  |  | ML pipeline |
 | BigQuery rejection |  |  | 🔵 |  |  |  |  |  |  |
-| Corpus outage |  |  |  |  |  |  |  | 🔵 |  |
-| Runaway Zyte calls |  |  |  | 🔵 |  |  |  |  |  |
-| Memory leak |  |  |  |  |  | 🔵 |  |  |  |
-| Redis full |  |  |  |  |  |  | 🔵 |  |  |
+| Publisher blocked |  |  |  |  |  |  |  |  | Dashboard |
 | Workers slow |  |  |  |  | 🔵 |  |  |  |  |
+| Memory leak |  |  |  |  |  | 🔵 |  |  |  |
+| Runaway Zyte calls |  |  |  | 🔵 |  |  |  |  |  |
+| Corpus outage |  |  |  |  |  |  |  | 🔵 |  |
+| Redis full |  |  |  |  |  |  | 🔵 |  |  |
+| ML sections stuck |  |  |  |  |  |  |  |  | ML pipeline |
 
 [^gap]: The pipeline is expected to continuously discover and crawl articles,
     so an hour gap points to a failure. The longest gap in the legacy pipeline
