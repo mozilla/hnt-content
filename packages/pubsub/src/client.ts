@@ -245,14 +245,16 @@ async function processMessage<T>(
   onError: (err: Error, ctx: SubscriberErrorContext) => void,
 ): Promise<void> {
   const { subscriptionName, handler, validate } = opts;
-  // Only first deliveries count, so retries of a failing job do not read
-  // as a backlog. Pub/Sub reports 0 without a dead-letter policy, as in
+  // Only first deliveries count, so retries of a failing message do not
+  // read as a backlog. Pub/Sub reports 0 without a dead-letter policy, as in
   // the emulator.
   if (message.deliveryAttempt <= 1) {
     // Clamp, since the histogram drops the negative waits that clock skew
     // between Pub/Sub and the pod can produce.
     const waitMs = Math.max(0, Date.now() - message.publishTime.getTime());
-    duration('crawl_job_queue_wait', waitMs / 1000);
+    duration('pubsub_queue_wait', waitMs / 1000, {
+      subscription: subscriptionName,
+    });
   }
   let raw: unknown;
   try {
@@ -288,7 +290,10 @@ async function processMessage<T>(
     );
   } finally {
     const seconds = (performance.now() - start) / 1000;
-    duration('crawl_job_duration', seconds, { outcome });
+    duration('pubsub_handler_duration', seconds, {
+      subscription: subscriptionName,
+      outcome,
+    });
   }
 }
 

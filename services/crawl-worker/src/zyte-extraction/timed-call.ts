@@ -1,4 +1,4 @@
-import { duration, type Outcome, type Tags } from 'metrics';
+import { duration, type Outcome } from 'metrics';
 import { ZyteError } from 'zyte';
 
 /**
@@ -7,7 +7,7 @@ import { ZyteError } from 'zyte';
  * tracks spend.
  */
 export async function timeZyteCall<T>(
-  itemType: NonNullable<Tags['item_type']>,
+  itemType: 'article' | 'live_article' | 'article_list',
   call: () => Promise<T>,
 ): Promise<T> {
   const start = performance.now();

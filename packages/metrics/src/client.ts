@@ -31,9 +31,12 @@ export type Outcome = 'success' | 'failure';
  */
 export type Tags = {
   outcome?: Outcome;
-  item_type?: 'article' | 'live_article' | 'article_list';
-  // Zyte status code or error class, e.g. '429' or 'TimeoutError'.
+  // Type of item processed, e.g. 'article_list' or 'live_article'.
+  item_type?: string;
+  // Error class or status code, e.g. 'TimeoutError', '429'.
   error_type?: string;
+  // Pub/Sub subscription a message came from.
+  subscription?: string;
 };
 
 export interface MetricsInitOptions {

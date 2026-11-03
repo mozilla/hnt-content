@@ -72,9 +72,9 @@ describe('metrics client', () => {
   it('exports durations as second histograms', async () => {
     initMetrics({ service: 'crawl-worker' });
 
-    duration('crawl_job_duration', 42, { outcome: 'success' });
+    duration('example_duration', 42, { outcome: 'success' });
 
-    const metric = (await flush()).get('crawl_job_duration')!;
+    const metric = (await flush()).get('example_duration')!;
     expect(metric.descriptor.unit).toBe('s');
     expect(metric.dataPoints[0].attributes).toEqual({ outcome: 'success' });
     expect(metric.dataPoints[0].value).toMatchObject({ count: 1, sum: 42 });
@@ -83,15 +83,15 @@ describe('metrics client', () => {
   it('drops tags left undefined so callers need no branching', async () => {
     initMetrics({ service: 'crawl-worker' });
 
-    duration('crawl_job_duration', 1, {
+    duration('example_duration', 1, {
       outcome: 'success',
       error_type: undefined,
     });
 
     const metrics = await flush();
-    expect(metrics.get('crawl_job_duration')!.dataPoints[0].attributes).toEqual(
-      { outcome: 'success' },
-    );
+    expect(metrics.get('example_duration')!.dataPoints[0].attributes).toEqual({
+      outcome: 'success',
+    });
   });
 
   it('is a no-op when no endpoint is configured', async () => {
@@ -99,7 +99,7 @@ describe('metrics client', () => {
     config.endpoint = undefined;
     initMetrics({ service: 'crawl-worker' });
 
-    duration('crawl_job_duration', 5);
+    duration('example_duration', 5);
 
     expect(mockExporter).toBeUndefined();
   });
@@ -109,7 +109,7 @@ describe('metrics client', () => {
     config.endpoint = 'not a url';
 
     initMetrics({ service: 'crawl-worker' });
-    duration('crawl_job_duration', 1);
+    duration('example_duration', 1);
 
     expect(error).toHaveBeenCalledWith(
       'Metrics disabled: invalid configuration',
@@ -120,7 +120,7 @@ describe('metrics client', () => {
 
   it('flushes pending datapoints on shutdown', async () => {
     initMetrics({ service: 'crawl-worker' });
-    duration('crawl_job_duration', 1);
+    duration('example_duration', 1);
 
     await shutdownMetrics();
 
@@ -136,7 +136,7 @@ describe('metrics client', () => {
     ).toMatchObject({ count: 1 });
 
     // Emitting after shutdown is a silent no-op.
-    duration('crawl_job_duration', 1);
+    duration('example_duration', 1);
     expect(mockExporter!.getMetrics()).toHaveLength(1);
   });
 });
