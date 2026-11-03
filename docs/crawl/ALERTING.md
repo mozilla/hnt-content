@@ -72,10 +72,9 @@ each alert that catches it.
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
 | Zyte outage | 🔵 | 🔵 |  |  |  |  |  |  |  |
 | Crawler hung | 🔵 |  |  |  |  |  |  |  |  |
-| Crawler OOM | 🔵 |  |  |  |  | 🔵 |  |  |  |
+| Out of memory |  |  |  |  |  | 🔵 |  |  |  |
 | BigQuery rejection |  |  | 🔵 |  |  |  |  |  |  |
 | Workers slow |  |  |  |  | 🔵 |  |  |  |  |
-| Memory leak |  |  |  |  |  | 🔵 |  |  |  |
 | Runaway Zyte calls |  |  |  | 🔵 |  |  |  |  |  |
 | Corpus outage |  |  |  |  |  |  |  | 🔵 |  |
 | Redis full |  |  |  |  |  |  | 🔵 |  |  |
