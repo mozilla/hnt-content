@@ -74,12 +74,12 @@ each alert that catches it.
 | Crawler hung | 🔵 |  |  |  |  |  |  |  |  |
 | Crawler OOM | 🔵 |  |  |  |  | 🔵 |  |  |  |
 | BigQuery rejection |  |  | 🔵 |  |  |  |  |  |  |
-| Publisher blocked |  |  |  |  |  |  |  |  | Dashboard |
 | Workers slow |  |  |  |  | 🔵 |  |  |  |  |
 | Memory leak |  |  |  |  |  | 🔵 |  |  |  |
 | Runaway Zyte calls |  |  |  | 🔵 |  |  |  |  |  |
 | Corpus outage |  |  |  |  |  |  |  | 🔵 |  |
 | Redis full |  |  |  |  |  |  | 🔵 |  |  |
+| Publisher blocked |  |  |  |  |  |  |  |  | Dashboard |
 | ML sections stuck |  |  |  |  |  |  |  |  | ML pipeline |
 
 [^gap]: The pipeline is expected to continuously discover and crawl articles,
