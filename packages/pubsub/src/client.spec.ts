@@ -531,7 +531,7 @@ describe('job metrics', () => {
       vi
         .mocked(duration)
         .mock.calls.filter(([name]) => name === metric)
-        .map(([, seconds, , tags]) => ({ seconds, tags }));
+        .map(([, seconds, tags]) => ({ seconds, tags }));
     expect(recorded('crawl_job_queue_wait')).toEqual(
       c.waits.map((s) => ({
         // Within 0.5s, to allow for the time the handler takes.

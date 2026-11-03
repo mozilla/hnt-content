@@ -230,12 +230,6 @@ export function startSubscriber<T>(
   return controller;
 }
 
-// Queue wait reaches past the 20-minute crawl interval, beyond which
-// workers are falling behind, to show how far behind. Job duration
-// reaches the 600s ceiling a worker gives one job.
-const QUEUE_WAIT_BUCKETS = [1, 10, 60, 300, 600, 1200, 1800, 3600];
-const JOB_DURATION_BUCKETS = [1, 5, 10, 30, 60, 120, 300, 600];
-
 /**
  * Parse, validate, dispatch, and ack/nack a single message.
  * Parse, validation, and handler failures all nack; distinct
@@ -258,7 +252,7 @@ async function processMessage<T>(
     // Clamp, since the histogram drops the negative waits that clock skew
     // between Pub/Sub and the pod can produce.
     const waitMs = Math.max(0, Date.now() - message.publishTime.getTime());
-    duration('crawl_job_queue_wait', waitMs / 1000, QUEUE_WAIT_BUCKETS);
+    duration('crawl_job_queue_wait', waitMs / 1000);
   }
   let raw: unknown;
   try {
@@ -294,9 +288,7 @@ async function processMessage<T>(
     );
   } finally {
     const seconds = (performance.now() - start) / 1000;
-    duration('crawl_job_duration', seconds, JOB_DURATION_BUCKETS, {
-      outcome,
-    });
+    duration('crawl_job_duration', seconds, { outcome });
   }
 }
 

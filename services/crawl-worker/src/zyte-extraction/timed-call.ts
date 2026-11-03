@@ -1,10 +1,6 @@
 import { duration, type Outcome, type Tags } from 'metrics';
 import { ZyteError } from 'zyte';
 
-// Zyte averages about 9s per attempt. Each attempt times out at 90s, and
-// up to three retries stretch one call to about 400s.
-const ZYTE_BUCKETS = [0.5, 1, 2, 5, 10, 20, 30, 60, 90, 180, 400];
-
 /**
  * Run a Zyte call and record its duration, including the client's
  * retries. Zyte bills only successful calls, so the success count
@@ -29,7 +25,6 @@ export async function timeZyteCall<T>(
     duration(
       'crawl_zyte_request_duration',
       (performance.now() - start) / 1000,
-      ZYTE_BUCKETS,
       { item_type: itemType, outcome, error_type: errorType },
     );
   }

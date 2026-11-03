@@ -96,23 +96,13 @@ export function initMetrics({ service }: MetricsInitOptions): void {
 }
 
 /**
- * Record a duration in seconds. The SDK's default buckets are sized for
- * milliseconds, so each caller passes boundaries that fit what it
- * measures. No-op when metrics are disabled.
+ * Record a duration in seconds. The SDK's default buckets run from 0 to
+ * 10,000, which covers durations up to a few hours. No-op when metrics
+ * are disabled.
  */
-export function duration(
-  name: string,
-  seconds: number,
-  buckets: number[],
-  tags?: Tags,
-): void {
-  meter
-    // createHistogram returns the existing instrument on repeat names.
-    .createHistogram(name, {
-      unit: 's',
-      advice: { explicitBucketBoundaries: buckets },
-    })
-    .record(seconds, definedTags(tags));
+export function duration(name: string, seconds: number, tags?: Tags): void {
+  // createHistogram returns the existing instrument on repeat names.
+  meter.createHistogram(name, { unit: 's' }).record(seconds, definedTags(tags));
 }
 
 /**
