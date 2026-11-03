@@ -10,7 +10,7 @@ the alerts are built, delivered and tested. This document will cover it then.
 
 ## Approach
 
-- Alerts watch symptoms, not causes such as pod restarts, CPU or Redis memory.
+- Alerts watch symptoms, not causes such as pod restarts or CPU.
 - Every alert catches at least one outage no other alert catches.
   Some outages unavoidably fire more than one alert.
 
@@ -27,6 +27,8 @@ these problems instead.
 | BigQuery Writes Failing | A `*-to-bq` message unacked for 60 minutes | [`oldest_unacked_message_age`](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z#pubsub/subscription/oldest_unacked_message_age) |
 | Zyte Spend Surge | The last hour's billable requests exceed 3x[^spend] the 7-day average for that hour | `crawl_zyte_requests` counter |
 | Workers Falling Behind | Jobs wait over 20 minutes[^cycle] to be picked up (p90, last hour) | `crawl_job_queue_wait_seconds` histogram |
+| Container Memory Near Limit | A crawl container reached 90%[^memory] of its memory limit in the last 60 minutes | [`container/memory/limit_utilization`](https://docs.cloud.google.com/monitoring/api/metrics_kubernetes#kubernetes/container/memory/limit_utilization) |
+| Redis Memory Near Limit | Redis is more than 80%[^redis] full | [`stats/memory/usage_ratio`](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z#redis/stats/memory/usage_ratio) |
 | New Sentry Issue | A new kind of error | Sentry |
 
 ### No New Discoveries and No New Extractions
@@ -53,28 +55,37 @@ This alert only counts a job's first delivery, so retries of failing jobs do not
 trigger it. When no jobs run at all, it records nothing, and No New Discoveries
 and No New Extractions fire instead.
 
+### Container Memory Near Limit and Redis Memory Near Limit
+
+We alert on memory because the other alerts see it late or not at all. The
+crawler recovers when a leaking container is killed and restarted, so we want to
+know about leaks even when nothing else breaks. When Redis is full, it silently
+evicts the deduplication markers and locks, so workers re-extract articles and
+Zyte cost goes up.
+
 ## Which alert catches which outage
 
 The first group lists real outages of the legacy pipeline in 2026, linked to
 where they were reported. The second lists failures that could happen in the
 new design.
 
-| Outage | No New<br>Discoveries | No New<br>Extractions | BigQuery<br>Writes Failing | Zyte Spend<br>Surge | Workers<br>Falling Behind | New Sentry<br>Issue | Other monitoring |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|---|
-| **Legacy pipeline, 2026** | | | | | | | |
-| Crawler hung for 11 hours ([Oct 8](https://mozilla.slack.com/archives/C06PX8YFQBZ/p1791448229636159)) | 🔵 |  |  |  |  |  |  |
-| Crawler ran out of memory ([Feb 19](https://mozilla-hub.atlassian.net/browse/HNT-1776), [Mar 24](https://mozilla-hub.atlassian.net/browse/HNT-2071)) | 🔵 |  |  |  |  |  |  |
-| Zyte outage ([Feb 12](https://status.zyte.com/incidents/czp1lfm6z0bn)) | 🔵 | 🔵 |  |  |  |  |  |
-| Zyte blocked The Guardian for five weeks ([Apr to Jun](https://mozilla.slack.com/archives/C09PBCCN0M6/p1780540369518059)) |  |  |  |  |  |  | Dashboard |
-| ML sections stuck for four days ([Sep](https://mozilla-hub.atlassian.net/browse/HNT-3360)) |  |  |  |  |  |  | ML pipeline |
-| **New design** | | | | | | | |
-| Scheduler stops enqueuing | 🔵 | 🔵 |  |  |  |  |  |
-| BigQuery rejects rows |  |  | 🔵 |  |  |  |  |
-| Zyte API key revoked | 🔵 | 🔵 |  |  |  | 🔵 |  |
-| Corpus API key revoked |  |  |  |  |  | 🔵 |  |
-| Runaway Zyte calls |  |  |  | 🔵 |  |  |  |
-| Workers fall behind |  |  |  |  | 🔵 |  |  |
-| Zyte fails on many publishers |  |  |  |  |  |  | Dashboard |
+| Outage | No New<br>Discoveries | No New<br>Extractions | BigQuery<br>Writes Failing | Zyte Spend<br>Surge | Workers<br>Falling Behind | Container<br>Memory | Redis<br>Memory | New Sentry<br>Issue | Other monitoring |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| **Legacy, 2026** | | | | | | | | | |
+| [Crawler hung](https://mozilla.slack.com/archives/C06PX8YFQBZ/p1791448229636159) | 🔵 |  |  |  |  |  |  |  |  |
+| [Crawler OOM](https://mozilla-hub.atlassian.net/browse/HNT-1776) | 🔵 |  |  |  |  | 🔵 |  |  |  |
+| [Zyte outage](https://status.zyte.com/incidents/czp1lfm6z0bn) | 🔵 | 🔵 |  |  |  |  |  |  |  |
+| [Guardian ban](https://mozilla.slack.com/archives/C09PBCCN0M6/p1780540369518059) |  |  |  |  |  |  |  |  | Dashboard |
+| [ML sections stuck](https://mozilla-hub.atlassian.net/browse/HNT-3360) |  |  |  |  |  |  |  |  | ML pipeline |
+| **New design** | | | | | | | | | |
+| Scheduler stops | 🔵 | 🔵 |  |  |  |  |  |  |  |
+| BigQuery rejection |  |  | 🔵 |  |  |  |  |  |  |
+| Zyte key revoked | 🔵 | 🔵 |  |  |  |  |  | 🔵 |  |
+| Corpus outage |  |  |  |  |  |  |  | 🔵 |  |
+| Runaway Zyte calls |  |  |  | 🔵 |  |  |  |  |  |
+| Memory leak |  |  |  |  |  | 🔵 |  |  |  |
+| Redis full |  |  |  |  |  |  | 🔵 |  |  |
+| Workers slow |  |  |  |  | 🔵 |  |  |  |  |
 
 [^gap]: The pipeline is expected to continuously discover and crawl articles,
     so an hour gap points to a failure. The longest gap in the legacy pipeline
@@ -86,3 +97,11 @@ new design.
 
 [^cycle]: Each publisher page is crawled every 20 minutes, so a longer wait
     means work is piling up.
+
+[^memory]: Every crawl container has a 256 MiB limit, and the workers peaked at
+    30% of it over a week in dev. The kernel kills a container at 100%, so 90%
+    leaves time to raise the limit.
+
+[^redis]: Redis evicts keys once it is full, and our eviction policy removes the
+    deduplication markers and locks first. Redis fills slowly, so 80% leaves
+    time to add memory.
