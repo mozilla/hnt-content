@@ -44,7 +44,7 @@ vi.mock('@opentelemetry/exporter-metrics-otlp-proto', async () => {
 vi.mock('./config.js', () => ({ default: {} }));
 
 import config from './config.js';
-import { duration, initMetrics, shutdownMetrics } from './client.js';
+import { count, duration, initMetrics, shutdownMetrics } from './client.js';
 
 /** Flush via shutdown and return the exported metrics keyed by name. */
 async function flush(): Promise<Map<string, MetricData>> {
@@ -69,6 +69,21 @@ describe('metrics client', () => {
     vi.restoreAllMocks();
   });
 
+  it('exports counters with per-call tags', async () => {
+    initMetrics({ service: 'crawl-worker' });
+
+    count('crawl.tick.enqueued', 3, { item_type: 'page' });
+    count('crawl.tick.enqueued', 2, { item_type: 'page' });
+    count('crawl.tick.ran');
+
+    const metrics = await flush();
+    const enqueued = metrics.get('crawl.tick.enqueued')!.dataPoints;
+    expect(enqueued).toHaveLength(1);
+    expect(enqueued[0].value).toBe(5);
+    expect(enqueued[0].attributes).toEqual({ item_type: 'page' });
+    expect(metrics.get('crawl.tick.ran')!.dataPoints[0].value).toBe(1);
+  });
+
   it('exports durations as second histograms', async () => {
     initMetrics({ service: 'crawl-worker' });
 
@@ -83,15 +98,15 @@ describe('metrics client', () => {
   it('drops tags left undefined so callers need no branching', async () => {
     initMetrics({ service: 'crawl-worker' });
 
-    duration('example_duration', 1, {
+    count('crawl.message.processed', 1, {
       outcome: 'success',
-      error_type: undefined,
+      item_type: undefined,
     });
 
     const metrics = await flush();
-    expect(metrics.get('example_duration')!.dataPoints[0].attributes).toEqual({
-      outcome: 'success',
-    });
+    expect(
+      metrics.get('crawl.message.processed')!.dataPoints[0].attributes,
+    ).toEqual({ outcome: 'success' });
   });
 
   it('is a no-op when no endpoint is configured', async () => {
@@ -99,6 +114,7 @@ describe('metrics client', () => {
     config.endpoint = undefined;
     initMetrics({ service: 'crawl-worker' });
 
+    count('crawl.message.processed');
     duration('example_duration', 5);
 
     expect(mockExporter).toBeUndefined();
@@ -109,7 +125,7 @@ describe('metrics client', () => {
     config.endpoint = 'not a url';
 
     initMetrics({ service: 'crawl-worker' });
-    duration('example_duration', 1);
+    count('crawl.tick.ran');
 
     expect(error).toHaveBeenCalledWith(
       'Metrics disabled: invalid configuration',
@@ -120,7 +136,7 @@ describe('metrics client', () => {
 
   it('flushes pending datapoints on shutdown', async () => {
     initMetrics({ service: 'crawl-worker' });
-    duration('example_duration', 1);
+    count('crawl.tick.ran');
 
     await shutdownMetrics();
 
@@ -131,12 +147,12 @@ describe('metrics client', () => {
     expect(resourceMetrics.resource.attributes['service.name']).toBe(
       'crawl-worker',
     );
-    expect(
-      resourceMetrics.scopeMetrics[0].metrics[0].dataPoints[0].value,
-    ).toMatchObject({ count: 1 });
+    expect(resourceMetrics.scopeMetrics[0].metrics[0].dataPoints[0].value).toBe(
+      1,
+    );
 
     // Emitting after shutdown is a silent no-op.
-    duration('example_duration', 1);
+    count('crawl.tick.ran');
     expect(mockExporter!.getMetrics()).toHaveLength(1);
   });
 });

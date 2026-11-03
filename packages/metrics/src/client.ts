@@ -31,16 +31,18 @@ export type Outcome = 'success' | 'failure';
  */
 export type Tags = {
   outcome?: Outcome;
-  // Type of item processed, e.g. 'article_list' or 'live_article'.
+  // Type of item processed, e.g. 'page' or 'live_article'.
   item_type?: string;
   // Error class or status code, e.g. 'TimeoutError', '429'.
   error_type?: string;
+  // External service being called.
+  upstream?: string;
   // Pub/Sub subscription a message came from.
   subscription?: string;
 };
 
 export interface MetricsInitOptions {
-  // Service name, e.g. 'crawl-worker'; becomes the Prometheus job label.
+  // Service name, e.g. 'crawl-scheduler'; becomes the Prometheus job label.
   service: string;
 }
 
@@ -96,6 +98,12 @@ export function initMetrics({ service }: MetricsInitOptions): void {
     return;
   }
   meter = provider.getMeter(service);
+}
+
+/** Increment a counter. No-op when metrics are disabled. */
+export function count(name: string, value = 1, tags?: Tags): void {
+  // createCounter returns the existing instrument on repeat names.
+  meter.createCounter(name).add(value, definedTags(tags));
 }
 
 /**
