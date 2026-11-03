@@ -1,8 +1,9 @@
-import { duration, type Outcome } from 'metrics';
+import { duration, type Outcome, type Tags } from 'metrics';
 import { ZyteError } from 'zyte';
 
-// Zyte averages about 9s per call, and the client gives up after 90s.
-const ZYTE_BUCKETS = [0.5, 1, 2, 5, 10, 20, 30, 60, 90];
+// Zyte averages about 9s per attempt. Each attempt times out at 90s, and
+// up to three retries stretch one call to about 400s.
+const ZYTE_BUCKETS = [0.5, 1, 2, 5, 10, 20, 30, 60, 90, 180, 400];
 
 /**
  * Run a Zyte call and record its duration, including the client's
@@ -10,7 +11,7 @@ const ZYTE_BUCKETS = [0.5, 1, 2, 5, 10, 20, 30, 60, 90];
  * tracks spend.
  */
 export async function timeZyteCall<T>(
-  itemType: 'article' | 'live_article' | 'article_list',
+  itemType: NonNullable<Tags['item_type']>,
   call: () => Promise<T>,
 ): Promise<T> {
   const start = performance.now();
@@ -21,7 +22,8 @@ export async function timeZyteCall<T>(
     outcome = 'success';
     return result;
   } catch (err) {
-    errorType = err instanceof ZyteError ? String(err.status) : 'other';
+    errorType =
+      err instanceof ZyteError ? String(err.status) : (err as Error).name;
     throw err;
   } finally {
     duration(

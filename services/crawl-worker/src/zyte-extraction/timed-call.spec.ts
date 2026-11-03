@@ -7,32 +7,37 @@ import { ZyteError } from 'zyte';
 import { timeZyteCall } from './timed-call.js';
 
 describe('timeZyteCall', () => {
-  it.each([
-    {
-      name: 'success',
-      call: async () => 'ok',
-      tags: { item_type: 'article', outcome: 'success', error_type: undefined },
-    },
-    {
-      name: 'Zyte error',
-      call: async () => {
-        throw new ZyteError(429, 'rate limited');
-      },
-      tags: { item_type: 'article', outcome: 'failure', error_type: '429' },
-    },
-    {
-      name: 'other error',
-      call: async () => {
-        throw new TypeError('fetch failed');
-      },
-      tags: { item_type: 'article', outcome: 'failure', error_type: 'other' },
-    },
-  ])('records the call on $name', async ({ call, tags }) => {
+  it('returns the result and records a success', async () => {
     vi.mocked(duration).mockClear();
-    await timeZyteCall('article', call).catch(() => {});
+    await expect(timeZyteCall('article', async () => 'ok')).resolves.toBe('ok');
 
-    const [[name, , , recorded]] = vi.mocked(duration).mock.calls;
+    const [[name, , , tags]] = vi.mocked(duration).mock.calls;
     expect(name).toBe('crawl_zyte_request_duration');
-    expect(recorded).toEqual(tags);
+    expect(tags).toEqual({ item_type: 'article', outcome: 'success' });
   });
+
+  it.each([
+    { error: new ZyteError(429, 'rate limited'), errorType: '429' },
+    {
+      error: new DOMException('timed out', 'TimeoutError'),
+      errorType: 'TimeoutError',
+    },
+  ])(
+    'rethrows and records a $errorType failure',
+    async ({ error, errorType }) => {
+      vi.mocked(duration).mockClear();
+      await expect(
+        timeZyteCall('article', async () => {
+          throw error;
+        }),
+      ).rejects.toBe(error);
+
+      const [[, , , tags]] = vi.mocked(duration).mock.calls;
+      expect(tags).toEqual({
+        item_type: 'article',
+        outcome: 'failure',
+        error_type: errorType,
+      });
+    },
+  );
 });

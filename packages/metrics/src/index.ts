@@ -1,2 +1,2 @@
-export { initMetrics, count, duration, shutdownMetrics } from './client.js';
+export { initMetrics, duration, shutdownMetrics } from './client.js';
 export type { MetricsInitOptions, Outcome, Tags } from './client.js';

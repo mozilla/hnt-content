@@ -31,9 +31,8 @@ export type Outcome = 'success' | 'failure';
  */
 export type Tags = {
   outcome?: Outcome;
-  // Type of item processed, e.g. 'article_list' or 'live_article'.
-  item_type?: string;
-  // Error class or status code, e.g. 'TimeoutError', '429'.
+  item_type?: 'article' | 'live_article' | 'article_list';
+  // Zyte status code or error class, e.g. '429' or 'TimeoutError'.
   error_type?: string;
 };
 
@@ -100,16 +99,10 @@ export function initMetrics({ service }: MetricsInitOptions): void {
   meter = provider.getMeter(service);
 }
 
-/** Increment a counter. No-op when metrics are disabled. */
-export function count(name: string, value = 1, tags?: Tags): void {
-  // createCounter returns the existing instrument on repeat names.
-  meter.createCounter(name).add(value, definedTags(tags));
-}
-
 /**
- * Record a duration in seconds. The SDK's default buckets stop at 10s,
- * so each caller passes boundaries that fit what it measures. No-op when
- * metrics are disabled.
+ * Record a duration in seconds. The SDK's default buckets are sized for
+ * milliseconds, so each caller passes boundaries that fit what it
+ * measures. No-op when metrics are disabled.
  */
 export function duration(
   name: string,
@@ -118,6 +111,7 @@ export function duration(
   tags?: Tags,
 ): void {
   meter
+    // createHistogram returns the existing instrument on repeat names.
     .createHistogram(name, {
       unit: 's',
       advice: { explicitBucketBoundaries: buckets },

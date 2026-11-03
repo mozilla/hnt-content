@@ -230,8 +230,8 @@ export function startSubscriber<T>(
   return controller;
 }
 
-// Queue wait spans seconds up to well past the 20-minute Workers Falling
-// Behind threshold. Job duration spans seconds up to the 600s ceiling a
+// Queue wait reaches past the 20-minute crawl interval, beyond which
+// workers are falling behind. Job duration reaches the 600s ceiling a
 // worker gives one job.
 const QUEUE_WAIT_BUCKETS = [1, 10, 60, 300, 600, 1200, 1800, 3600];
 const JOB_DURATION_BUCKETS = [1, 5, 10, 30, 60, 120, 300, 600];
@@ -254,8 +254,10 @@ async function processMessage<T>(
   // Only first deliveries count, so retries of a failing job do not read
   // as a backlog.
   if (message.deliveryAttempt <= 1) {
-    const waitSeconds = (Date.now() - message.publishTime.getTime()) / 1000;
-    duration('crawl_job_queue_wait', waitSeconds, QUEUE_WAIT_BUCKETS);
+    // Clamp, since the histogram drops the negative waits that clock skew
+    // between Pub/Sub and the pod can produce.
+    const waitMs = Math.max(0, Date.now() - message.publishTime.getTime());
+    duration('crawl_job_queue_wait', waitMs / 1000, QUEUE_WAIT_BUCKETS);
   }
   let raw: unknown;
   try {
@@ -274,13 +276,13 @@ async function processMessage<T>(
     return;
   }
   const start = performance.now();
+  let outcome: Outcome = 'failure';
   try {
     await handler(parsed);
     message.ack();
-    recordJobDuration(start, 'success');
+    outcome = 'success';
   } catch (err) {
     message.nack();
-    recordJobDuration(start, 'failure');
     // Handler errors aren't routed to onError; the caller's
     // withSentryHandler wrapper captures them with the per-message
     // tags/context that onError lacks.
@@ -289,13 +291,12 @@ async function processMessage<T>(
         `messageId=${message.id}`,
       err,
     );
+  } finally {
+    const seconds = (performance.now() - start) / 1000;
+    duration('crawl_job_duration', seconds, JOB_DURATION_BUCKETS, {
+      outcome,
+    });
   }
-}
-
-/** Record how long the handler took, from a performance.now() start. */
-function recordJobDuration(start: number, outcome: Outcome): void {
-  const seconds = (performance.now() - start) / 1000;
-  duration('crawl_job_duration', seconds, JOB_DURATION_BUCKETS, { outcome });
 }
 
 /**
