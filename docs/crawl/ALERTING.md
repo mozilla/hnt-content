@@ -80,7 +80,6 @@ each alert that catches it.
 | Corpus outage |  |  |  |  |  |  |  | 🔵 |  |
 | Redis full |  |  |  |  |  |  | 🔵 |  |  |
 | Publisher blocked |  |  |  |  |  |  |  |  | Dashboard |
-| ML sections stuck |  |  |  |  |  |  |  |  | ML pipeline |
 
 [^gap]: The pipeline is expected to continuously discover and crawl articles,
     so an hour gap points to a failure. The longest gap in the legacy pipeline
