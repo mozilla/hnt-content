@@ -15,8 +15,7 @@ the alerts are built, delivered and tested. This document will cover it then.
   Some outages unavoidably fire more than one alert.
 
 Partial outages, such as one publisher or locale failing, and quality issues,
-such as empty article bodies, are out of scope for now. The dashboard may show
-these problems instead.
+such as empty article bodies, are out of scope for now.
 
 ## The alerts
 
@@ -68,17 +67,16 @@ Zyte cost goes up.
 Each row is a way the crawler can fail, from most to least serious. A dot marks
 each alert that catches it.
 
-| Outage | No New<br>Discoveries | No New<br>Extractions | BigQuery<br>Writes Failing | Zyte Spend<br>Surge | Workers<br>Falling Behind | Container<br>Memory | Redis<br>Memory | New Sentry<br>Issue | Other monitoring |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
-| Zyte outage | 🔵 | 🔵 |  |  |  |  |  |  |  |
-| Crawler hung | 🔵 |  |  |  |  |  |  |  |  |
-| Out of memory |  |  |  |  |  | 🔵 |  |  |  |
-| BigQuery rejection |  |  | 🔵 |  |  |  |  |  |  |
-| Workers slow |  |  |  |  | 🔵 |  |  |  |  |
-| Runaway Zyte calls |  |  |  | 🔵 |  |  |  |  |  |
-| Corpus outage |  |  |  |  |  |  |  | 🔵 |  |
-| Redis full |  |  |  |  |  |  | 🔵 |  |  |
-| Publisher blocked |  |  |  |  |  |  |  |  | Dashboard |
+| Outage | No New<br>Discoveries | No New<br>Extractions | BigQuery<br>Writes Failing | Zyte Spend<br>Surge | Workers<br>Falling Behind | Container<br>Memory | Redis<br>Memory | New Sentry<br>Issue |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Zyte outage | 🔵 | 🔵 |  |  |  |  |  |  |
+| Crawler hung | 🔵 |  |  |  |  |  |  |  |
+| Out of memory |  |  |  |  |  | 🔵 |  |  |
+| BigQuery rejection |  |  | 🔵 |  |  |  |  |  |
+| Workers slow |  |  |  |  | 🔵 |  |  |  |
+| Runaway Zyte calls |  |  |  | 🔵 |  |  |  |  |
+| Corpus outage |  |  |  |  |  |  |  | 🔵 |
+| Redis full |  |  |  |  |  |  | 🔵 |  |
 
 [^gap]: The pipeline is expected to continuously discover and crawl articles,
     so an hour gap points to a failure. The longest gap in the legacy pipeline
