@@ -9,10 +9,15 @@ import { timeZyteCall } from './timed-call.js';
 describe('timeZyteCall', () => {
   it('returns the result and records a success', async () => {
     vi.mocked(duration).mockClear();
+    // The call appears to take 2.5s.
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(1_000)
+      .mockReturnValueOnce(3_500);
     await expect(timeZyteCall('article', async () => 'ok')).resolves.toBe('ok');
 
-    const [[name, , , tags]] = vi.mocked(duration).mock.calls;
+    const [[name, seconds, , tags]] = vi.mocked(duration).mock.calls;
     expect(name).toBe('crawl_zyte_request_duration');
+    expect(seconds).toBe(2.5);
     expect(tags).toEqual({ item_type: 'article', outcome: 'success' });
   });
 

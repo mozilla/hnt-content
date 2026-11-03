@@ -472,52 +472,75 @@ describe('shutdownPubSub', () => {
 });
 
 describe('job metrics', () => {
-  // waits lists the queue waits expected; a future publishTime (clock
-  // skew) clamps to 0.
+  // waits lists the queue waits expected, in seconds.
   it.each([
     {
+      name: 'no dead-letter policy',
       fails: false,
       attempt: 0,
       agoMs: 30_000,
       outcome: 'success',
       waits: [30],
     },
-    { fails: true, attempt: 1, agoMs: 30_000, outcome: 'failure', waits: [30] },
-    { fails: false, attempt: 1, agoMs: -5_000, outcome: 'success', waits: [0] },
-    { fails: false, attempt: 2, agoMs: 30_000, outcome: 'success', waits: [] },
-  ])(
-    'records job duration, and queue wait on first delivery ($attempt)',
-    async (c) => {
-      vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.mocked(duration).mockClear();
-      const handler = vi.fn(async () => {
-        if (c.fails) {
-          throw new Error('boom');
-        }
-      });
-      startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
-
-      const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
-      const message = createMockMessage(TEST_PAYLOAD);
-      message.publishTime = new Date(Date.now() - c.agoMs);
-      message.deliveryAttempt = c.attempt;
-      sub.emit('message', message);
-      await message.settled;
-
-      const recorded = (metric: string) =>
-        vi
-          .mocked(duration)
-          .mock.calls.filter(([name]) => name === metric)
-          .map(([, seconds, , tags]) => ({ seconds, tags }));
-      expect(recorded('crawl_job_queue_wait')).toEqual(
-        c.waits.map((s) => ({
-          seconds: expect.closeTo(s, 0),
-          tags: undefined,
-        })),
-      );
-      expect(recorded('crawl_job_duration')).toEqual([
-        { seconds: expect.any(Number), tags: { outcome: c.outcome } },
-      ]);
+    {
+      name: 'handler failure',
+      fails: true,
+      attempt: 1,
+      agoMs: 30_000,
+      outcome: 'failure',
+      waits: [30],
     },
-  );
+    {
+      name: 'clock skew',
+      fails: false,
+      attempt: 1,
+      agoMs: -5_000,
+      outcome: 'success',
+      waits: [0],
+    },
+    {
+      name: 'redelivery',
+      fails: false,
+      attempt: 2,
+      agoMs: 30_000,
+      outcome: 'success',
+      waits: [],
+    },
+  ])('records job duration and first-delivery queue wait: $name', async (c) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(duration).mockClear();
+    // The handler appears to take 2.5s.
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(1_000)
+      .mockReturnValueOnce(3_500);
+    const handler = vi.fn(async () => {
+      if (c.fails) {
+        throw new Error('boom');
+      }
+    });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage(TEST_PAYLOAD);
+    message.publishTime = new Date(Date.now() - c.agoMs);
+    message.deliveryAttempt = c.attempt;
+    sub.emit('message', message);
+    await message.settled;
+
+    const recorded = (metric: string) =>
+      vi
+        .mocked(duration)
+        .mock.calls.filter(([name]) => name === metric)
+        .map(([, seconds, , tags]) => ({ seconds, tags }));
+    expect(recorded('crawl_job_queue_wait')).toEqual(
+      c.waits.map((s) => ({
+        // Within 0.5s, to allow for the time the handler takes.
+        seconds: expect.closeTo(s, 0),
+        tags: undefined,
+      })),
+    );
+    expect(recorded('crawl_job_duration')).toEqual([
+      { seconds: 2.5, tags: { outcome: c.outcome } },
+    ]);
+  });
 });

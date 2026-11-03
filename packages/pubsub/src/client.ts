@@ -231,8 +231,8 @@ export function startSubscriber<T>(
 }
 
 // Queue wait reaches past the 20-minute crawl interval, beyond which
-// workers are falling behind. Job duration reaches the 600s ceiling a
-// worker gives one job.
+// workers are falling behind, to show how far behind. Job duration
+// reaches the 600s ceiling a worker gives one job.
 const QUEUE_WAIT_BUCKETS = [1, 10, 60, 300, 600, 1200, 1800, 3600];
 const JOB_DURATION_BUCKETS = [1, 5, 10, 30, 60, 120, 300, 600];
 
@@ -252,7 +252,8 @@ async function processMessage<T>(
 ): Promise<void> {
   const { subscriptionName, handler, validate } = opts;
   // Only first deliveries count, so retries of a failing job do not read
-  // as a backlog.
+  // as a backlog. Pub/Sub reports 0 without a dead-letter policy, as in
+  // the emulator.
   if (message.deliveryAttempt <= 1) {
     // Clamp, since the histogram drops the negative waits that clock skew
     // between Pub/Sub and the pod can produce.
