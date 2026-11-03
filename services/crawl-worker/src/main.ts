@@ -20,7 +20,7 @@ const server = app.listen(config.port, () => {
 // none takes an argument here. Only the article worker syncs curated
 // metadata, so only it needs the Corpus API. Only the discovery worker
 // guards its crawls with Redis so far.
-initMetrics({ service: config.service, workerRole: config.workerRole });
+initMetrics({ service: config.service });
 initZyteClient();
 
 initPubSubClient();

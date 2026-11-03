@@ -4,10 +4,10 @@ import {
   DiscoveryContext,
   getRegistrableDomain,
 } from 'crawl-common';
-import { count } from 'metrics';
 import { extractArticleList, ZyteArticleListItem } from 'zyte';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
+import { timeZyteCall } from '../zyte-extraction/timed-call.js';
 
 /**
  * Output of the discovery handler: one article-discoveries event
@@ -40,14 +40,13 @@ export async function handleArticleDiscovery(
   // resolvedUrl is the url zyte actually scraped - which, due to redirects
   // on the publisher side, may differ from the url contained in the message.
   // NOTE - we are implicitly trusting a publisher domain's behavior here.
-  const { data: items, url: resolvedUrl } = await extractArticleList(
-    message.url,
-    {
-      extractFrom: resolveExtractFrom(message.url, 'articleList'),
-    },
+  const { data: items, url: resolvedUrl } = await timeZyteCall(
+    'article_list',
+    () =>
+      extractArticleList(message.url, {
+        extractFrom: resolveExtractFrom(message.url, 'articleList'),
+      }),
   );
-  // Zyte bills each successful response, whatever the page's own status.
-  count('crawl_zyte_requests', 1, { item_type: 'article_list' });
 
   const crawledAt = new Date().toISOString();
 

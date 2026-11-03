@@ -26,23 +26,20 @@ export type Outcome = 'success' | 'failure';
 /**
  * Only low-cardinality tags (never a URL or an ID): each distinct value
  * becomes its own stored series. Extend this closed set when a metric
- * needs a new tag. env and worker_role are attached at init.
+ * needs a new tag. The MozCloud collector adds env_code and
+ * component_code, so the environment and worker role need no tag.
  */
 export type Tags = {
   outcome?: Outcome;
-  // Type of item processed, e.g. 'page' or 'live_article'.
+  // Type of item processed, e.g. 'article_list' or 'live_article'.
   item_type?: string;
   // Error class or status code, e.g. 'TimeoutError', '429'.
   error_type?: string;
-  // External service being called.
-  upstream?: string;
 };
 
 export interface MetricsInitOptions {
-  // Service name, e.g. 'crawl-scheduler'; becomes the Prometheus job label.
+  // Service name, e.g. 'crawl-worker'; becomes the Prometheus job label.
   service: string;
-  // Which role a multi-role service runs as, e.g. 'article'.
-  workerRole?: string;
 }
 
 // Match the sentry package's flush timeout. Leaves most of the pod's 10s
@@ -52,31 +49,26 @@ const FLUSH_TIMEOUT_MS = 2_000;
 let provider: MeterProvider | undefined;
 // A noop until initMetrics succeeds, so emits are always safe to call.
 let meter: Meter = createNoopMeter();
-let baseTags: Attributes = {};
 
 /**
- * Combine the base tags with per-call tags, dropping keys the caller left
- * undefined, which OTel would otherwise treat as a distinct label set.
+ * Drop tags the caller left undefined, which OTel would otherwise treat
+ * as a distinct label set.
  */
-function mergeTagsWithBase(tags?: Tags): Attributes {
-  const merged: Attributes = { ...baseTags };
-  if (!tags) {
-    return merged;
-  }
-  for (const [key, value] of Object.entries(tags)) {
+function definedTags(tags?: Tags): Attributes {
+  const defined: Attributes = {};
+  for (const [key, value] of Object.entries(tags ?? {})) {
     if (value !== undefined) {
-      merged[key] = value;
+      defined[key] = value;
     }
   }
-  return merged;
+  return defined;
 }
 
 /**
- * Initialize the metrics provider and attach the static env and
- * worker_role tags. An unset OTLP endpoint disables emission. Call once
- * at process startup.
+ * Initialize the metrics provider. An unset OTLP endpoint disables
+ * emission. Call once at process startup.
  */
-export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
+export function initMetrics({ service }: MetricsInitOptions): void {
   if (!config.endpoint) {
     console.log(
       `Metrics disabled: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT not set ` +
@@ -87,16 +79,6 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
 
   // Log export failures to console.error; the SDK is silent by default.
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
-
-  // env and worker_role ride on every datapoint: only datapoint
-  // attributes become queryable labels; resource attributes do not.
-  baseTags = {};
-  if (config.environment) {
-    baseTags.env = config.environment;
-  }
-  if (workerRole) {
-    baseTags.worker_role = workerRole;
-  }
 
   try {
     // The MeterProvider is the SDK entry point that owns the export pipeline.
@@ -121,14 +103,26 @@ export function initMetrics({ service, workerRole }: MetricsInitOptions): void {
 /** Increment a counter. No-op when metrics are disabled. */
 export function count(name: string, value = 1, tags?: Tags): void {
   // createCounter returns the existing instrument on repeat names.
-  meter.createCounter(name).add(value, mergeTagsWithBase(tags));
+  meter.createCounter(name).add(value, definedTags(tags));
 }
 
-/** Record a timing in milliseconds. No-op when metrics are disabled. */
-export function timing(name: string, ms: number, tags?: Tags): void {
+/**
+ * Record a duration in seconds. The SDK's default buckets stop at 10s,
+ * so each caller passes boundaries that fit what it measures. No-op when
+ * metrics are disabled.
+ */
+export function duration(
+  name: string,
+  seconds: number,
+  buckets: number[],
+  tags?: Tags,
+): void {
   meter
-    .createHistogram(name, { unit: 'ms' })
-    .record(ms, mergeTagsWithBase(tags));
+    .createHistogram(name, {
+      unit: 's',
+      advice: { explicitBucketBoundaries: buckets },
+    })
+    .record(seconds, definedTags(tags));
 }
 
 /**

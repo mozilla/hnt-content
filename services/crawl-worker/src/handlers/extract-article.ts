@@ -7,11 +7,11 @@ import {
   updateApprovedCorpusItem,
   UpdateApprovedCorpusItemInput,
 } from 'crawl-common';
-import { count } from 'metrics';
 import { extractArticle, ZyteArticle } from 'zyte';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 
 import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
+import { timeZyteCall } from '../zyte-extraction/timed-call.js';
 
 const BODY_TRUNCATE_LENGTH = 2_000;
 const EXCERPT_COMPARE_LENGTH = 255;
@@ -30,11 +30,11 @@ export async function handleArticleExtraction(
     data: article,
     url: resolvedUrl,
     statusCode,
-  } = await extractArticle(message.url, {
-    extractFrom: resolveExtractFrom(message.url, 'article'),
-  });
-  // Zyte bills each successful response, whatever the page's own status.
-  count('crawl_zyte_requests', 1, { item_type: 'article' });
+  } = await timeZyteCall(message.corpus_item ? 'live_article' : 'article', () =>
+    extractArticle(message.url, {
+      extractFrom: resolveExtractFrom(message.url, 'article'),
+    }),
+  );
 
   const canonicalUrl = toCanonicalUrl(
     article.canonicalUrl,

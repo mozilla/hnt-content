@@ -28,6 +28,7 @@
  * Tests and local dev point at a Pub/Sub emulator by passing
  * `apiEndpoint` and `useEmulator: true` to `initPubSubClient`.
  */
+import { duration, type Outcome } from 'metrics';
 import config from './config.js';
 import {
   Duration,
@@ -229,6 +230,12 @@ export function startSubscriber<T>(
   return controller;
 }
 
+// Queue wait spans seconds up to well past the 20-minute Workers Falling
+// Behind threshold. Job duration spans seconds up to the 600s ceiling a
+// worker gives one job.
+const QUEUE_WAIT_BUCKETS = [1, 10, 60, 300, 600, 1200, 1800, 3600];
+const JOB_DURATION_BUCKETS = [1, 5, 10, 30, 60, 120, 300, 600];
+
 /**
  * Parse, validate, dispatch, and ack/nack a single message.
  * Parse, validation, and handler failures all nack; distinct
@@ -244,6 +251,12 @@ async function processMessage<T>(
   onError: (err: Error, ctx: SubscriberErrorContext) => void,
 ): Promise<void> {
   const { subscriptionName, handler, validate } = opts;
+  // Only first deliveries count, so retries of a failing job do not read
+  // as a backlog.
+  if (message.deliveryAttempt <= 1) {
+    const waitSeconds = (Date.now() - message.publishTime.getTime()) / 1000;
+    duration('crawl_job_queue_wait', waitSeconds, QUEUE_WAIT_BUCKETS);
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(message.data.toString());
@@ -260,11 +273,14 @@ async function processMessage<T>(
     onError(err as Error, { kind: 'validation-error', messageId: message.id });
     return;
   }
+  const start = performance.now();
   try {
     await handler(parsed);
     message.ack();
+    recordJobDuration(start, 'success');
   } catch (err) {
     message.nack();
+    recordJobDuration(start, 'failure');
     // Handler errors aren't routed to onError; the caller's
     // withSentryHandler wrapper captures them with the per-message
     // tags/context that onError lacks.
@@ -274,6 +290,12 @@ async function processMessage<T>(
       err,
     );
   }
+}
+
+/** Record how long the handler took, from a performance.now() start. */
+function recordJobDuration(start: number, outcome: Outcome): void {
+  const seconds = (performance.now() - start) / 1000;
+  duration('crawl_job_duration', seconds, JOB_DURATION_BUCKETS, { outcome });
 }
 
 /**

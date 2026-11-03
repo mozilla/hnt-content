@@ -3,5 +3,4 @@
 // local dev needs no configuration.
 export default {
   endpoint: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
-  environment: process.env.ENVIRONMENT,
 };

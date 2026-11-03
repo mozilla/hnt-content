@@ -103,6 +103,9 @@ importers:
       '@sentry/node':
         specifier: ^10.58.0
         version: 10.58.0
+      metrics:
+        specifier: workspace:*
+        version: link:../metrics
     devDependencies:
       '@testcontainers/gcloud':
         specifier: ^11.14.0

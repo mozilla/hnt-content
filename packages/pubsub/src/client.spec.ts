@@ -45,7 +45,10 @@ vi.mock('@google-cloud/pubsub', () => ({
   },
 }));
 
+vi.mock('metrics', () => ({ duration: vi.fn() }));
+
 import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
+import { duration } from 'metrics';
 import {
   flushTopics,
   initPubSubClient,
@@ -465,5 +468,48 @@ describe('shutdownPubSub', () => {
     mockPubSub.close.mockClear();
     await shutdownPubSub();
     expect(mockPubSub.close).not.toHaveBeenCalled();
+  });
+});
+
+describe('job metrics', () => {
+  it.each([
+    { name: 'success', fails: false, outcome: 'success' },
+    { name: 'failure', fails: true, outcome: 'failure' },
+  ])('records queue wait and job duration on $name', async (c) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(duration).mockClear();
+    const handler = vi.fn(async () => {
+      if (c.fails) {
+        throw new Error('boom');
+      }
+    });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage(TEST_PAYLOAD);
+    message.publishTime = new Date(Date.now() - 30_000);
+    sub.emit('message', message);
+    await message.settled;
+
+    const calls = vi.mocked(duration).mock.calls;
+    expect(calls[0][0]).toBe('crawl_job_queue_wait');
+    expect(calls[0][1]).toBeGreaterThanOrEqual(30);
+    expect(calls[1][0]).toBe('crawl_job_duration');
+    expect(calls[1][3]).toEqual({ outcome: c.outcome });
+  });
+
+  it('skips queue wait on redelivery', async () => {
+    vi.mocked(duration).mockClear();
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler: async () => {} });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage(TEST_PAYLOAD);
+    message.deliveryAttempt = 2;
+    sub.emit('message', message);
+    await message.settled;
+
+    expect(vi.mocked(duration).mock.calls.map((c) => c[0])).toEqual([
+      'crawl_job_duration',
+    ]);
   });
 });
