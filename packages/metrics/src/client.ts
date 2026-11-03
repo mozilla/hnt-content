@@ -107,9 +107,11 @@ export function count(name: string, value = 1, tags?: Tags): void {
 }
 
 /**
- * Record a timing in seconds. The SDK's default buckets run from 0 to
- * 10,000, which covers durations up to a few hours. No-op when metrics
- * are disabled.
+ * Record a timing in seconds. The SDK's default buckets (0, 5, 10, 25,
+ * ... 10,000) carry no unit, so in seconds they span up to a few hours.
+ * The timings we record today run from about a second to about an hour.
+ * To record milliseconds later, we can make the unit an argument. No-op
+ * when metrics are disabled.
  */
 export function timing(name: string, seconds: number, tags?: Tags): void {
   // createHistogram returns the existing instrument on repeat names.
