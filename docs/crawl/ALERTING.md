@@ -1,0 +1,98 @@
+# Alerting
+
+This document proposes the alerts that tell us when the crawler stops working.
+None exist yet, and two need metrics we have yet to add
+([HNT-3137](https://mozilla-hub.atlassian.net/browse/HNT-3137)). Once the alerts
+are built, we will update this document to describe them.
+
+[HNT-3671](https://mozilla-hub.atlassian.net/browse/HNT-3671) will decide how
+the alerts are built, delivered and tested. This document will cover it then.
+
+## Approach
+
+- Alerts watch symptoms, not causes such as pod restarts or CPU.
+- Every alert catches at least one outage no other alert catches.
+  Some outages unavoidably fire more than one alert.
+
+Partial outages, such as one publisher or locale failing, and quality issues,
+such as empty article bodies, are out of scope for now.
+
+## The alerts
+
+| Alert | Fires when | Signal |
+|---|---|---|
+| No New Discoveries | No messages on `article-discoveries` for 60 minutes[^gap] | Messages published ([`topic/message_sizes`](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z#pubsub/topic/message_sizes)) |
+| No New Extractions | No messages on `articles` for 60 minutes[^gap] | Messages published ([`topic/message_sizes`](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z#pubsub/topic/message_sizes)) |
+| BigQuery Writes Failing | A `*-to-bq` message unacked for 60 minutes | [`oldest_unacked_message_age`](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z#pubsub/subscription/oldest_unacked_message_age) |
+| Zyte Spend Surge | The last hour's billable requests exceed 3x[^spend] the 7-day average for that hour | `crawl_zyte_requests` counter |
+| Workers Falling Behind | Jobs wait over 20 minutes[^cycle] to be picked up (p90, last hour) | `crawl_job_queue_wait_seconds` histogram |
+| Container Memory Near Limit | A crawl container reached 90%[^memory] of its memory limit in the last 60 minutes | [`container/memory/limit_utilization`](https://docs.cloud.google.com/monitoring/api/metrics_kubernetes#kubernetes/container/memory/limit_utilization) |
+| Redis Memory Near Limit | Redis is more than 80%[^redis] full | [`stats/memory/usage_ratio`](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z#redis/stats/memory/usage_ratio) |
+| New Sentry Issue | A new kind of error | Sentry |
+
+### No New Discoveries and No New Extractions
+
+The article worker extracts two kinds of articles: those found by discovery,
+and live articles, which the scheduler enqueues directly. When discovery stops,
+No New Discoveries fires, but live articles may keep No New Extractions
+quiet. When No New Extractions fires on its own, extraction itself is broken.
+
+### BigQuery Writes Failing
+
+If a message does not fit the table schema, for example a field of the wrong
+type, BigQuery rejects it and Pub/Sub keeps redelivering it. If the subscription
+cannot write at all, for example because the table was deleted or Pub/Sub lost
+its write permission, every message stays queued. Either way the oldest unacked
+message keeps getting older, which is what this alert watches. Without it, those
+rows would be lost silently when Pub/Sub drops them after seven days. A
+dead-letter topic would not replace the alert, because it only catches messages
+rejected one at a time.
+
+### Workers Falling Behind
+
+This alert only counts a job's first delivery, so retries of failing jobs do not
+trigger it. When no jobs run at all, it records nothing, and No New Discoveries
+and No New Extractions fire instead.
+
+### Container Memory Near Limit and Redis Memory Near Limit
+
+We alert on memory because the other alerts see it late or not at all. The
+crawler recovers when a leaking container is killed and restarted, so we want to
+know about leaks even when nothing else breaks. When Redis is full, it silently
+evicts the deduplication markers and locks, so workers re-extract articles and
+Zyte cost goes up.
+
+## Which alert catches which outage
+
+Each row is a way the crawler can fail, from most to least serious. A dot marks
+each alert that catches it.
+
+| Outage | No New<br>Discoveries | No New<br>Extractions | BigQuery<br>Writes Failing | Zyte Spend<br>Surge | Workers<br>Falling Behind | Container<br>Memory | Redis<br>Memory | New Sentry<br>Issue |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Zyte outage | 🔵 | 🔵 |  |  |  |  |  |  |
+| Crawler hung | 🔵 |  |  |  |  |  |  |  |
+| Out of memory |  |  |  |  |  | 🔵 |  |  |
+| BigQuery rejection |  |  | 🔵 |  |  |  |  |  |
+| Workers slow |  |  |  |  | 🔵 |  |  |  |
+| Runaway Zyte calls |  |  |  | 🔵 |  |  |  |  |
+| Corpus outage |  |  |  |  |  |  |  | 🔵 |
+| Redis full |  |  |  |  |  |  | 🔵 |  |
+
+[^gap]: The pipeline is expected to continuously discover and crawl articles,
+    so an hour gap points to a failure. The longest gap in the legacy pipeline
+    was 18 minutes, as measured during 7 days in October.
+
+[^spend]: Legacy Zyte volume stayed within 1.3x of this average in 99% of hours
+    from July to October. A runaway, such as re-extracting every article on
+    every crawl, would far exceed 3x.
+
+[^cycle]: Each publisher page is crawled every 20 minutes, so a longer wait
+    means work is piling up.
+
+[^memory]: Every crawl container has a 256 MiB limit, and the workers peaked at
+    30% of it over a week in dev. The kernel kills a container at 100%, so 90%
+    leaves time to raise the limit.
+
+[^redis]: Redis evicts keys once it is full, and our eviction policy removes the
+    deduplication markers and locks first. Redis fills slowly, so 80% leaves
+    time to add memory.
