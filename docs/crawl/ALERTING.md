@@ -65,22 +65,16 @@ Zyte cost goes up.
 
 ## Which alert catches which outage
 
-The first group lists real outages of the legacy pipeline in 2026, linked to
-where they were reported. The second lists failures that could happen in the
-new design.
+Each row is a way the crawler can fail. A dot marks each alert that catches it.
 
 | Outage | No New<br>Discoveries | No New<br>Extractions | BigQuery<br>Writes Failing | Zyte Spend<br>Surge | Workers<br>Falling Behind | Container<br>Memory | Redis<br>Memory | New Sentry<br>Issue | Other monitoring |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
-| **Legacy, 2026** | | | | | | | | | |
-| [Crawler hung](https://mozilla.slack.com/archives/C06PX8YFQBZ/p1791448229636159) | 🔵 |  |  |  |  |  |  |  |  |
-| [Crawler OOM](https://mozilla-hub.atlassian.net/browse/HNT-1776) | 🔵 |  |  |  |  | 🔵 |  |  |  |
-| [Zyte outage](https://status.zyte.com/incidents/czp1lfm6z0bn) | 🔵 | 🔵 |  |  |  |  |  |  |  |
-| [Guardian ban](https://mozilla.slack.com/archives/C09PBCCN0M6/p1780540369518059) |  |  |  |  |  |  |  |  | Dashboard |
-| [ML sections stuck](https://mozilla-hub.atlassian.net/browse/HNT-3360) |  |  |  |  |  |  |  |  | ML pipeline |
-| **New design** | | | | | | | | | |
-| Scheduler stops | 🔵 | 🔵 |  |  |  |  |  |  |  |
+| Crawler hung | 🔵 |  |  |  |  |  |  |  |  |
+| Crawler OOM | 🔵 |  |  |  |  | 🔵 |  |  |  |
+| Zyte outage | 🔵 | 🔵 |  |  |  |  |  |  |  |
+| Publisher blocked |  |  |  |  |  |  |  |  | Dashboard |
+| ML sections stuck |  |  |  |  |  |  |  |  | ML pipeline |
 | BigQuery rejection |  |  | 🔵 |  |  |  |  |  |  |
-| Zyte key revoked | 🔵 | 🔵 |  |  |  |  |  | 🔵 |  |
 | Corpus outage |  |  |  |  |  |  |  | 🔵 |  |
 | Runaway Zyte calls |  |  |  | 🔵 |  |  |  |  |  |
 | Memory leak |  |  |  |  |  | 🔵 |  |  |  |
