@@ -28,7 +28,7 @@
  * Tests and local dev point at a Pub/Sub emulator by passing
  * `apiEndpoint` and `useEmulator: true` to `initPubSubClient`.
  */
-import { timing, type Outcome } from 'metrics';
+import { timing } from 'metrics';
 import config from './config.js';
 import {
   Duration,
@@ -272,12 +272,9 @@ async function processMessage<T>(
     onError(err as Error, { kind: 'validation-error', messageId: message.id });
     return;
   }
-  const start = performance.now();
-  let outcome: Outcome = 'failure';
   try {
     await handler(parsed);
     message.ack();
-    outcome = 'success';
   } catch (err) {
     message.nack();
     // Handler errors aren't routed to onError; the caller's
@@ -288,12 +285,6 @@ async function processMessage<T>(
         `messageId=${message.id}`,
       err,
     );
-  } finally {
-    const seconds = (performance.now() - start) / 1000;
-    timing('pubsub_handler_duration', seconds, {
-      subscription: subscriptionName,
-      outcome,
-    });
   }
 }
 

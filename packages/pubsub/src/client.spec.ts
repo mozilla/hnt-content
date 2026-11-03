@@ -479,7 +479,6 @@ describe('message metrics', () => {
       fails: false,
       attempt: 0,
       agoMs: 30_000,
-      outcome: 'success',
       waits: [30],
     },
     {
@@ -487,66 +486,34 @@ describe('message metrics', () => {
       fails: true,
       attempt: 1,
       agoMs: 30_000,
-      outcome: 'failure',
       waits: [30],
     },
-    {
-      name: 'clock skew',
-      fails: false,
-      attempt: 1,
-      agoMs: -5_000,
-      outcome: 'success',
-      waits: [0],
-    },
-    {
-      name: 'redelivery',
-      fails: false,
-      attempt: 2,
-      agoMs: 30_000,
-      outcome: 'success',
-      waits: [],
-    },
-  ])(
-    'records handler duration and first-delivery queue wait: $name',
-    async (c) => {
-      vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.mocked(timing).mockClear();
-      // The handler appears to take 2.5s.
-      vi.spyOn(performance, 'now')
-        .mockReturnValueOnce(1_000)
-        .mockReturnValueOnce(3_500);
-      const handler = vi.fn(async () => {
-        if (c.fails) {
-          throw new Error('boom');
-        }
-      });
-      startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
+    { name: 'clock skew', fails: false, attempt: 1, agoMs: -5_000, waits: [0] },
+    { name: 'redelivery', fails: false, attempt: 2, agoMs: 30_000, waits: [] },
+  ])('records queue wait on first delivery only: $name', async (c) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(timing).mockClear();
+    const handler = vi.fn(async () => {
+      if (c.fails) {
+        throw new Error('boom');
+      }
+    });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
 
-      const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
-      const message = createMockMessage(TEST_PAYLOAD);
-      message.publishTime = new Date(Date.now() - c.agoMs);
-      message.deliveryAttempt = c.attempt;
-      sub.emit('message', message);
-      await message.settled;
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage(TEST_PAYLOAD);
+    message.publishTime = new Date(Date.now() - c.agoMs);
+    message.deliveryAttempt = c.attempt;
+    sub.emit('message', message);
+    await message.settled;
 
-      const recorded = (metric: string) =>
-        vi
-          .mocked(timing)
-          .mock.calls.filter(([name]) => name === metric)
-          .map(([, seconds, tags]) => ({ seconds, tags }));
-      expect(recorded('pubsub_queue_wait')).toEqual(
-        c.waits.map((s) => ({
-          // Within 0.5s, to allow for the time the handler takes.
-          seconds: expect.closeTo(s, 0),
-          tags: { subscription: SUBSCRIPTION_NAME },
-        })),
-      );
-      expect(recorded('pubsub_handler_duration')).toEqual([
-        {
-          seconds: 2.5,
-          tags: { subscription: SUBSCRIPTION_NAME, outcome: c.outcome },
-        },
-      ]);
-    },
-  );
+    expect(vi.mocked(timing).mock.calls).toEqual(
+      c.waits.map((s) => [
+        'pubsub_queue_wait',
+        // Within 0.5s, to allow for the time the test takes.
+        expect.closeTo(s, 0),
+        { subscription: SUBSCRIPTION_NAME },
+      ]),
+    );
+  });
 });
