@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "crawl-common": "workspace:*",
+    "metrics": "workspace:*",
     "sentry": "workspace:*",
     "express": "^5.1.0",
     "zyte": "workspace:*",

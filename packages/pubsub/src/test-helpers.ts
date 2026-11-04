@@ -101,6 +101,8 @@ export interface MockMessage {
   id: string;
   ack: ReturnType<typeof vi.fn>;
   nack: ReturnType<typeof vi.fn>;
+  publishTime: Date;
+  deliveryAttempt: number;
   /** Resolves with 'ack' or 'nack' once the subscriber settles the message. */
   settled: Promise<'ack' | 'nack'>;
 }
@@ -125,6 +127,8 @@ export function createMockMessageRaw(
   return {
     data,
     id,
+    publishTime: new Date(),
+    deliveryAttempt: 1,
     ack: vi.fn(() => resolve('ack')),
     nack: vi.fn(() => resolve('nack')),
     settled,

@@ -45,7 +45,10 @@ vi.mock('@google-cloud/pubsub', () => ({
   },
 }));
 
+vi.mock('metrics', () => ({ timing: vi.fn() }));
+
 import { SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
+import { timing } from 'metrics';
 import {
   flushTopics,
   initPubSubClient,
@@ -465,5 +468,52 @@ describe('shutdownPubSub', () => {
     mockPubSub.close.mockClear();
     await shutdownPubSub();
     expect(mockPubSub.close).not.toHaveBeenCalled();
+  });
+});
+
+describe('message metrics', () => {
+  // waits lists the queue waits expected, in seconds.
+  it.each([
+    {
+      name: 'no dead-letter policy',
+      fails: false,
+      attempt: 0,
+      agoMs: 30_000,
+      waits: [30],
+    },
+    {
+      name: 'handler failure',
+      fails: true,
+      attempt: 1,
+      agoMs: 30_000,
+      waits: [30],
+    },
+    { name: 'clock skew', fails: false, attempt: 1, agoMs: -5_000, waits: [0] },
+    { name: 'redelivery', fails: false, attempt: 2, agoMs: 30_000, waits: [] },
+  ])('records queue wait on first delivery only: $name', async (c) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(timing).mockClear();
+    const handler = vi.fn(async () => {
+      if (c.fails) {
+        throw new Error('boom');
+      }
+    });
+    startSubscriber({ ...TEST_SUBSCRIBER_OPTIONS, handler });
+
+    const sub = mockPubSub.subscriptions.get(SUBSCRIPTION_NAME)!;
+    const message = createMockMessage(TEST_PAYLOAD);
+    message.publishTime = new Date(Date.now() - c.agoMs);
+    message.deliveryAttempt = c.attempt;
+    sub.emit('message', message);
+    await message.settled;
+
+    expect(vi.mocked(timing).mock.calls).toEqual(
+      c.waits.map((s) => [
+        'pubsub_queue_wait',
+        // Within 0.5s, to allow for the time the test takes.
+        expect.closeTo(s, 0),
+        { subscription: SUBSCRIPTION_NAME },
+      ]),
+    );
   });
 });

@@ -39,12 +39,12 @@ vi.mock('@opentelemetry/exporter-metrics-otlp-proto', async () => {
   };
 });
 
-// Replace the real config with a test-owned object so setting endpoint
-// and environment below does not mutate the real module.
+// Replace the real config with a test-owned object so setting the
+// endpoint below does not mutate the real module.
 vi.mock('./config.js', () => ({ default: {} }));
 
 import config from './config.js';
-import { count, initMetrics, shutdownMetrics, timing } from './client.js';
+import { count, timing, initMetrics, shutdownMetrics } from './client.js';
 
 /** Flush via shutdown and return the exported metrics keyed by name. */
 async function flush(): Promise<Map<string, MetricData>> {
@@ -58,7 +58,6 @@ async function flush(): Promise<Map<string, MetricData>> {
 describe('metrics client', () => {
   beforeEach(() => {
     config.endpoint = 'http://collector:4318/v1/metrics';
-    config.environment = 'test';
     // Reset so each init constructs a fresh exporter and the disabled
     // tests can assert that none was constructed.
     mockExporter = undefined;
@@ -70,8 +69,8 @@ describe('metrics client', () => {
     vi.restoreAllMocks();
   });
 
-  it('exports counters with base and per-call tags', async () => {
-    initMetrics({ service: 'crawl-worker', workerRole: 'article' });
+  it('exports counters with per-call tags', async () => {
+    initMetrics({ service: 'crawl-worker' });
 
     count('crawl.tick.enqueued', 3, { item_type: 'page' });
     count('crawl.tick.enqueued', 2, { item_type: 'page' });
@@ -81,25 +80,18 @@ describe('metrics client', () => {
     const enqueued = metrics.get('crawl.tick.enqueued')!.dataPoints;
     expect(enqueued).toHaveLength(1);
     expect(enqueued[0].value).toBe(5);
-    expect(enqueued[0].attributes).toEqual({
-      env: 'test',
-      worker_role: 'article',
-      item_type: 'page',
-    });
+    expect(enqueued[0].attributes).toEqual({ item_type: 'page' });
     expect(metrics.get('crawl.tick.ran')!.dataPoints[0].value).toBe(1);
   });
 
-  it('exports timings as millisecond histograms', async () => {
+  it('exports timings as second histograms', async () => {
     initMetrics({ service: 'crawl-worker' });
 
-    timing('crawl.message.duration_ms', 42, { outcome: 'success' });
+    timing('example_duration', 42, { outcome: 'success' });
 
-    const metric = (await flush()).get('crawl.message.duration_ms')!;
-    expect(metric.descriptor.unit).toBe('ms');
-    expect(metric.dataPoints[0].attributes).toEqual({
-      env: 'test',
-      outcome: 'success',
-    });
+    const metric = (await flush()).get('example_duration')!;
+    expect(metric.descriptor.unit).toBe('s');
+    expect(metric.dataPoints[0].attributes).toEqual({ outcome: 'success' });
     expect(metric.dataPoints[0].value).toMatchObject({ count: 1, sum: 42 });
   });
 
@@ -114,7 +106,7 @@ describe('metrics client', () => {
     const metrics = await flush();
     expect(
       metrics.get('crawl.message.processed')!.dataPoints[0].attributes,
-    ).toEqual({ env: 'test', outcome: 'success' });
+    ).toEqual({ outcome: 'success' });
   });
 
   it('is a no-op when no endpoint is configured', async () => {
@@ -123,7 +115,7 @@ describe('metrics client', () => {
     initMetrics({ service: 'crawl-worker' });
 
     count('crawl.message.processed');
-    timing('crawl.message.duration_ms', 5);
+    timing('example_duration', 5);
 
     expect(mockExporter).toBeUndefined();
   });

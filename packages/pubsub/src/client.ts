@@ -28,6 +28,7 @@
  * Tests and local dev point at a Pub/Sub emulator by passing
  * `apiEndpoint` and `useEmulator: true` to `initPubSubClient`.
  */
+import { timing } from 'metrics';
 import config from './config.js';
 import {
   Duration,
@@ -244,6 +245,17 @@ async function processMessage<T>(
   onError: (err: Error, ctx: SubscriberErrorContext) => void,
 ): Promise<void> {
   const { subscriptionName, handler, validate } = opts;
+  // Only first deliveries count, so retries of a failing message do not
+  // read as a backlog. Pub/Sub reports 0 without a dead-letter policy, as in
+  // the emulator.
+  if (message.deliveryAttempt <= 1) {
+    // Clamp, since the histogram drops the negative waits that clock skew
+    // between Pub/Sub and the pod can produce.
+    const waitMs = Math.max(0, Date.now() - message.publishTime.getTime());
+    timing('pubsub_queue_wait', waitMs / 1000, {
+      subscription: subscriptionName,
+    });
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(message.data.toString());
