@@ -155,6 +155,7 @@ const handleWithSentry = withSentryHandler<CrawlArticleMessage>(
       url: message.url,
       crawl_id: message.crawl_id,
       source_url: message.source_url,
+      corpus_external_id: message.corpus_item?.external_id,
     },
   }),
   handleMessage,
