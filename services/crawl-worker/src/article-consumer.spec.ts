@@ -1,9 +1,22 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   crawlConfig,
   type ArticleEvent,
   type CrawlArticleMessage,
 } from 'crawl-common';
+import { publishMessage, startSubscriber } from 'pubsub';
+import {
+  acquireRedisKeyLockToken,
+  getRedisKeyTimestampValue,
+  getString,
+  releaseRedisKeyLock,
+  setRedisKeyTimestampWithTTL,
+  setString,
+} from 'redis-state';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { startArticleConsumer } from './article-consumer.js';
+import config from './config.js';
+import { handleArticleExtraction } from './handlers/extract-article.js';
+import { BASE_MESSAGE } from './handlers/test-helpers.js';
 
 vi.mock('pubsub', () => ({
   publishMessage: vi.fn(),
@@ -21,20 +34,6 @@ vi.mock('redis-state', () => ({
 vi.mock('./handlers/extract-article.js', () => ({
   handleArticleExtraction: vi.fn(),
 }));
-
-import { publishMessage, startSubscriber } from 'pubsub';
-import {
-  acquireRedisKeyLockToken,
-  getRedisKeyTimestampValue,
-  getString,
-  releaseRedisKeyLock,
-  setRedisKeyTimestampWithTTL,
-  setString,
-} from 'redis-state';
-import { startArticleConsumer } from './article-consumer.js';
-import config from './config.js';
-import { handleArticleExtraction } from './handlers/extract-article.js';
-import { BASE_MESSAGE } from './handlers/test-helpers.js';
 
 const EVENT: ArticleEvent = {
   url: BASE_MESSAGE.url,

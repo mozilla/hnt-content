@@ -22,8 +22,8 @@ import {
 } from 'redis-state';
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
-import { isWithinMinutes } from './discovery-consumer.js';
 import { handleArticleExtraction } from './handlers/extract-article.js';
+import { isWithinMinutes } from './is-within-minutes.js';
 
 /**
  * Extract one article and publish it as an `articles` event if eligible
@@ -37,6 +37,11 @@ import { handleArticleExtraction } from './handlers/extract-article.js';
  */
 async function handleMessage(message: CrawlArticleMessage): Promise<void> {
   const extractedKey = buildRedisArticleExtractedKey(message.url);
+
+  // The producer sets the window: the discovery worker uses the
+  // discovered-article window, the scheduler its live-article interval.
+  // The scheduler enqueues live articles more often than that, so this
+  // window alone sets how often they are re-extracted.
   const refreshMinutes = message.article_refresh_minutes;
 
   if (
@@ -71,6 +76,9 @@ async function handleMessage(message: CrawlArticleMessage): Promise<void> {
       return;
     }
 
+    // Claim the URL before calling Zyte. If extraction throws, only this
+    // claim remains, so redeliveries and other pages linking the URL skip
+    // it until the claim expires instead of repeating the failure.
     await setRedisKeyTimestampWithTTL(
       extractedKey,
       config.articleAttemptTtlMinutes * 60,
@@ -83,6 +91,7 @@ async function handleMessage(message: CrawlArticleMessage): Promise<void> {
       await publishIfChanged(event);
     }
 
+    // The work is done, so extend the claim to the full refresh window.
     await setRedisKeyTimestampWithTTL(extractedKey, refreshMinutes * 60);
   } finally {
     // The lock expires automatically, so a release failure should not

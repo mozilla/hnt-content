@@ -12,10 +12,7 @@ import {
   setRedisKeyTimestampWithTTL,
 } from 'redis-state';
 import config from './config.js';
-import {
-  startDiscoveryConsumer,
-  isWithinMinutes,
-} from './discovery-consumer.js';
+import { startDiscoveryConsumer } from './discovery-consumer.js';
 import { handleArticleDiscovery } from './handlers/extract-discovery.js';
 import { DISCOVERY_MESSAGE, TEST_SOURCE_URL } from './handlers/test-helpers.js';
 
@@ -66,27 +63,6 @@ function registeredHandler(): (
   startDiscoveryConsumer();
   return vi.mocked(startSubscriber).mock.calls[0]![0].handler;
 }
-
-describe('isWithinMinutes', () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('is true when the marker is within the window', async () => {
-    // true for 5 mins when the refresh window is 10 mins
-    expect(isWithinMinutes(Date.now() - 5 * 60_000, 10)).toBe(true);
-  });
-
-  it('is false when the marker is older than the window', async () => {
-    // false for 11 minutes when the refresh window is 10 mins
-    expect(isWithinMinutes(Date.now() - 11 * 60_000, 10)).toBe(false);
-  });
-
-  it('is false when there is no marker', async () => {
-    // false for null type
-    expect(isWithinMinutes(null, 10)).toBe(false);
-  });
-});
 
 describe('discovery consumer', () => {
   beforeEach(() => {
