@@ -4,6 +4,7 @@ import {
   buildRedisArticleContentKey,
   buildRedisArticleExtractedKey,
   buildRedisArticleLockKey,
+  getRegistrableDomain,
   type ArticleEvent,
   type CrawlArticleMessage,
 } from 'crawl-common';
@@ -147,6 +148,7 @@ const handleWithSentry = withSentryHandler<CrawlArticleMessage>(
   (message) => ({
     tags: {
       worker_role: 'article',
+      domain: getRegistrableDomain(message.url),
       has_corpus_item: String(message.corpus_item != null),
     },
     context: {
