@@ -4,7 +4,11 @@ export class ZyteError extends Error {
   readonly status: number;
   /** URL Zyte was asked to extract. */
   readonly url?: string;
-  /** Parsed response body, if available. */
+  /**
+   * Parsed JSON of a failed response, if it parsed. Its shape is
+   * whatever Zyte returned when it failed, so it is only logged and
+   * reported, never read.
+   */
   readonly responseBody?: unknown;
 
   /**

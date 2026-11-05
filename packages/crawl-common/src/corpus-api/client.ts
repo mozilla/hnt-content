@@ -40,17 +40,28 @@ const DEFAULT_CLIENT_VERSION = '1.0';
 
 /**
  * Error thrown when a Corpus Admin API request fails. The message stays
- * free of IDs and response text, which go in details, so Sentry can
- * group errors by message.
+ * free of IDs and response text, which go in their own fields, so
+ * Sentry can group errors by message.
  */
 export class CorpusApiError extends Error {
+  /**
+   * Parsed JSON of a failed response. Its shape is whatever the API
+   * returned when it failed, so it is only logged and reported, never
+   * read.
+   */
+  readonly responseBody?: unknown;
+  /** Messages of the GraphQL errors the API returned. */
+  readonly graphqlErrors?: string[];
+
   constructor(
     message: string,
     readonly statusCode?: number,
-    readonly details?: unknown,
+    details: { responseBody?: unknown; graphqlErrors?: string[] } = {},
   ) {
     super(message);
     this.name = 'CorpusApiError';
+    this.responseBody = details.responseBody;
+    this.graphqlErrors = details.graphqlErrors;
   }
 }
 
@@ -194,7 +205,7 @@ async function graphqlRequest<T>(
         throw new CorpusApiError(
           `Corpus API client error: ${response.status} for ${label}`,
           response.status,
-          body,
+          { responseBody: body },
         );
       }
 
@@ -204,19 +215,15 @@ async function graphqlRequest<T>(
       };
 
       if (payload.errors?.length) {
-        throw new CorpusApiError(
-          `GraphQL errors for ${label}`,
-          undefined,
-          payload.errors,
-        );
+        throw new CorpusApiError(`GraphQL errors for ${label}`, undefined, {
+          graphqlErrors: payload.errors.map((e) => e.message),
+        });
       }
 
       if (payload.data == null) {
-        throw new CorpusApiError(
-          `No data returned for ${label}`,
-          undefined,
-          payload,
-        );
+        throw new CorpusApiError(`No data returned for ${label}`, undefined, {
+          responseBody: payload,
+        });
       }
 
       return payload.data;
@@ -266,7 +273,7 @@ export async function updateApprovedCorpusItem(
     throw new CorpusApiError(
       'No data returned for updateApprovedCorpusItem',
       undefined,
-      data,
+      { responseBody: data },
     );
   }
   return data.updateApprovedCorpusItem;
