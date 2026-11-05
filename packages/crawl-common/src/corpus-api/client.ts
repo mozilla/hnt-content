@@ -38,11 +38,16 @@ export const RETRY_MAX_TIMEOUT_MS = 16_000;
 const DEFAULT_CLIENT_NAME = 'hnt-content';
 const DEFAULT_CLIENT_VERSION = '1.0';
 
-/** Error thrown when a Corpus Admin API request fails. */
+/**
+ * Error thrown when a Corpus Admin API request fails. The message stays
+ * free of IDs and response text, which go in details, so Sentry can
+ * group errors by message.
+ */
 export class CorpusApiError extends Error {
   constructor(
     message: string,
     readonly statusCode?: number,
+    readonly details?: unknown,
   ) {
     super(message);
     this.name = 'CorpusApiError';
@@ -187,9 +192,9 @@ async function graphqlRequest<T>(
           // Response may not be JSON.
         }
         throw new CorpusApiError(
-          `Corpus API client error: ${response.status} for ${label}: ` +
-            JSON.stringify(body),
+          `Corpus API client error: ${response.status} for ${label}`,
           response.status,
+          body,
         );
       }
 
@@ -200,14 +205,17 @@ async function graphqlRequest<T>(
 
       if (payload.errors?.length) {
         throw new CorpusApiError(
-          `GraphQL errors for ${label}: ` +
-            payload.errors.map((e) => e.message).join('; '),
+          `GraphQL errors for ${label}`,
+          undefined,
+          payload.errors,
         );
       }
 
       if (payload.data == null) {
         throw new CorpusApiError(
-          `No data returned for ${label}: ${JSON.stringify(payload)}`,
+          `No data returned for ${label}`,
+          undefined,
+          payload,
         );
       }
 
@@ -252,12 +260,13 @@ export async function updateApprovedCorpusItem(
 ): Promise<UpdateApprovedCorpusItemResponse> {
   const data = await graphqlRequest<{
     updateApprovedCorpusItem?: UpdateApprovedCorpusItemResponse;
-  }>(UPDATE_MUTATION, { data: input }, `update item ${input.externalId}`);
+  }>(UPDATE_MUTATION, { data: input }, 'updateApprovedCorpusItem');
 
   if (!data.updateApprovedCorpusItem) {
     throw new CorpusApiError(
-      `No data returned for update item ${input.externalId}: ` +
-        JSON.stringify(data),
+      'No data returned for updateApprovedCorpusItem',
+      undefined,
+      data,
     );
   }
   return data.updateApprovedCorpusItem;

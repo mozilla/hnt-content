@@ -31,7 +31,9 @@ describe('withSentryHandler', () => {
 
     await expect(wrapped({})).rejects.toBe(err);
     expect(Sentry.captureException).toHaveBeenCalledOnce();
-    expect(Sentry.captureException).toHaveBeenCalledWith(err);
+    expect(Sentry.captureException).toHaveBeenCalledWith(err, {
+      fingerprint: ['{{ default }}', 'boom'],
+    });
   });
 
   it('does not capture when the handler resolves', async () => {
