@@ -1,4 +1,7 @@
 import {
+  buildRedisArticleContentKey,
+  buildRedisArticleExtractedKey,
+  buildRedisArticleLockKey,
   crawlConfig,
   type ArticleEvent,
   type CrawlArticleMessage,
@@ -67,6 +70,8 @@ describe('article consumer', () => {
     vi.mocked(handleArticleExtraction).mockResolvedValue(EVENT);
     vi.mocked(publishMessage).mockResolvedValue('message-id');
     vi.mocked(releaseRedisKeyLock).mockResolvedValue();
+    vi.mocked(setRedisKeyTimestampWithTTL).mockResolvedValue();
+    vi.mocked(setString).mockResolvedValue();
   });
 
   afterEach(() => {
@@ -96,6 +101,25 @@ describe('article consumer', () => {
       expect.any(String),
       'lock-token',
     );
+  });
+
+  it('keys the marker, lock, and content hash on the message URL', async () => {
+    await registeredHandler()(BASE_MESSAGE);
+
+    const extractedKey = buildRedisArticleExtractedKey(BASE_MESSAGE.url);
+    const lockKey = buildRedisArticleLockKey(BASE_MESSAGE.url);
+    const contentKey = buildRedisArticleContentKey(BASE_MESSAGE.url);
+    expect(getRedisKeyTimestampValue).toHaveBeenCalledWith(extractedKey);
+    expect(acquireRedisKeyLockToken).toHaveBeenCalledWith(
+      lockKey,
+      config.lockTtlSeconds,
+    );
+    expect(
+      vi.mocked(setRedisKeyTimestampWithTTL).mock.calls.map(([key]) => key),
+    ).toEqual([extractedKey, extractedKey]);
+    expect(getString).toHaveBeenCalledWith(contentKey);
+    expect(setString).toHaveBeenCalledWith(contentKey, expect.any(String));
+    expect(releaseRedisKeyLock).toHaveBeenCalledWith(lockKey, 'lock-token');
   });
 
   it('claims the marker before extracting, then confirms it for the refresh window', async () => {
@@ -172,6 +196,24 @@ describe('article consumer', () => {
     expect(setString).toHaveBeenCalledOnce();
   });
 
+  it('republishes changed content and stores the new hash', async () => {
+    await registeredHandler()(BASE_MESSAGE);
+    const storedHash = vi.mocked(setString).mock.calls[0]![1];
+    vi.clearAllMocks();
+
+    const changed = { ...EVENT, headline: 'Revised Headline' };
+    vi.mocked(getString).mockResolvedValue(storedHash);
+    vi.mocked(handleArticleExtraction).mockResolvedValue(changed);
+    await registeredHandler()(BASE_MESSAGE);
+
+    expect(publishMessage).toHaveBeenCalledWith(
+      crawlConfig.articlesTopic,
+      changed,
+    );
+    const newHash = vi.mocked(setString).mock.calls[0]![1];
+    expect(newHash).not.toBe(storedHash);
+  });
+
   it('ignores extracted_at when detecting content changes', async () => {
     await registeredHandler()(BASE_MESSAGE);
     const storedHash = vi.mocked(setString).mock.calls[0]![1];
@@ -219,6 +261,37 @@ describe('article consumer', () => {
 
     expect(markerTtls()).toEqual([CLAIM_TTL_SECONDS]);
     expect(setString).not.toHaveBeenCalled();
+  });
+
+  it('keeps only the claim when storing the hash throws after a publish', async () => {
+    // The redelivery finds no stored hash and publishes again, so the
+    // event is duplicated rather than lost.
+    vi.mocked(setString).mockRejectedValue(new Error('redis blip'));
+
+    await expect(registeredHandler()(BASE_MESSAGE)).rejects.toThrow(
+      'redis blip',
+    );
+
+    expect(publishMessage).toHaveBeenCalledOnce();
+    expect(markerTtls()).toEqual([CLAIM_TTL_SECONDS]);
+    expect(releaseRedisKeyLock).toHaveBeenCalled();
+  });
+
+  it('extracts nothing and releases the lock when the claim fails', async () => {
+    vi.mocked(setRedisKeyTimestampWithTTL).mockRejectedValue(
+      new Error('redis blip'),
+    );
+
+    await expect(registeredHandler()(BASE_MESSAGE)).rejects.toThrow(
+      'redis blip',
+    );
+
+    expect(handleArticleExtraction).not.toHaveBeenCalled();
+    expect(publishMessage).not.toHaveBeenCalled();
+    expect(releaseRedisKeyLock).toHaveBeenCalledWith(
+      expect.any(String),
+      'lock-token',
+    );
   });
 
   it('still succeeds when releasing the lock fails', async () => {
