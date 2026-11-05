@@ -19,6 +19,9 @@ export type HandlerMetadata = {
  * Wrap an async handler so events it reports to Sentry carry the tags
  * and context from extractMetadata, and any error it throws is
  * captured before being rethrown so the caller's ack/nack still apply.
+ * Sentry groups a thrown error by stack trace and message, so messages
+ * must not contain URLs, IDs or other per-event values; put those in
+ * error fields or context instead.
  */
 export function withSentryHandler<T>(
   extractMetadata: (input: T) => HandlerMetadata,
@@ -42,7 +45,14 @@ export function withSentryHandler<T>(
       try {
         await handler(input);
       } catch (err) {
-        Sentry.captureException(err);
+        // The stack alone lumps different failures from one call site
+        // together, e.g. a Zyte ban and a Zyte outage.
+        Sentry.captureException(err, {
+          fingerprint: [
+            '{{ default }}',
+            err instanceof Error ? err.message : String(err),
+          ],
+        });
         throw err;
       }
     });

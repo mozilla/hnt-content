@@ -1,4 +1,8 @@
-import { crawlConfig, type CrawlArticleMessage } from 'crawl-common';
+import {
+  crawlConfig,
+  getRegistrableDomain,
+  type CrawlArticleMessage,
+} from 'crawl-common';
 import {
   publishMessage,
   sentryPubSubErrorHandler,
@@ -22,12 +26,14 @@ const handleWithSentry = withSentryHandler<CrawlArticleMessage>(
   (message) => ({
     tags: {
       worker_role: 'article',
+      domain: getRegistrableDomain(message.url),
       has_corpus_item: String(message.corpus_item != null),
     },
     context: {
       url: message.url,
       crawl_id: message.crawl_id,
       source_url: message.source_url,
+      corpus_external_id: message.corpus_item?.external_id,
     },
   }),
   handleMessage,

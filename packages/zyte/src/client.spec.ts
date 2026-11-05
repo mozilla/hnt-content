@@ -200,8 +200,8 @@ describe('extractArticle', () => {
       expect(err).toBeInstanceOf(ZyteError);
       expect(err.status).toBe(401);
       expect(err.responseBody).toEqual(errorBody);
-      expect(err.message).toContain('401');
-      expect(err.message).toContain('https://example.com/a');
+      expect(err.message).toBe('Zyte API error: 401');
+      expect(err.url).toBe('https://example.com/a');
     });
 
     it('throws ZyteError when response lacks article data', async () => {
