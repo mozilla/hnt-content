@@ -43,10 +43,12 @@ export default {
   // The Pub/Sub client keeps extending the ack deadline for this long, so
   // a slow job keeps its message rather than a copy going to another pod.
   maxExtensionSeconds: MAX_JOB_SECONDS,
-  // This caps how many handlers run at once, and so how many Zyte
-  // responses are held in memory. The library default of 1000 exhausts
-  // the pod memory when the queue is long.
-  maxMessages: 64,
+  // This caps how many handlers run at once. A job mostly waits on Zyte
+  // and uses about 10ms of CPU, so a pod only reaches the 50% CPU
+  // autoscaling target when it finishes about 12 jobs a second. At 15s
+  // per job, the slowest minute measured in dev, that takes about 180
+  // jobs at once; 300 leaves room for a lower CPU cost per job.
+  maxMessages: 300,
   // The discovery worker skips a page crawled within this fraction of
   // pageRefreshMinutes. Without this variable, every second crawl would
   // be skipped, because the time since the last crawl started is always
