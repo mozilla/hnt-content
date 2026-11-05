@@ -5,6 +5,7 @@ import {
   type CrawlArticleDiscoveryMessage,
 } from 'crawl-common';
 import { publishMessage, startSubscriber } from 'pubsub';
+import { withSentryHandler } from 'sentry';
 import {
   acquireRedisKeyLockToken,
   getRedisKeyTimestampValue,
@@ -29,6 +30,10 @@ vi.mock('redis-state', () => ({
   getRedisKeyTimestampValue: vi.fn(),
   releaseRedisKeyLock: vi.fn(),
   setRedisKeyTimestampWithTTL: vi.fn(),
+}));
+// Pass handlers through unwrapped, keeping each Sentry metadata function.
+vi.mock('sentry', () => ({
+  withSentryHandler: vi.fn((_, handler) => handler),
 }));
 vi.mock('./handlers/extract-discovery.js', () => ({
   handleArticleDiscovery: vi.fn(),
@@ -66,6 +71,9 @@ function registeredHandler(): (
   startDiscoveryConsumer();
   return vi.mocked(startSubscriber).mock.calls[0]![0].handler;
 }
+
+// Read at import, before the tests clear the mock's calls.
+const [sentryMetadata] = vi.mocked(withSentryHandler).mock.calls[0]!;
 
 describe('isWithinMinutes', () => {
   afterEach(() => {
@@ -267,5 +275,12 @@ describe('discovery consumer', () => {
       expect.any(String),
       'lock-token',
     );
+  });
+
+  it('tags Sentry errors with the role and the page domain', () => {
+    expect(sentryMetadata(DISCOVERY_MESSAGE).tags).toMatchObject({
+      worker_role: 'discovery',
+      domain: 'example.com',
+    });
   });
 });

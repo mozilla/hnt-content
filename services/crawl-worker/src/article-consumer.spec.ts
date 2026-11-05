@@ -10,11 +10,16 @@ vi.mock('pubsub', () => ({
   sentryPubSubErrorHandler: vi.fn(() => vi.fn()),
   startSubscriber: vi.fn(),
 }));
+// Pass handlers through unwrapped, keeping each Sentry metadata function.
+vi.mock('sentry', () => ({
+  withSentryHandler: vi.fn((_, handler) => handler),
+}));
 vi.mock('./handlers/extract-article.js', () => ({
   handleArticleExtraction: vi.fn(),
 }));
 
 import { publishMessage, startSubscriber } from 'pubsub';
+import { withSentryHandler } from 'sentry';
 import { startArticleConsumer } from './article-consumer.js';
 import config from './config.js';
 import { handleArticleExtraction } from './handlers/extract-article.js';
@@ -31,6 +36,9 @@ function registeredHandler(): (message: CrawlArticleMessage) => Promise<void> {
   startArticleConsumer();
   return vi.mocked(startSubscriber).mock.calls[0]![0].handler;
 }
+
+// Read at import, before the tests clear the mock's calls.
+const [sentryMetadata] = vi.mocked(withSentryHandler).mock.calls[0]!;
 
 describe('article consumer', () => {
   afterEach(() => {
@@ -67,5 +75,12 @@ describe('article consumer', () => {
     vi.mocked(handleArticleExtraction).mockRejectedValue(new Error('zyte'));
     await expect(registeredHandler()(BASE_MESSAGE)).rejects.toThrow('zyte');
     expect(publishMessage).not.toHaveBeenCalled();
+  });
+
+  it('tags Sentry errors with the role and the article domain', () => {
+    expect(sentryMetadata(BASE_MESSAGE).tags).toMatchObject({
+      worker_role: 'article',
+      domain: 'example.com',
+    });
   });
 });
