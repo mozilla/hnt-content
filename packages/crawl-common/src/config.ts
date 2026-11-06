@@ -20,7 +20,7 @@ const environment: string = process.env.ENVIRONMENT ?? '';
 // will continue to process remaining pubsub messages
 const environmentEnabled: { [key: string]: boolean } = {
   dev: true,
-  stage: false,
+  stage: true,
   prod: false,
   // outlier - not set in infra, but in individual vitest.config.ts files
   test: true,
