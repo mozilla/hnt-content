@@ -3,7 +3,28 @@
 
 // Terraform prefixes every Pub/Sub name with the deploy environment.
 // Each service checks that this value is set before using it.
-const environment = process.env.ENVIRONMENT ?? '';
+const environment: string = process.env.ENVIRONMENT ?? '';
+
+// ENABLE/DISABLE ENVIRONMENTS
+//
+// for our purposes here, "disabled" means the service is running in infra, but
+// is not processing any data. when disabled, the environment is essentially
+// idle.
+//
+// the key names below match the environment values injected by infrastructure.
+// enabling an environment enables both crawling publisher pages and updating
+// live corpus articles.
+//
+// currently used only in the crawl scheduler to stop sending messages to
+// pubsub. if changed to false with pre-existing pubsub messages, crawl workers
+// will continue to process remaining pubsub messages
+const environmentEnabled: { [key: string]: boolean } = {
+  dev: true,
+  stage: false,
+  prod: false,
+  // outlier - not set in infra, but in individual vitest.config.ts files
+  test: true,
+};
 
 // ids for both pubsub topics and subscriptions
 // the ids are identical by convention - see the pubsub module in infra:
@@ -13,6 +34,7 @@ const crawlArticleDiscoveryPubSubId = `${environment}-crawl-article-discovery`;
 
 export default {
   environment,
+  environmentEnabled: environmentEnabled[environment],
   // Subscription and topic are given matching names in Terraform. Configure
   // distinct config values to make it clear there are 2 underlying resources.
   crawlArticlePubSub: {

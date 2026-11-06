@@ -10,11 +10,12 @@ import config from './config.js';
 import { randomBatch } from './random-batch.js';
 
 /**
- * Enqueue a capped batch of the live articles scheduled on New Tab for
+ * Enqueue a batch of the live articles scheduled on New Tab for
  * re-extraction, and return how many jobs went out.
  */
 export async function enqueueLiveArticles(): Promise<number> {
-  if (!config.liveArticlesPerTick) {
+  // if the config value is 0, return early.
+  if (config.maxLiveArticlesPerTick === 0) {
     return 0;
   }
 
@@ -22,7 +23,14 @@ export async function enqueueLiveArticles(): Promise<number> {
   // do not know whether that is still what editorial wants; HNT-2426
   // tracks the question.
   const liveArticles = await getScheduledSectionItems('NEW_TAB_EN_US');
-  const batch = randomBatch(liveArticles, config.liveArticlesPerTick);
+
+  // if there is a limit set on live articles to process per tick, honor it.
+  // a null value means no limit - process all of them.
+  const batch: LiveArticle[] =
+    config.maxLiveArticlesPerTick !== null
+      ? randomBatch(liveArticles, config.maxLiveArticlesPerTick)
+      : liveArticles;
+
   await Promise.all(batch.map(publishCrawlJob));
 
   return batch.length;
@@ -43,5 +51,6 @@ async function publishCrawlJob(article: LiveArticle): Promise<void> {
     article_refresh_minutes: config.liveArticleRefreshMinutes,
     corpus_item: article.corpus_item,
   };
+
   await publishMessage(crawlConfig.crawlArticlePubSub.topic, message);
 }
