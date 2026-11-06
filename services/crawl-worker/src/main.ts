@@ -18,18 +18,18 @@ const server = app.listen(config.port, () => {
 
 // Each client reads its own credentials from its package config, so
 // none takes an argument here. Only the article worker syncs curated
-// metadata, so only it needs the Corpus API. Only the discovery worker
-// guards its crawls with Redis so far.
+// metadata, so only it needs the Corpus API. Both workers guard their
+// crawls with Redis.
 initMetrics({ service: config.service });
 initZyteClient();
 
 initPubSubClient();
+initRedisClient();
 
 if (config.workerRole === 'article') {
   await initCorpusApiClient();
   startArticleConsumer();
 } else if (config.workerRole === 'discovery') {
-  initRedisClient();
   startDiscoveryConsumer();
 }
 
