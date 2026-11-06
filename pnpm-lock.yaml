@@ -280,6 +280,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/zyte
     devDependencies:
+      '@testcontainers/redis':
+        specifier: ^11.14.0
+        version: 11.14.0
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.6
@@ -1016,6 +1019,9 @@ packages:
 
   '@testcontainers/gcloud@11.14.0':
     resolution: {integrity: sha512-PlBv1AGNYD2iQH8jIyeQTwN1xruSqwb8IlzeCfpcv7+Ql0B8WcpvSFmAQM3UBseOX6gIDwSZZNG/7oYIqEbT2g==}
+
+  '@testcontainers/redis@11.14.0':
+    resolution: {integrity: sha512-WX005slz2JMQPw2avbSjf5awVjpmFhOs5xCxeGSYLcV5ia4W1edv/P6MdOw4dZnvDQDuN5LfqNoV/ut3XGb2pA==}
 
   '@turbo/darwin-64@2.8.20':
     resolution: {integrity: sha512-FQ9EX1xMU5nbwjxXxM3yU88AQQ6Sqc6S44exPRroMcx9XZHqqppl5ymJF0Ig/z3nvQNwDmz1Gsnvxubo+nXWjQ==}
@@ -3448,6 +3454,15 @@ snapshots:
   '@testcontainers/gcloud@11.14.0':
     dependencies:
       '@grpc/grpc-js': 1.14.3
+      testcontainers: 11.14.0
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bare-buffer
+      - react-native-b4a
+      - supports-color
+
+  '@testcontainers/redis@11.14.0':
+    dependencies:
       testcontainers: 11.14.0
     transitivePeerDependencies:
       - bare-abort-controller

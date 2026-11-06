@@ -20,6 +20,7 @@ import {
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
 import { handleArticleDiscovery } from './handlers/extract-discovery.js';
+import { isWithinMinutes } from './is-within-minutes.js';
 
 const MINUTES_PER_DAY = 1440;
 const MIN_PAGE_REFRESH_MINUTES =
@@ -43,21 +44,6 @@ function buildCrawlArticleJob(
     article_refresh_minutes:
       config.discoveredArticleRefreshDays * MINUTES_PER_DAY,
   };
-}
-
-/**
- * Return whether the fetch/crawl marker at key was set within the last
- * `minutes`, so the worker can skip a page or article it processed
- * recently.
- */
-export function isWithinMinutes(
-  timeStampValue: number | null,
-  refreshMinutesLimit: number,
-): boolean {
-  return (
-    timeStampValue !== null &&
-    Date.now() - timeStampValue < refreshMinutesLimit * 60_000
-  );
 }
 
 /**

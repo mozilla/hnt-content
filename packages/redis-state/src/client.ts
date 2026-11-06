@@ -154,7 +154,7 @@ export async function getRedisKeyTimestampValue(
 }
 
 /** Store a string value at a key with a TTL (default 30 days). */
-export async function setString(
+export async function setRedisKeyStringValue(
   key: string,
   value: string,
   ttlSeconds = defaultTtl,
@@ -164,7 +164,9 @@ export async function setString(
 }
 
 /** Read a string value, or null if absent or expired. */
-export async function getString(key: string): Promise<string | null> {
+export async function getRedisKeyStringValue(
+  key: string,
+): Promise<string | null> {
   return requireClient().get(key);
 }
 
