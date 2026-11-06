@@ -5,9 +5,8 @@ export class ZyteError extends Error {
   /** URL Zyte was asked to extract. */
   readonly url?: string;
   /**
-   * Parsed JSON of a failed response, if it parsed. Its shape is
-   * whatever Zyte returned when it failed, so it is only logged and
-   * reported, never read.
+   * Zyte's response body, captured for Sentry and the logs. Its shape
+   * is not known ahead of time, so the type is unknown.
    */
   readonly responseBody?: unknown;
 

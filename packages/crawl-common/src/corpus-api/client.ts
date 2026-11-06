@@ -45,9 +45,8 @@ const DEFAULT_CLIENT_VERSION = '1.0';
  */
 export class CorpusApiError extends Error {
   /**
-   * Parsed JSON of a failed response. Its shape is whatever the API
-   * returned when it failed, so it is only logged and reported, never
-   * read.
+   * Response body, captured for Sentry and the logs. Its shape is not
+   * known ahead of time, so the type is unknown.
    */
   readonly responseBody?: unknown;
   /** Messages of the GraphQL errors the API returned. */
