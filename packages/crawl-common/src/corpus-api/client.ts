@@ -51,16 +51,23 @@ export class CorpusApiError extends Error {
   readonly responseBody?: unknown;
   /** Messages of the GraphQL errors the API returned. */
   readonly graphqlErrors?: string[];
+  /** Variables of the failed request, such as the surface or item ID. */
+  readonly variables?: Record<string, unknown>;
 
   constructor(
     message: string,
     readonly statusCode?: number,
-    details: { responseBody?: unknown; graphqlErrors?: string[] } = {},
+    details: {
+      responseBody?: unknown;
+      graphqlErrors?: string[];
+      variables?: Record<string, unknown>;
+    } = {},
   ) {
     super(message);
     this.name = 'CorpusApiError';
     this.responseBody = details.responseBody;
     this.graphqlErrors = details.graphqlErrors;
+    this.variables = details.variables;
   }
 }
 
@@ -157,13 +164,14 @@ async function getToken(): Promise<string> {
 /**
  * Execute a GraphQL operation against the Corpus Admin API and return
  * its data payload. Retries transient 5xx and network errors with
- * exponential backoff and fails fast on 4xx and GraphQL errors. label
- * names the operation in error messages.
+ * exponential backoff and fails fast on 4xx and GraphQL errors. Error
+ * messages name only the operation, and the variables go on the error,
+ * so every call's failures share a message.
  */
 async function graphqlRequest<T>(
   query: string,
   variables: Record<string, unknown>,
-  label: string,
+  operation: string,
 ): Promise<T> {
   if (!endpoint) {
     throw new Error(
@@ -189,8 +197,9 @@ async function graphqlRequest<T>(
 
       if (response.status >= 500) {
         throw new CorpusApiError(
-          `Corpus API error: ${response.status} for ${label}`,
+          `Corpus API error: ${response.status} for ${operation}`,
           response.status,
+          { variables },
         );
       }
 
@@ -202,9 +211,9 @@ async function graphqlRequest<T>(
           // Response may not be JSON.
         }
         throw new CorpusApiError(
-          `Corpus API client error: ${response.status} for ${label}`,
+          `Corpus API client error: ${response.status} for ${operation}`,
           response.status,
-          { responseBody: body },
+          { responseBody: body, variables },
         );
       }
 
@@ -214,15 +223,21 @@ async function graphqlRequest<T>(
       };
 
       if (payload.errors?.length) {
-        throw new CorpusApiError(`GraphQL errors for ${label}`, undefined, {
+        throw new CorpusApiError(`GraphQL errors for ${operation}`, undefined, {
           graphqlErrors: payload.errors.map((e) => e.message),
+          variables,
         });
       }
 
       if (payload.data == null) {
-        throw new CorpusApiError(`No data returned for ${label}`, undefined, {
-          responseBody: payload,
-        });
+        throw new CorpusApiError(
+          `No data returned for ${operation}`,
+          undefined,
+          {
+            responseBody: payload,
+            variables,
+          },
+        );
       }
 
       return payload.data;
@@ -272,7 +287,7 @@ export async function updateApprovedCorpusItem(
     throw new CorpusApiError(
       'No data returned for updateApprovedCorpusItem',
       undefined,
-      { responseBody: data },
+      { responseBody: data, variables: { data: input } },
     );
   }
   return data.updateApprovedCorpusItem;
@@ -321,7 +336,7 @@ export async function getScheduledSectionItems(
   }>(
     SECTION_ITEMS_QUERY,
     { scheduledSurfaceGuid },
-    `sections for ${scheduledSurfaceGuid}`,
+    'getSectionsWithSectionItems',
   );
 
   const seen = new Set<string>();
