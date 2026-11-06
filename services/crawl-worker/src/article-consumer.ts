@@ -15,10 +15,10 @@ import {
 import {
   acquireRedisKeyLockToken,
   getRedisKeyTimestampValue,
-  getString,
-  releaseRedisKeyLock,
   setRedisKeyTimestampWithTTL,
-  setString,
+  getRedisKeyStringValue,
+  setRedisKeyStringValue,
+  releaseRedisKeyLock,
 } from 'redis-state';
 import { withSentryHandler } from 'sentry';
 import config from './config.js';
@@ -111,19 +111,20 @@ async function publishIfChanged(event: ArticleEvent): Promise<void> {
   const contentKey = buildRedisArticleContentKey(event.url);
   const hash = contentHash(event);
 
-  if ((await getString(contentKey)) !== hash) {
+  if ((await getRedisKeyStringValue(contentKey)) !== hash) {
     await publishMessage(crawlConfig.articlesTopic, event);
   }
 
   // Store the hash on every extraction so its TTL keeps pace with the
   // marker; otherwise an unchanged article's hash expires and the next
   // extraction republishes it.
-  await setString(contentKey, hash);
+  await setRedisKeyStringValue(contentKey, hash);
 }
 
 /**
  * Hash the content columns of `crawl.articles`. url is constant per key
  * and extracted_at changes on every extraction, so both are excluded.
+ * While the url is constant, canonical_url is not.
  */
 function contentHash(event: ArticleEvent): string {
   const content = {

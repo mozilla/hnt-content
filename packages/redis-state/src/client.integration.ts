@@ -7,11 +7,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   acquireRedisKeyLockToken,
   acquireRateLimitToken,
-  getString,
+  getRedisKeyStringValue,
   getRedisKeyTimestampValue,
   initRedisClient,
   releaseRedisKeyLock,
-  setString,
+  setRedisKeyStringValue,
   setRedisKeyTimestampWithTTL,
   shutdownRedis,
 } from './client.js';
@@ -75,7 +75,7 @@ describe('redis state client integration', () => {
   });
 
   it('treats a non-numeric stored value as no timestamp', async () => {
-    await setString('page:fetch:corrupt', 'not-a-number', 60);
+    await setRedisKeyStringValue('page:fetch:corrupt', 'not-a-number', 60);
     expect(await getRedisKeyTimestampValue('page:fetch:corrupt')).toBeNull();
   });
 
@@ -92,8 +92,8 @@ describe('redis state client integration', () => {
   });
 
   it('round-trips a string', async () => {
-    await setString('article:content:x', 'deadbeef', 60);
-    expect(await getString('article:content:x')).toBe('deadbeef');
+    await setRedisKeyStringValue('article:content:x', 'deadbeef', 60);
+    expect(await getRedisKeyStringValue('article:content:x')).toBe('deadbeef');
   });
 
   it('acquires a lock once and blocks a second acquirer', async () => {
