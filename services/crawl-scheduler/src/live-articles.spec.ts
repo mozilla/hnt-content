@@ -17,6 +17,7 @@ vi.mock('crawl-common', async (importOriginal) => ({
   ...(await importOriginal<typeof import('crawl-common')>()),
   getScheduledSectionItems: mocks.getScheduledSectionItems,
 }));
+
 vi.mock('pubsub', () => ({ publishMessage: mocks.publishMessage }));
 
 import config from './config.js';
@@ -58,10 +59,10 @@ beforeEach(() => {
   mocks.publishMessage.mockResolvedValue('message-id');
 });
 
-const CONFIGURED_CAP = config.liveArticlesPerTick;
+const CONFIGURED_CAP = config.maxLiveArticlesPerTick;
 
 afterEach(() => {
-  config.liveArticlesPerTick = CONFIGURED_CAP;
+  config.maxLiveArticlesPerTick = CONFIGURED_CAP;
   vi.clearAllMocks();
 });
 
@@ -89,10 +90,23 @@ describe('enqueueLiveArticles', () => {
   });
 
   it('publishes up to the cap and never the same article twice', async () => {
+    config.maxLiveArticlesPerTick = 5;
+
+    mocks.getScheduledSectionItems.mockResolvedValue(
+      liveArticles(config.maxLiveArticlesPerTick + 10),
+    );
+
+    expect(await enqueueLiveArticles()).toBe(config.maxLiveArticlesPerTick);
+    expect(new Set(publishedUrls()).size).toBe(config.maxLiveArticlesPerTick);
+  });
+
+  it('publishes all articles when the limit is null', async () => {
+    config.maxLiveArticlesPerTick = null;
+
     mocks.getScheduledSectionItems.mockResolvedValue(liveArticles(10));
 
-    expect(await enqueueLiveArticles()).toBe(3);
-    expect(new Set(publishedUrls()).size).toBe(3);
+    expect(await enqueueLiveArticles()).toBe(10);
+    expect(new Set(publishedUrls()).size).toBe(10);
   });
 
   it('reaches articles beyond the first few over successive runs', async () => {
@@ -102,21 +116,23 @@ describe('enqueueLiveArticles', () => {
       await enqueueLiveArticles();
     }
 
-    // Every one of the twenty runs would have to draw the same three of
+    // Every one of the twenty runs would have to draw the same set from
     // ten articles for this to fail, so it asserts the spread without
     // being flaky.
-    expect(new Set(publishedUrls()).size).toBeGreaterThan(3);
+    expect(new Set(publishedUrls()).size).toBeGreaterThan(
+      config.maxLiveArticlesPerTick,
+    );
   });
 
   it('enqueues nothing when the cap is zero', async () => {
-    config.liveArticlesPerTick = 0;
+    config.maxLiveArticlesPerTick = 0;
 
     expect(await enqueueLiveArticles()).toBe(0);
     expect(mocks.getScheduledSectionItems).not.toHaveBeenCalled();
     expect(mocks.publishMessage).not.toHaveBeenCalled();
   });
 
-  it('publishes nothing for an empty list', async () => {
+  it('publishes nothing for an empty result from the corpus', async () => {
     mocks.getScheduledSectionItems.mockResolvedValue([]);
 
     expect(await enqueueLiveArticles()).toBe(0);

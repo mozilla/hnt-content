@@ -1,12 +1,41 @@
 import { crawlConfig } from 'crawl-common';
 
-// A page crawl fans out to tens of article extractions, and nothing yet
-// skips an article we extracted recently, so dev and stage cap how many
-// of the pages due each minute go out, and production stays off. null
-// means no limit, so every due page goes out.
-// TODO: Change prod value to null to release.
-const maxPagesPerTick: number | null =
-  crawlConfig.environment === 'prod' ? 0 : 1;
+// option to limit the number of publisher pages processed per system tick.
+// a null value means no limit.
+let maxPagesPerTick: number | null = 0;
+
+// option to limit the number of live corpus articles processed per system
+// tick.
+// a null value means no limit.
+let maxLiveArticlesPerTick: number | null = 0;
+
+// if the current environment is enabled, set processing limits.
+if (crawlConfig.environmentEnabled) {
+  switch (crawlConfig.environment) {
+    // for vi tests
+    case 'test':
+      maxLiveArticlesPerTick = 3;
+      maxPagesPerTick = 1;
+
+      break;
+    case 'dev':
+      maxLiveArticlesPerTick = 3;
+      maxPagesPerTick = 1;
+
+      break;
+    case 'stage':
+      maxLiveArticlesPerTick = 3;
+      maxPagesPerTick = 1;
+
+      break;
+    case 'prod':
+      // TODO: uncomment for release phase 2
+      // maxLiveArticlesPerTick = null;
+      maxPagesPerTick = null;
+
+      break;
+  }
+}
 
 export default {
   service: 'crawl-scheduler',
@@ -14,11 +43,7 @@ export default {
   staleTickThresholdMinutes: Number(
     process.env.STALE_TICK_THRESHOLD_MINUTES ?? '10',
   ),
-  // While this service is under development we disable live updates in
-  // production and limit dev and stage to three articles a tick. Every
-  // job is a Zyte extraction and nothing yet skips an article we just
-  // extracted, so a tick a minute costs sixty times this number an hour.
-  liveArticlesPerTick: crawlConfig.environment === 'prod' ? 0 : 3,
+  maxLiveArticlesPerTick,
   maxPagesPerTick,
   // How often we re-read a live article. Each job carries this window so
   // the worker knows when the article is due again. A publisher revises
