@@ -40,7 +40,7 @@ const DEFAULT_CLIENT_VERSION = '1.0';
 
 /**
  * Error thrown when a Corpus Admin API request fails. The message stays
- * free of IDs and response text, so Sentry can group errors by message.
+ * free of IDs and response text, so issue titles describe the failure.
  */
 export class CorpusApiError extends Error {
   constructor(

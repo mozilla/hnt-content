@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import { timing, type Outcome } from 'metrics';
 import { ZyteError } from 'zyte';
 
@@ -20,6 +21,8 @@ export async function timeZyteCall<T>(
   } catch (err) {
     errorType =
       err instanceof ZyteError ? String(err.status) : (err as Error).name;
+    // Lets one Sentry issue show its mix of failures, e.g. bans and outages.
+    Sentry.setTag('error_type', errorType);
     throw err;
   } finally {
     timing('crawl_zyte_request_duration', (performance.now() - start) / 1000, {

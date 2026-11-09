@@ -36,7 +36,7 @@ export function initSentry({ service }: SentryInitOptions): void {
     // truncated; adopted from the @pocket-tools/sentry library.
     maxValueLength: 2000,
     // Attach an error's own fields, such as a Corpus API error's GraphQL
-    // errors, which stay out of the message so Sentry can group on it.
+    // errors, which are kept out of the message.
     integrations: [Sentry.extraErrorDataIntegration()],
   });
 
