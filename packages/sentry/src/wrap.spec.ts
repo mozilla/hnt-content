@@ -32,7 +32,7 @@ describe('withSentryHandler', () => {
     await expect(wrapped({})).rejects.toBe(err);
     expect(Sentry.captureException).toHaveBeenCalledOnce();
     expect(Sentry.captureException).toHaveBeenCalledWith(err, {
-      fingerprint: ['{{ default }}', 'boom'],
+      fingerprint: ['{{ default }}', 'Error: boom'],
     });
   });
 

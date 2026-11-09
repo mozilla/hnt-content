@@ -48,10 +48,7 @@ export function withSentryHandler<T>(
         // The stack alone lumps different failures from one call site
         // together, e.g. a Zyte ban and a Zyte outage.
         Sentry.captureException(err, {
-          fingerprint: [
-            '{{ default }}',
-            err instanceof Error ? err.message : String(err),
-          ],
+          fingerprint: ['{{ default }}', String(err)],
         });
         throw err;
       }
