@@ -40,27 +40,16 @@ const DEFAULT_CLIENT_VERSION = '1.0';
 
 /**
  * Error thrown when a Corpus Admin API request fails. The message stays
- * free of IDs and response text, which go in their own fields, so
- * Sentry can group errors by message.
+ * free of IDs and response text, so Sentry can group errors by message.
  */
 export class CorpusApiError extends Error {
-  /**
-   * Response body, captured for Sentry and the logs. Its shape is not
-   * known ahead of time, so the type is unknown.
-   */
-  readonly responseBody?: unknown;
-  /** Messages of the GraphQL errors the API returned. */
-  readonly graphqlErrors?: string[];
-
   constructor(
     message: string,
     readonly statusCode?: number,
-    details: { responseBody?: unknown; graphqlErrors?: string[] } = {},
+    readonly graphqlErrors?: string[],
   ) {
     super(message);
     this.name = 'CorpusApiError';
-    this.responseBody = details.responseBody;
-    this.graphqlErrors = details.graphqlErrors;
   }
 }
 
@@ -195,16 +184,9 @@ async function graphqlRequest<T>(
       }
 
       if (response.status >= 400) {
-        let body: unknown;
-        try {
-          body = await response.json();
-        } catch {
-          // Response may not be JSON.
-        }
         throw new CorpusApiError(
           `Corpus API client error: ${response.status} for ${label}`,
           response.status,
-          { responseBody: body },
         );
       }
 
@@ -214,15 +196,15 @@ async function graphqlRequest<T>(
       };
 
       if (payload.errors?.length) {
-        throw new CorpusApiError(`GraphQL errors for ${label}`, undefined, {
-          graphqlErrors: payload.errors.map((e) => e.message),
-        });
+        throw new CorpusApiError(
+          `GraphQL errors for ${label}`,
+          undefined,
+          payload.errors.map((e) => e.message),
+        );
       }
 
       if (payload.data == null) {
-        throw new CorpusApiError(`No data returned for ${label}`, undefined, {
-          responseBody: payload,
-        });
+        throw new CorpusApiError(`No data returned for ${label}`);
       }
 
       return payload.data;
@@ -269,11 +251,7 @@ export async function updateApprovedCorpusItem(
   }>(UPDATE_MUTATION, { data: input }, 'updateApprovedCorpusItem');
 
   if (!data.updateApprovedCorpusItem) {
-    throw new CorpusApiError(
-      'No data returned for updateApprovedCorpusItem',
-      undefined,
-      { responseBody: data },
-    );
+    throw new CorpusApiError('No data returned for updateApprovedCorpusItem');
   }
   return data.updateApprovedCorpusItem;
 }
