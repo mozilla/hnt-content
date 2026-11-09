@@ -35,8 +35,8 @@ export function initSentry({ service }: SentryInitOptions): void {
     // Raise from the 250-char default so longer errors aren't
     // truncated; adopted from the @pocket-tools/sentry library.
     maxValueLength: 2000,
-    // Attach an error's own fields, such as a Zyte error's url, which
-    // stay out of the message so Sentry can group on it.
+    // Attach an error's own fields, such as a Corpus API error's response
+    // body, which stay out of the message so Sentry can group on it.
     integrations: [Sentry.extraErrorDataIntegration()],
   });
 

@@ -25,9 +25,6 @@ export const RETRY_MIN_TIMEOUT_MS = 2_000;
 /** Upper bound on retry delay. */
 export const RETRY_MAX_TIMEOUT_MS = 30_000;
 
-/** A Zyte extract request; url is required, the rest varies by type. */
-type ZyteRequestBody = { url: string } & Record<string, unknown>;
-
 /**
  * Return whether a failed request should be retried. Retries
  * network errors and Zyte API responses with transient status
@@ -87,7 +84,6 @@ export async function extractArticle(
     throw new ZyteError(
       statusCode,
       `Zyte API returned ${statusCode} but no article data`,
-      { url },
     );
   }
   return {
@@ -115,7 +111,6 @@ export async function extractArticleList(
     throw new ZyteError(
       statusCode,
       `Zyte API returned ${statusCode} but no articleList data`,
-      { url },
     );
   }
   return {
@@ -135,8 +130,8 @@ function buildRequestBody(
   url: string,
   type: ExtractionType,
   opts?: ExtractionOptions,
-): ZyteRequestBody {
-  const body: ZyteRequestBody = { url, [type]: true };
+): Record<string, unknown> {
+  const body: Record<string, unknown> = { url, [type]: true };
 
   if (opts?.extractFrom) {
     const optionsKey =
@@ -165,7 +160,7 @@ function buildRequestBody(
  * retry on transient errors via p-retry.
  */
 async function zyteRequest(
-  body: ZyteRequestBody,
+  body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const key = apiKey;
   if (!key) {
@@ -198,7 +193,7 @@ async function zyteRequest(
         throw new ZyteError(
           response.status,
           `Zyte API error: ${response.status}`,
-          { url: body.url, responseBody: parsed },
+          parsed,
         );
       }
 
@@ -208,7 +203,6 @@ async function zyteRequest(
         throw new ZyteError(
           response.status,
           `Zyte API returned ${response.status} with unparseable body`,
-          { url: body.url },
         );
       }
     },
