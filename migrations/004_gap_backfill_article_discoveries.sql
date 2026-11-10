@@ -6,7 +6,8 @@
 -- 2026-11-10 20:16:10.754 UTC (12:16:10 PT, after the 12:12 PT deploy).
 -- This copies only legacy PAGE rows strictly between those two times, so it
 -- neither duplicates the old backfill nor overlaps the new crawler.
--- The NOT EXISTS guard makes a rerun a no-op. Same mapping as 002.
+-- The NOT EXISTS guard makes a rerun a no-op. Unlike 002, exact duplicate
+-- legacy rows (about 11% of the gap) are copied once. Same mapping as 002.
 
 -- last row of 002
 DECLARE gap_start TIMESTAMP DEFAULT TIMESTAMP '2026-11-04 20:03:12.323';
@@ -46,4 +47,10 @@ WHERE r.source = 'PAGE'
       AND d.source_url = r.origin_url
       AND d.topic IS NOT DISTINCT FROM r.page_subtopic
       AND d.surface_id = CONCAT('NEW_TAB_', UPPER(r.surface))
-  );
+  )
+-- The legacy crawler sometimes wrote the same discovery twice.
+QUALIFY ROW_NUMBER() OVER (
+  PARTITION BY
+    r.canonical_url, r.crawled_at, r.origin_url, r.page_subtopic, r.surface
+  ORDER BY r.page_position
+) = 1;
