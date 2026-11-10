@@ -72,6 +72,15 @@ function registeredHandler(): (
 // Read at import, before the tests clear the mock's calls.
 const [sentryMetadata] = vi.mocked(withSentryHandler).mock.calls[0]!;
 
+describe('discovery consumer Sentry metadata', () => {
+  it('tags Sentry errors with the role and the page domain', () => {
+    expect(sentryMetadata(DISCOVERY_MESSAGE).tags).toMatchObject({
+      worker_role: 'discovery',
+      domain: 'example.com',
+    });
+  });
+});
+
 describe('discovery consumer', () => {
   beforeEach(() => {
     // Page not crawled recently, lock free, articles not extracted.
@@ -251,14 +260,5 @@ describe('discovery consumer', () => {
       expect.any(String),
       'lock-token',
     );
-  });
-});
-
-describe('discovery consumer Sentry metadata', () => {
-  it('tags Sentry errors with the role and the page domain', () => {
-    expect(sentryMetadata(DISCOVERY_MESSAGE).tags).toMatchObject({
-      worker_role: 'discovery',
-      domain: 'example.com',
-    });
   });
 });

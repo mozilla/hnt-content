@@ -69,6 +69,15 @@ function markerTtls(): unknown[] {
 // Read at import, before the tests clear the mock's calls.
 const [sentryMetadata] = vi.mocked(withSentryHandler).mock.calls[0]!;
 
+describe('article consumer Sentry metadata', () => {
+  it('tags Sentry errors with the role and the article domain', () => {
+    expect(sentryMetadata(BASE_MESSAGE).tags).toMatchObject({
+      worker_role: 'article',
+      domain: 'example.com',
+    });
+  });
+});
+
 describe('article consumer', () => {
   beforeEach(() => {
     // Happy path: not extracted recently, lock free, no prior content.
@@ -312,14 +321,5 @@ describe('article consumer', () => {
 
     await expect(registeredHandler()(BASE_MESSAGE)).resolves.toBeUndefined();
     expect(publishMessage).toHaveBeenCalledOnce();
-  });
-});
-
-describe('article consumer Sentry metadata', () => {
-  it('tags Sentry errors with the role and the article domain', () => {
-    expect(sentryMetadata(BASE_MESSAGE).tags).toMatchObject({
-      worker_role: 'article',
-      domain: 'example.com',
-    });
   });
 });
