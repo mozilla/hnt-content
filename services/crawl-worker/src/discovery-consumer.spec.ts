@@ -75,7 +75,7 @@ const [sentryMetadata] = vi.mocked(withSentryHandler).mock.calls[0]!;
 describe('discovery consumer Sentry metadata', () => {
   it('tags Sentry errors with the role and the page domain', () => {
     expect(sentryMetadata(DISCOVERY_MESSAGE).tags).toMatchObject({
-      worker_role: 'discovery',
+      worker_role: config.workerRole,
       domain: 'example.com',
     });
   });

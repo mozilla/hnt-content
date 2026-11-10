@@ -147,7 +147,7 @@ function contentHash(event: ArticleEvent): string {
 const handleWithSentry = withSentryHandler<CrawlArticleMessage>(
   (message) => ({
     tags: {
-      worker_role: 'article',
+      worker_role: config.workerRole,
       domain: getRegistrableDomain(message.url),
       has_corpus_item: String(message.corpus_item != null),
     },

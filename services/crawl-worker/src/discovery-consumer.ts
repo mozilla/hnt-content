@@ -129,7 +129,7 @@ async function handleMessage(
 const handleWithSentry = withSentryHandler<CrawlArticleDiscoveryMessage>(
   (message) => ({
     tags: {
-      worker_role: 'discovery',
+      worker_role: config.workerRole,
       domain: getRegistrableDomain(message.url),
     },
     context: {
