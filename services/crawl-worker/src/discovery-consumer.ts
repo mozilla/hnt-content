@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   crawlConfig,
   buildRedisPageFetchKey,
+  getRegistrableDomain,
   buildRedisPageLockKey,
   type CrawlArticleDiscoveryMessage,
   type CrawlArticleMessage,
@@ -127,7 +128,7 @@ async function handleMessage(
 // then rethrown so the subscriber nacks the message for redelivery.
 const handleWithSentry = withSentryHandler<CrawlArticleDiscoveryMessage>(
   (message) => ({
-    tags: { worker_role: 'discovery' },
+    tags: { domain: getRegistrableDomain(message.url) },
     context: {
       url: message.url,
       // A page is crawled for one or more (surface, topic) pairs, and

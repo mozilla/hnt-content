@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('metrics', () => ({ timing: vi.fn() }));
+vi.mock('@sentry/node', () => ({ setTag: vi.fn() }));
 
+import * as Sentry from '@sentry/node';
 import { timing } from 'metrics';
 import { ZyteError } from 'zyte';
 import { timeZyteCall } from './timed-call.js';
@@ -43,6 +45,7 @@ describe('timeZyteCall', () => {
         outcome: 'failure',
         error_type: errorType,
       });
+      expect(Sentry.setTag).toHaveBeenCalledWith('error_type', errorType);
     },
   );
 });

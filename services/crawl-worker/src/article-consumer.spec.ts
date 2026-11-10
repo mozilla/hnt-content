@@ -7,6 +7,7 @@ import {
   type CrawlArticleMessage,
 } from 'crawl-common';
 import { publishMessage, startSubscriber } from 'pubsub';
+import { withSentryHandler } from 'sentry';
 import {
   acquireRedisKeyLockToken,
   getRedisKeyTimestampValue,
@@ -34,6 +35,10 @@ vi.mock('redis-state', () => ({
   setRedisKeyTimestampWithTTL: vi.fn(),
   setRedisKeyStringValue: vi.fn(),
 }));
+// Pass handlers through unwrapped, keeping each Sentry metadata function.
+vi.mock('sentry', () => ({
+  withSentryHandler: vi.fn((_, handler) => handler),
+}));
 vi.mock('./handlers/extract-article.js', () => ({
   handleArticleExtraction: vi.fn(),
 }));
@@ -60,6 +65,17 @@ function markerTtls(): unknown[] {
     .mocked(setRedisKeyTimestampWithTTL)
     .mock.calls.map(([, ttl]) => ttl);
 }
+
+// Read at import, before the tests clear the mock's calls.
+const [sentryMetadata] = vi.mocked(withSentryHandler).mock.calls[0]!;
+
+describe('article consumer Sentry metadata', () => {
+  it('tags Sentry errors with the article domain', () => {
+    expect(sentryMetadata(BASE_MESSAGE).tags).toMatchObject({
+      domain: 'example.com',
+    });
+  });
+});
 
 describe('article consumer', () => {
   beforeEach(() => {

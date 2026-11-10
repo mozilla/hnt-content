@@ -38,11 +38,15 @@ export const RETRY_MAX_TIMEOUT_MS = 16_000;
 const DEFAULT_CLIENT_NAME = 'hnt-content';
 const DEFAULT_CLIENT_VERSION = '1.0';
 
-/** Error thrown when a Corpus Admin API request fails. */
+/**
+ * Error thrown when a Corpus Admin API request fails. The message stays
+ * free of IDs and response text, so issue titles describe the failure.
+ */
 export class CorpusApiError extends Error {
   constructor(
     message: string,
     readonly statusCode?: number,
+    readonly graphqlErrors?: string[],
   ) {
     super(message);
     this.name = 'CorpusApiError';
@@ -180,15 +184,8 @@ async function graphqlRequest<T>(
       }
 
       if (response.status >= 400) {
-        let body: unknown;
-        try {
-          body = await response.json();
-        } catch {
-          // Response may not be JSON.
-        }
         throw new CorpusApiError(
-          `Corpus API client error: ${response.status} for ${label}: ` +
-            JSON.stringify(body),
+          `Corpus API client error: ${response.status} for ${label}`,
           response.status,
         );
       }
@@ -200,15 +197,14 @@ async function graphqlRequest<T>(
 
       if (payload.errors?.length) {
         throw new CorpusApiError(
-          `GraphQL errors for ${label}: ` +
-            payload.errors.map((e) => e.message).join('; '),
+          `GraphQL errors for ${label}`,
+          undefined,
+          payload.errors.map((e) => e.message),
         );
       }
 
       if (payload.data == null) {
-        throw new CorpusApiError(
-          `No data returned for ${label}: ${JSON.stringify(payload)}`,
-        );
+        throw new CorpusApiError(`No data returned for ${label}`);
       }
 
       return payload.data;
@@ -252,13 +248,10 @@ export async function updateApprovedCorpusItem(
 ): Promise<UpdateApprovedCorpusItemResponse> {
   const data = await graphqlRequest<{
     updateApprovedCorpusItem?: UpdateApprovedCorpusItemResponse;
-  }>(UPDATE_MUTATION, { data: input }, `update item ${input.externalId}`);
+  }>(UPDATE_MUTATION, { data: input }, 'updateApprovedCorpusItem');
 
   if (!data.updateApprovedCorpusItem) {
-    throw new CorpusApiError(
-      `No data returned for update item ${input.externalId}: ` +
-        JSON.stringify(data),
-    );
+    throw new CorpusApiError('No data returned for updateApprovedCorpusItem');
   }
   return data.updateApprovedCorpusItem;
 }
@@ -306,7 +299,7 @@ export async function getScheduledSectionItems(
   }>(
     SECTION_ITEMS_QUERY,
     { scheduledSurfaceGuid },
-    `sections for ${scheduledSurfaceGuid}`,
+    'getSectionsWithSectionItems',
   );
 
   const seen = new Set<string>();

@@ -258,6 +258,9 @@ importers:
 
   services/crawl-worker:
     dependencies:
+      '@sentry/node':
+        specifier: ^10.58.0
+        version: 10.58.0
       crawl-common:
         specifier: workspace:*
         version: link:../../packages/crawl-common

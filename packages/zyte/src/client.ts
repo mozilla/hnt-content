@@ -83,7 +83,7 @@ export async function extractArticle(
   if (!article) {
     throw new ZyteError(
       statusCode,
-      `Zyte API returned ${statusCode} but no article data for ${url}`,
+      `Zyte API returned ${statusCode} but no article data`,
     );
   }
   return {
@@ -110,7 +110,7 @@ export async function extractArticleList(
   if (!list) {
     throw new ZyteError(
       statusCode,
-      `Zyte API returned ${statusCode} but no articleList data for ${url}`,
+      `Zyte API returned ${statusCode} but no articleList data`,
     );
   }
   return {
@@ -192,7 +192,7 @@ async function zyteRequest(
         }
         throw new ZyteError(
           response.status,
-          `Zyte API error: ${response.status} for ${body.url}`,
+          `Zyte API error: ${response.status}`,
           parsed,
         );
       }
@@ -202,7 +202,7 @@ async function zyteRequest(
       } catch {
         throw new ZyteError(
           response.status,
-          `Zyte API returned ${response.status} with unparseable body for ${body.url}`,
+          `Zyte API returned ${response.status} with unparseable body`,
         );
       }
     },
