@@ -153,6 +153,10 @@
       "url": "https://www.20minutes.fr/gaming/",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "hobbies"
+        },
+        {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "hobbies"
         }
@@ -978,6 +982,10 @@
       "url": "https://www.admagazine.fr/dossier/chambres",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "home"
+        },
+        {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "home"
         }
@@ -1045,60 +1053,6 @@
       ]
     },
     {
-      "url": "https://www.adnkronos.com/economia/fintech/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "tech"
-        }
-      ]
-    },
-    {
-      "url": "https://www.adnkronos.com/lavoro/offerte-lavoro/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "finance"
-        }
-      ]
-    },
-    {
-      "url": "https://www.adnkronos.com/politica/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "government"
-        }
-      ]
-    },
-    {
-      "url": "https://www.adnkronos.com/salute/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "health"
-        }
-      ]
-    },
-    {
-      "url": "https://www.adnkronos.com/sport/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "sports"
-        }
-      ]
-    },
-    {
-      "url": "https://www.adnkronos.com/tecnologia/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "tech"
-        }
-      ]
-    },
-    {
       "url": "https://www.advocate.com/history",
       "contexts": [
         {
@@ -1157,15 +1111,6 @@
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.agi.it/sport/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "sports"
         }
       ]
     },
@@ -1273,10 +1218,6 @@
         {
           "surface_id": "NEW_TAB_EN_INTL",
           "topic": "business"
-        },
-        {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "business"
         }
       ]
     },
@@ -1335,6 +1276,15 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://www.alterechos.be/tag/sante/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "health"
         }
       ]
     },
@@ -1606,6 +1556,15 @@
       ]
     },
     {
+      "url": "https://www.apartmenttherapy.com/archive",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_US",
+          "topic": "home"
+        }
+      ]
+    },
+    {
       "url": "https://apnews.com/",
       "contexts": [
         {
@@ -1744,6 +1703,15 @@
         {
           "surface_id": "NEW_TAB_EN_IE",
           "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://apnews.com/hub/europe",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
         }
       ]
     },
@@ -2041,6 +2009,40 @@
       ]
     },
     {
+      "url": "https://www.apotheken-umschau.de/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "health"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "health"
+        }
+      ]
+    },
+    {
+      "url": "https://www.apotheken-umschau.de/familie/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "society-parenting"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "society-parenting"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "society-parenting"
+        }
+      ]
+    },
+    {
       "url": "https://www.apotheken-umschau.de/gesund-bleiben/",
       "contexts": [
         {
@@ -2088,6 +2090,14 @@
     {
       "url": "https://www.apotheken-umschau.de/news/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "health"
+        },
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "health"
@@ -2690,15 +2700,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "travel"
-        }
-      ]
-    },
-    {
-      "url": "https://asia.nikkei.com/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "business"
         }
       ]
     },
@@ -3497,6 +3498,15 @@
       ]
     },
     {
+      "url": "https://www.bbc.com/news/topics/cjnwl8q4qe8t",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
       "url": "https://www.bbc.com/news/topics/cwnpxwzd269t",
       "contexts": [
         {
@@ -3532,6 +3542,15 @@
       "contexts": [
         {
           "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.bbc.com/news/world/europe",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "headlines"
         }
       ]
@@ -3804,10 +3823,6 @@
           "topic": "education"
         },
         {
-          "surface_id": "NEW_TAB_EN_IE",
-          "topic": "education"
-        },
-        {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "education"
         }
@@ -3854,10 +3869,6 @@
           "topic": "education"
         },
         {
-          "surface_id": "NEW_TAB_EN_IE",
-          "topic": "education"
-        },
-        {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "education"
         }
@@ -3901,6 +3912,10 @@
         },
         {
           "surface_id": "NEW_TAB_EN_IE",
+          "topic": "health"
+        },
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         },
         {
@@ -4080,15 +4095,6 @@
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "soccer"
-        }
-      ]
-    },
-    {
-      "url": "https://www.blick.ch/life/familie/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "society-parenting"
         }
       ]
     },
@@ -4276,6 +4282,10 @@
     {
       "url": "https://www.brigitte.de/liebe/persoenlichkeit/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "health"
@@ -4913,6 +4923,15 @@
       ]
     },
     {
+      "url": "https://www.cash.ch/ratgeber",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "finance"
+        }
+      ]
+    },
+    {
       "url": "https://www.caughtoffside.com/",
       "contexts": [
         {
@@ -5259,15 +5278,6 @@
         {
           "surface_id": "NEW_TAB_PL_PL",
           "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.channelnewsasia.com/world",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "headlines"
         }
       ]
     },
@@ -5929,6 +5939,15 @@
       ]
     },
     {
+      "url": "https://collider.com/tv/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_US",
+          "topic": "tv"
+        }
+      ]
+    },
+    {
       "url": "https://computerhoy.20minutos.es/ciberseguridad/",
       "contexts": [
         {
@@ -6037,15 +6056,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.corriere.it/cook/ricette/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "food"
         }
       ]
     },
@@ -6212,15 +6222,6 @@
       ]
     },
     {
-      "url": "https://www.cosmopolitan.com/it/lifestyle/musica/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.cosmopolitan.com/it/lifestyle/viaggi/",
       "contexts": [
         {
@@ -6248,8 +6249,64 @@
       ]
     },
     {
+      "url": "https://www.cosmopolitan.fr/,fatigue-et-sommeil,2511294.htm",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "health"
+        },
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "health"
+        }
+      ]
+    },
+    {
+      "url": "https://www.cosmopolitan.fr/,sante-et-nutrition,2510882.htm",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "health"
+        },
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "health"
+        }
+      ]
+    },
+    {
+      "url": "https://www.cosmopolitan.fr/,tous-les-articles-musique-de-la-redac,2151.htm",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "arts"
+        },
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.cosmopolitan.fr/gaming,2511491.asp1",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "hobbies"
+        },
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "hobbies"
+        }
+      ]
+    },
+    {
       "url": "https://www.cotemaison.fr/idees-deco",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "home"
+        },
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "home"
@@ -6260,6 +6317,10 @@
       "url": "https://www.cotemaison.fr/jardin-terrasse",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "home"
+        },
+        {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "home"
         }
@@ -6269,6 +6330,10 @@
       "url": "https://www.cotemaison.fr/pieces/salle-de-bains",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "home"
+        },
+        {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "home"
         }
@@ -6277,6 +6342,10 @@
     {
       "url": "https://www.cotemaison.fr/renover",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "home"
+        },
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "home"
@@ -6575,6 +6644,15 @@
         {
           "surface_id": "NEW_TAB_EN_CA",
           "topic": "government"
+        }
+      ]
+    },
+    {
+      "url": "https://cuidateplus.marca.com/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "health"
         }
       ]
     },
@@ -6928,6 +7006,15 @@
         {
           "surface_id": "NEW_TAB_PL_PL",
           "topic": "home"
+        }
+      ]
+    },
+    {
+      "url": "https://decider.com/tag/tv-reviews/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_US",
+          "topic": "tv"
         }
       ]
     },
@@ -8063,6 +8150,10 @@
       "url": "https://www.domodeco.fr/tendances/",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "home"
+        },
+        {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "home"
         }
@@ -8208,6 +8299,15 @@
       ]
     },
     {
+      "url": "https://www.dw.com/en/europe/s-1433",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
       "url": "https://www.dw.com/en/health/s-58123583",
       "contexts": [
         {
@@ -8222,6 +8322,15 @@
         {
           "surface_id": "NEW_TAB_EN_INTL",
           "topic": "government"
+        }
+      ]
+    },
+    {
+      "url": "https://www.dw.com/en/science/s-12526",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "education-science"
         }
       ]
     },
@@ -8261,15 +8370,6 @@
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.dwell.com/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "home"
         }
       ]
     },
@@ -8667,6 +8767,10 @@
     {
       "url": "https://efe.com/portada-espana/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "government"
+        },
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "headlines"
@@ -9231,6 +9335,96 @@
       ]
     },
     {
+      "url": "https://www.elindependiente.com/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elindependiente.com/economia/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "business"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elindependiente.com/economia/trabajo/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "finance"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elindependiente.com/espana/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "government"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elindependiente.com/futuro/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "education-science"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elindependiente.com/tendencias/cine/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elindependiente.com/tendencias/historia/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "education"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elindependiente.com/tendencias/libros/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elindependiente.com/tendencias/musica/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elindependiente.com/vida-sana/nutricion/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "food"
+        }
+      ]
+    },
+    {
       "url": "https://www.elle.be/fr/elle-a-table",
       "contexts": [
         {
@@ -9303,15 +9497,6 @@
       ]
     },
     {
-      "url": "https://www.elle.com/it/cucina/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "food"
-        }
-      ]
-    },
-    {
       "url": "https://www.elle.com/it/lifestyle/viaggi/",
       "contexts": [
         {
@@ -9358,15 +9543,6 @@
     },
     {
       "url": "https://www.elle.com/it/showbiz/musica/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.elle.com/it/showbiz/tv/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_IT_IT",
@@ -9941,6 +10117,10 @@
       "url": "https://www.eltern.de/gesundheit-ernaehrung/",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
+        {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "health"
         }
@@ -10479,6 +10659,15 @@
       ]
     },
     {
+      "url": "https://www.esquire.com/entertainment/tv/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_US",
+          "topic": "tv"
+        }
+      ]
+    },
+    {
       "url": "https://www.esquire.com/es/actualidad/",
       "contexts": [
         {
@@ -10679,159 +10868,6 @@
       ]
     },
     {
-      "url": "https://www.esquire.de/entertainment/film",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.esquire.de/entertainment/kultur",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.esquire.de/entertainment/musik",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.esquire.de/entertainment/streaming-tv",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.esquire.de/life/essen-trinken",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "food"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "food"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "food"
-        }
-      ]
-    },
-    {
-      "url": "https://www.esquire.de/life/fitness-gesundheit",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "health"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "sports"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "sports"
-        }
-      ]
-    },
-    {
-      "url": "https://www.esquire.de/life/reisen",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "travel"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "travel"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "travel"
-        }
-      ]
-    },
-    {
-      "url": "https://www.esquire.de/news/business-karriere",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "finance"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "finance"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "finance"
-        }
-      ]
-    },
-    {
-      "url": "https://www.esquire.de/news/sport",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "sports"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "sports"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "sports"
-        }
-      ]
-    },
-    {
       "url": "https://www.essence.com/travel/",
       "contexts": [
         {
@@ -10841,29 +10877,20 @@
       ]
     },
     {
-      "url": "https://euractiv.fr/sections/economy-jobs/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_BE",
-          "topic": "business"
-        }
-      ]
-    },
-    {
-      "url": "https://euractiv.fr/sections/politics/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_BE",
-          "topic": "government"
-        }
-      ]
-    },
-    {
       "url": "https://www.eurogamer.pl/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_PL_PL",
           "topic": "hobbies"
+        }
+      ]
+    },
+    {
+      "url": "https://www.euronews.com/business",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "business"
         }
       ]
     },
@@ -10925,6 +10952,10 @@
         },
         {
           "surface_id": "NEW_TAB_EN_IE",
+          "topic": "health"
+        },
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         }
       ]
@@ -11010,6 +11041,15 @@
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://europeancorrespondent.com/en/feed",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
         }
       ]
     },
@@ -12737,10 +12777,6 @@
       "url": "https://www.fr.de/politik/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "government"
-        },
-        {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "government"
         }
@@ -12869,15 +12905,6 @@
       ]
     },
     {
-      "url": "https://www.france24.com/en/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
       "url": "https://www.france24.com/en/business-tech/",
       "contexts": [
         {
@@ -12892,6 +12919,15 @@
         {
           "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
+        }
+      ]
+    },
+    {
+      "url": "https://www.france24.com/en/europe/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
         }
       ]
     },
@@ -12984,6 +13020,15 @@
       "contexts": [
         {
           "surface_id": "NEW_TAB_FR_FR",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.freepressjournal.in/entertainment",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
           "topic": "arts"
         }
       ]
@@ -13169,6 +13214,15 @@
       ]
     },
     {
+      "url": "https://www.fuw.ch/maerkte",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "finance"
+        }
+      ]
+    },
+    {
       "url": "https://www.fuw.ch/unternehmen",
       "contexts": [
         {
@@ -13305,19 +13359,6 @@
         },
         {
           "surface_id": "NEW_TAB_EN_US",
-          "topic": "hobbies"
-        }
-      ]
-    },
-    {
-      "url": "https://www.gamekult.com/actualite.html",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_BE",
-          "topic": "hobbies"
-        },
-        {
-          "surface_id": "NEW_TAB_FR_FR",
           "topic": "hobbies"
         }
       ]
@@ -13564,7 +13605,92 @@
       ]
     },
     {
+      "url": "https://www.geo.de/natur/nachhaltigkeit/themen/tipps-fuer-den-haushalt-30020946.html",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "home"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "home"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "home"
+        }
+      ]
+    },
+    {
+      "url": "https://www.geo.de/natur/oekologie/themen/garten-30017132.html",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "home"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "home"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "home"
+        }
+      ]
+    },
+    {
+      "url": "https://www.geo.de/natur/tierwelt/themen/haustiere-30016332.html",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "education-science"
+        }
+      ]
+    },
+    {
+      "url": "https://www.geo.de/natur/tierwelt/themen/tierfotografie-30016694.html",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "education-science"
+        }
+      ]
+    },
+    {
       "url": "https://www.geo.de/reisen/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "travel"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "travel"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "travel"
+        }
+      ]
+    },
+    {
+      "url": "https://www.geo.de/reisen/reise-inspiration/themen/reisefotografie-30018016.html",
       "contexts": [
         {
           "surface_id": "NEW_TAB_DE_AT",
@@ -13818,15 +13944,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "society-parenting"
-        }
-      ]
-    },
-    {
-      "url": "https://gizmodo.com/tech",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "tech"
         }
       ]
     },
@@ -14095,7 +14212,7 @@
       ]
     },
     {
-      "url": "https://www.goodhousekeeping.com/uk/food/",
+      "url": "https://www.goodhousekeeping.com/uk/food/recipes/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_EN_GB",
@@ -15110,6 +15227,15 @@
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "travel"
+        }
+      ]
+    },
+    {
+      "url": "https://www.harpersbazaar.in/culture",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "arts"
         }
       ]
     },
@@ -16158,6 +16284,10 @@
       "url": "https://www.ici.fr/vie-quotidienne/jardin",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "home"
+        },
+        {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "home"
         }
@@ -16241,24 +16371,6 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "business"
-        }
-      ]
-    },
-    {
-      "url": "https://www.ilfattoquotidiano.it/mondo/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "government"
-        }
-      ]
-    },
-    {
-      "url": "https://www.ilfattoquotidiano.it/politica-palazzo/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "government"
         }
       ]
     },
@@ -18017,17 +18129,12 @@
       ]
     },
     {
-      "url": "https://www.japantimes.co.jp/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
       "url": "https://www.jeuxactu.com/news/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "hobbies"
+        },
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "hobbies"
@@ -18050,6 +18157,10 @@
     {
       "url": "https://www.journaldugeek.com/hub/jeux-video/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "hobbies"
+        },
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "hobbies"
@@ -18284,15 +18395,6 @@
       ]
     },
     {
-      "url": "https://www.krone.at/politik",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "government"
-        }
-      ]
-    },
-    {
       "url": "https://krytykapolityczna.pl/kultura/",
       "contexts": [
         {
@@ -18392,69 +18494,11 @@
       ]
     },
     {
-      "url": "https://kurier.at/freizeit/kulinarik",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "food"
-        }
-      ]
-    },
-    {
       "url": "https://kurier.at/gesund",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "health"
-        },
-        {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "health"
-        }
-      ]
-    },
-    {
-      "url": "https://kurier.at/politik",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "government"
-        }
-      ]
-    },
-    {
-      "url": "https://kurier.at/sport",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "sports"
-        }
-      ]
-    },
-    {
-      "url": "https://kurier.at/wirtschaft/anlagetipps",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "finance"
-        }
-      ]
-    },
-    {
-      "url": "https://kurier.at/wirtschaft/karriere",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "finance"
-        }
-      ]
-    },
-    {
-      "url": "https://kurier.at/wissen/geschichte",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education"
         }
       ]
     },
@@ -18558,15 +18602,6 @@
       ]
     },
     {
-      "url": "https://www.lacucinaitaliana.it/ricette/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "food"
-        }
-      ]
-    },
-    {
       "url": "https://www.lacucinaitaliana.it/tutorial/le-tecniche/",
       "contexts": [
         {
@@ -18659,38 +18694,11 @@
       ]
     },
     {
-      "url": "https://www.lamontagne.fr/actualites/environnement",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_FR",
-          "topic": "education-science"
-        }
-      ]
-    },
-    {
       "url": "https://www.lamontagne.fr/actualites/monde",
       "contexts": [
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "government"
-        }
-      ]
-    },
-    {
-      "url": "https://www.lamontagne.fr/actualites/politique",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_FR",
-          "topic": "government"
-        }
-      ]
-    },
-    {
-      "url": "https://www.lamontagne.fr/economie/emploi",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_FR",
-          "topic": "finance"
         }
       ]
     },
@@ -18771,15 +18779,6 @@
       "contexts": [
         {
           "surface_id": "NEW_TAB_IT_IT",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
-      "url": "https://www.laprovence.com/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_FR",
           "topic": "headlines"
         }
       ]
@@ -18961,6 +18960,15 @@
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "music"
+        }
+      ]
+    },
+    {
+      "url": "https://www.latimes.com/entertainment-arts/tv",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_US",
+          "topic": "tv"
         }
       ]
     },
@@ -19253,15 +19261,6 @@
       ]
     },
     {
-      "url": "https://www.lefigaro.fr/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_FR",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
       "url": "https://www.lefigaro.fr/histoire",
       "contexts": [
         {
@@ -19323,10 +19322,6 @@
       "contexts": [
         {
           "surface_id": "NEW_TAB_FR_BE",
-          "topic": "business"
-        },
-        {
-          "surface_id": "NEW_TAB_FR_FR",
           "topic": "business"
         }
       ]
@@ -19430,6 +19425,15 @@
       ]
     },
     {
+      "url": "https://www.lemonde.fr/en/europe/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
       "url": "https://www.lemonde.fr/en/health/",
       "contexts": [
         {
@@ -19459,6 +19463,10 @@
     {
       "url": "https://www.lemonde.fr/jeux-video/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "hobbies"
+        },
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "hobbies"
@@ -20104,15 +20112,6 @@
       ]
     },
     {
-      "url": "https://www.lifegate.it/alimentazione/ricette",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "food"
-        }
-      ]
-    },
-    {
       "url": "https://www.lifegate.it/ambiente",
       "contexts": [
         {
@@ -20335,15 +20334,6 @@
       ]
     },
     {
-      "url": "https://www.linkiesta.it/argomento/politica/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "government"
-        }
-      ]
-    },
-    {
       "url": "https://lithub.com/category/newsandculture/history/",
       "contexts": [
         {
@@ -20372,6 +20362,10 @@
     {
       "url": "https://lithub.com/story-type/parenting",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "society-parenting"
+        },
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "society-parenting"
@@ -20695,10 +20689,6 @@
         {
           "surface_id": "NEW_TAB_FR_BE",
           "topic": "health"
-        },
-        {
-          "surface_id": "NEW_TAB_FR_FR",
-          "topic": "health"
         }
       ]
     },
@@ -20707,10 +20697,6 @@
       "contexts": [
         {
           "surface_id": "NEW_TAB_FR_BE",
-          "topic": "home"
-        },
-        {
-          "surface_id": "NEW_TAB_FR_FR",
           "topic": "home"
         }
       ]
@@ -20845,15 +20831,6 @@
       ]
     },
     {
-      "url": "https://mamotoja.pl/rodzina/aktualnosci/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_PL_PL",
-          "topic": "society-parenting"
-        }
-      ]
-    },
-    {
       "url": "https://www.manager-magazin.de/finanzen/immobilien/",
       "contexts": [
         {
@@ -20945,42 +20922,6 @@
       ]
     },
     {
-      "url": "https://www.marca.com/tiramillas/cine.html",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_ES_ES",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.marca.com/tiramillas/economia.html",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_ES_ES",
-          "topic": "finance"
-        }
-      ]
-    },
-    {
-      "url": "https://www.marca.com/tiramillas/gastronomia.html",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_ES_ES",
-          "topic": "food"
-        }
-      ]
-    },
-    {
-      "url": "https://www.marca.com/tiramillas/series.html",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_ES_ES",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.marie-claire.es/que-ver-tv/",
       "contexts": [
         {
@@ -21008,6 +20949,15 @@
         {
           "surface_id": "NEW_TAB_EN_IE",
           "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.marieclaire.co.uk/health-fitness",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "health"
         }
       ]
     },
@@ -21599,6 +21549,10 @@
         {
           "surface_id": "NEW_TAB_EN_GB",
           "topic": "health"
+        },
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "health"
         }
       ]
     },
@@ -21893,6 +21847,15 @@
       ]
     },
     {
+      "url": "https://www.mid-day.com/entertainment/bollywood-news",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
       "url": "https://www.midilibre.fr/economie/emploi/",
       "contexts": [
         {
@@ -21904,6 +21867,10 @@
     {
       "url": "https://www.millenium.org/news",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "hobbies"
+        },
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "hobbies"
@@ -21938,15 +21905,6 @@
         {
           "surface_id": "NEW_TAB_PL_PL",
           "topic": "finance"
-        }
-      ]
-    },
-    {
-      "url": "https://www.mlb.com/news",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "mlb"
         }
       ]
     },
@@ -22307,6 +22265,10 @@
       "url": "https://www.mothermag.com/category/parenting-advice/",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "society-parenting"
+        },
+        {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "society-parenting"
         }
@@ -22537,6 +22499,24 @@
       ]
     },
     {
+      "url": "https://www.nachrichten.at/kultur/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.nachrichten.at/meine-welt/essen_trinken/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "food"
+        }
+      ]
+    },
+    {
       "url": "https://www.nachrichten.at/meine-welt/familie/",
       "contexts": [
         {
@@ -22550,11 +22530,74 @@
       ]
     },
     {
+      "url": "https://www.nachrichten.at/meine-welt/geschichte/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "education"
+        }
+      ]
+    },
+    {
+      "url": "https://www.nachrichten.at/meine-welt/gesundheit/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        }
+      ]
+    },
+    {
+      "url": "https://www.nachrichten.at/meine-welt/reisen/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "travel"
+        }
+      ]
+    },
+    {
+      "url": "https://www.nachrichten.at/meine-welt/wohnen/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "home"
+        }
+      ]
+    },
+    {
+      "url": "https://www.nachrichten.at/panorama/web/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "tech"
+        }
+      ]
+    },
+    {
       "url": "https://www.nachrichten.at/politik/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_DE_AT",
           "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.nachrichten.at/sport/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://www.nachrichten.at/wirtschaft/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "business"
         }
       ]
     },
@@ -22992,11 +23035,11 @@
       ]
     },
     {
-      "url": "https://www.nature.com/",
+      "url": "https://www.nau.ch/lifestyle/geld",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "education-science"
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "finance"
         }
       ]
     },
@@ -23058,15 +23101,6 @@
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.nba.com/news",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "nba"
         }
       ]
     },
@@ -23291,6 +23325,10 @@
       "url": "https://www.ndr.de/ratgeber/gesundheit",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
+        {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "health"
         },
@@ -23414,6 +23452,15 @@
         {
           "surface_id": "NEW_TAB_EN_INTL",
           "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.newindianexpress.com/entertainment/entertainment-news",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "arts"
         }
       ]
     },
@@ -23992,24 +24039,6 @@
       ]
     },
     {
-      "url": "https://www.nfl.com/news/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "nfl"
-        }
-      ]
-    },
-    {
-      "url": "https://www.nhl.com/news",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "nhl"
-        }
-      ]
-    },
-    {
       "url": "https://www.nicematin.com/sante/",
       "contexts": [
         {
@@ -24510,6 +24539,10 @@
       "url": "https://www.npr.org/series/140244738/parenting",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "society-parenting"
+        },
+        {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "society-parenting"
         }
@@ -24636,15 +24669,6 @@
       ]
     },
     {
-      "url": "https://www.nytimes.com/international/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
       "url": "https://www.nytimes.com/international/section/business",
       "contexts": [
         {
@@ -24687,6 +24711,10 @@
     {
       "url": "https://www.nytimes.com/section/parenting",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "society-parenting"
+        },
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "society-parenting"
@@ -25712,6 +25740,15 @@
       ]
     },
     {
+      "url": "https://www.politico.eu/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
       "url": "https://www.politico.eu/country/ireland/",
       "contexts": [
         {
@@ -25941,10 +25978,6 @@
         {
           "surface_id": "NEW_TAB_EN_GB",
           "topic": "hobbies"
-        },
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "hobbies"
         }
       ]
     },
@@ -26125,6 +26158,10 @@
         },
         {
           "surface_id": "NEW_TAB_EN_IE",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -26864,6 +26901,10 @@
       "url": "https://www.radfahren.de/gesundheit/",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
+        {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "health"
         }
@@ -27127,6 +27168,33 @@
         {
           "surface_id": "NEW_TAB_IT_IT",
           "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://www.rapporteur.com/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.rapporteur.com/fr/sections/economy-jobs/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "business"
+        }
+      ]
+    },
+    {
+      "url": "https://www.rapporteur.com/fr/sections/politics/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "headlines"
         }
       ]
     },
@@ -27463,6 +27531,15 @@
       ]
     },
     {
+      "url": "https://www.reuters.com/markets/europe/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "business"
+        }
+      ]
+    },
+    {
       "url": "https://www.reuters.com/sports/",
       "contexts": [
         {
@@ -27494,7 +27571,7 @@
       ]
     },
     {
-      "url": "https://www.reuters.com/world/africa/",
+      "url": "https://www.reuters.com/world/europe/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_EN_ROW",
@@ -28206,15 +28283,6 @@
       ]
     },
     {
-      "url": "https://rp-online.de/kultur/musik/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://rp-online.de/leben/bauen-kaufen-wohnen/",
       "contexts": [
         {
@@ -28737,6 +28805,15 @@
       ]
     },
     {
+      "url": "https://www.rtl.be/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_BE",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
       "url": "https://www.rtl.be/actu/belgique/politique",
       "contexts": [
         {
@@ -28777,7 +28854,7 @@
       "contexts": [
         {
           "surface_id": "NEW_TAB_FR_BE",
-          "topic": "government"
+          "topic": "headlines"
         }
       ]
     },
@@ -28844,6 +28921,10 @@
       "contexts": [
         {
           "surface_id": "NEW_TAB_ES_ES",
+          "topic": "government"
+        },
+        {
+          "surface_id": "NEW_TAB_ES_ES",
           "topic": "headlines"
         }
       ]
@@ -28851,6 +28932,10 @@
     {
       "url": "https://www.rtve.es/noticias/internacional/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "government"
+        },
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "headlines"
@@ -29066,6 +29151,10 @@
         {
           "surface_id": "NEW_TAB_EN_IE",
           "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "education-science"
         }
       ]
     },
@@ -29078,6 +29167,10 @@
         },
         {
           "surface_id": "NEW_TAB_EN_IE",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "education-science"
         }
       ]
@@ -29283,159 +29376,6 @@
       ]
     },
     {
-      "url": "https://www.scinexx.de/archaeologie/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.scinexx.de/biowissen/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.scinexx.de/energie/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.scinexx.de/geowissen/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.scinexx.de/kosmos/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.scinexx.de/medizin/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "health"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "health"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "health"
-        }
-      ]
-    },
-    {
-      "url": "https://www.scinexx.de/physik/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.scinexx.de/psychologie/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "health"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "health"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "health"
-        }
-      ]
-    },
-    {
-      "url": "https://www.scinexx.de/technik/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "education-science"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "education-science"
-        }
-      ]
-    },
-    {
       "url": "https://scroll.in/category/3/film-and-tv",
       "contexts": [
         {
@@ -29600,6 +29540,10 @@
     {
       "url": "https://www.sheknows.com/parenting/kids/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "society-parenting"
+        },
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "society-parenting"
@@ -31312,6 +31256,15 @@
       ]
     },
     {
+      "url": "https://www.srf.ch/sendungen/kassensturz-espresso",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "finance"
+        }
+      ]
+    },
+    {
       "url": "https://www.srf.ch/sport",
       "contexts": [
         {
@@ -31659,6 +31612,23 @@
       ]
     },
     {
+      "url": "https://www.stern.de/familie/tiere/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "home"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "home"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "home"
+        }
+      ]
+    },
+    {
       "url": "https://www.stern.de/genuss/essen/",
       "contexts": [
         {
@@ -31673,6 +31643,23 @@
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "food"
+        }
+      ]
+    },
+    {
+      "url": "https://www.stern.de/gesellschaft/klima-nachhaltigkeit/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "education-science"
         }
       ]
     },
@@ -31727,6 +31714,49 @@
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.stern.de/lifestyle/leben/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "home"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "home"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "home"
+        }
+      ]
+    },
+    {
+      "url": "https://www.stern.de/panorama/wissen/geschichte/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "education"
+        }
+      ]
+    },
+    {
+      "url": "https://www.stern.de/panorama/wissen/natur/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "education-science"
         }
       ]
     },
@@ -31834,15 +31864,6 @@
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "food"
-        }
-      ]
-    },
-    {
-      "url": "https://www.straitstimes.com/world",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "headlines"
         }
       ]
     },
@@ -32076,15 +32097,6 @@
       ]
     },
     {
-      "url": "https://www.sudouest.fr/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_FR",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
       "url": "https://www.sudouest.fr/sante/bien-etre/bien-dans-son-corps/",
       "contexts": [
         {
@@ -32096,6 +32108,10 @@
     {
       "url": "https://www.sueddeutsche.de/gesundheit",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
         {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "health"
@@ -32642,10 +32658,6 @@
       "url": "https://www.t-online.de/nachrichten/ausland/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "government"
-        },
-        {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "government"
         }
@@ -33027,6 +33039,10 @@
       "url": "https://www.tagesschau.de/wissen/gesundheit",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
+        {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "health"
         }
@@ -33346,6 +33362,15 @@
       ]
     },
     {
+      "url": "https://www.telegraph.co.uk/europe/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
       "url": "https://www.telegraph.co.uk/food-and-drink/",
       "contexts": [
         {
@@ -33461,6 +33486,15 @@
         {
           "surface_id": "NEW_TAB_EN_IE",
           "topic": "travel"
+        }
+      ]
+    },
+    {
+      "url": "https://www.telegraph.co.uk/world-news/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
         }
       ]
     },
@@ -33731,15 +33765,6 @@
       ]
     },
     {
-      "url": "https://tg24.sky.it/lifestyle/ricette",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "food"
-        }
-      ]
-    },
-    {
       "url": "https://tg24.sky.it/politica",
       "contexts": [
         {
@@ -33776,15 +33801,6 @@
       ]
     },
     {
-      "url": "https://tg24.sky.it/tecnologia",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "tech"
-        }
-      ]
-    },
-    {
       "url": "https://www.the-independent.com/arts-entertainment/art/features",
       "contexts": [
         {
@@ -33794,11 +33810,42 @@
       ]
     },
     {
+      "url": "https://www.the-independent.com/arts-entertainment/music",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.the-independent.com/climate-change",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "education-science"
+        }
+      ]
+    },
+    {
       "url": "https://www.the-independent.com/tech",
       "contexts": [
         {
           "surface_id": "NEW_TAB_EN_GB",
           "topic": "tech"
+        },
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "tech"
+        }
+      ]
+    },
+    {
+      "url": "https://www.the-independent.com/us/travel",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "travel"
         }
       ]
     },
@@ -33951,6 +33998,15 @@
       ]
     },
     {
+      "url": "https://theconversation.com/europe",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
       "url": "https://theconversation.com/fr/economie",
       "contexts": [
         {
@@ -34034,6 +34090,15 @@
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "education-science"
+        }
+      ]
+    },
+    {
+      "url": "https://theconversation.com/global",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
         }
       ]
     },
@@ -34207,15 +34272,6 @@
       ]
     },
     {
-      "url": "https://thediplomat.com/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "business"
-        }
-      ]
-    },
-    {
       "url": "https://www.thedrive.com/category/tech",
       "contexts": [
         {
@@ -34282,6 +34338,10 @@
       "url": "https://theeverymom.com/category/parenthood/behavior-discipline/",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "society-parenting"
+        },
+        {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "society-parenting"
         }
@@ -34290,6 +34350,10 @@
     {
       "url": "https://theeverymom.com/category/parenthood/kids-health/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "society-parenting"
+        },
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "society-parenting"
@@ -34372,6 +34436,15 @@
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.theguardian.com/europe",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "headlines"
         }
       ]
     },
@@ -34478,6 +34551,10 @@
           "topic": "health"
         },
         {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "health"
+        },
+        {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "health"
         }
@@ -34503,6 +34580,10 @@
     {
       "url": "https://www.theguardian.com/lifeandstyle/parents-and-parenting",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "society-parenting"
+        },
         {
           "surface_id": "NEW_TAB_EN_GB",
           "topic": "society-parenting"
@@ -34967,15 +35048,6 @@
       ]
     },
     {
-      "url": "https://www.thehindu.com/news/international/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_ROW",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
       "url": "https://www.thehindu.com/sci-tech/agriculture/",
       "contexts": [
         {
@@ -35204,6 +35276,15 @@
       ]
     },
     {
+      "url": "https://www.thenewsminute.com/collection/latest-stories",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "government"
+        }
+      ]
+    },
+    {
       "url": "https://theprint.in/",
       "contexts": [
         {
@@ -35272,6 +35353,15 @@
         {
           "surface_id": "NEW_TAB_EN_CA",
           "topic": "business"
+        }
+      ]
+    },
+    {
+      "url": "https://theprovince.com/category/life/parenting/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_CA",
+          "topic": "society-parenting"
         }
       ]
     },
@@ -35921,6 +36011,15 @@
         {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "tech"
+        }
+      ]
+    },
+    {
+      "url": "https://time.com/tag/television/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_US",
+          "topic": "tv"
         }
       ]
     },
@@ -37795,6 +37894,10 @@
       "url": "https://www.vogue.de/tag/fitness",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
+        {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "health"
         }
@@ -38162,15 +38265,6 @@
       ]
     },
     {
-      "url": "https://www.vol.at/news/politik",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
       "url": "https://www.vol.at/news/wirtschaft",
       "contexts": [
         {
@@ -38453,20 +38547,29 @@
       ]
     },
     {
-      "url": "https://www.watson.ch/filme-und-serien/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.watson.ch/food/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "food"
+        }
+      ]
+    },
+    {
+      "url": "https://www.watson.ch/frauen-und-geld/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "finance"
+        }
+      ]
+    },
+    {
+      "url": "https://www.watson.ch/geld/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "finance"
         }
       ]
     },
@@ -38568,10 +38671,6 @@
       "url": "https://web.de/magazine/gesundheit/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "health"
-        },
-        {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "health"
         }
@@ -38581,33 +38680,12 @@
       "url": "https://web.de/magazine/ratgeber/kind-familie/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "society-parenting"
-        },
-        {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "society-parenting"
         },
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "society-parenting"
-        }
-      ]
-    },
-    {
-      "url": "https://web.de/magazine/unterhaltung/filme-serien-kino/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "arts"
         }
       ]
     },
@@ -38632,27 +38710,6 @@
       "url": "https://web.de/magazine/unterhaltung/kultur/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "arts"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://web.de/magazine/unterhaltung/musik/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "arts"
-        },
-        {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "arts"
         }
@@ -38670,14 +38727,6 @@
     {
       "url": "https://web.de/magazine/wissen/geschichte/",
       "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education"
-        },
-        {
-          "surface_id": "NEW_TAB_DE_CH",
-          "topic": "education"
-        },
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "education"
@@ -38698,33 +38747,11 @@
       ]
     },
     {
-      "url": "https://web.de/magazine/wissen/natur-umwelt/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education-science"
-        }
-      ]
-    },
-    {
       "url": "https://web.de/magazine/wissen/psychologie/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "health"
-        },
-        {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "health"
-        }
-      ]
-    },
-    {
-      "url": "https://web.de/magazine/wissen/tiere/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_AT",
-          "topic": "education-science"
         }
       ]
     },
@@ -38778,15 +38805,6 @@
         {
           "surface_id": "NEW_TAB_FR_BE",
           "topic": "travel"
-        }
-      ]
-    },
-    {
-      "url": "https://www.welt.de/iconist/essen-und-trinken/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_DE_DE",
-          "topic": "food"
         }
       ]
     },
@@ -39029,6 +39047,42 @@
         {
           "surface_id": "NEW_TAB_EN_CA",
           "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://www.wionews.com/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.wionews.com/science",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "education-science"
+        }
+      ]
+    },
+    {
+      "url": "https://www.wionews.com/sports",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://www.wionews.com/technology",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "tech"
         }
       ]
     },
@@ -39299,6 +39353,10 @@
           "topic": "health"
         },
         {
+          "surface_id": "NEW_TAB_EN_ROW",
+          "topic": "health"
+        },
+        {
           "surface_id": "NEW_TAB_EN_US",
           "topic": "health"
         }
@@ -39313,6 +39371,10 @@
         },
         {
           "surface_id": "NEW_TAB_EN_IE",
+          "topic": "health"
+        },
+        {
+          "surface_id": "NEW_TAB_EN_ROW",
           "topic": "health"
         },
         {
@@ -39674,6 +39736,10 @@
       "url": "https://www.zeit.de/gesundheit/index",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "health"
+        },
+        {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "health"
         }
@@ -39706,11 +39772,133 @@
       ]
     },
     {
+      "url": "https://www.zeit.de/serie/auch-das-noch-krisenpodcast",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "education-science"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "education-science"
+        }
+      ]
+    },
+    {
+      "url": "https://www.zeit.de/serie/das-politikteil",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "government"
+        }
+      ]
+    },
+    {
+      "url": "https://www.zeit.de/serie/der-ostcast",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "government"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "government"
+        }
+      ]
+    },
+    {
+      "url": "https://www.zeit.de/serie/geld-genug",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "finance"
+        }
+      ]
+    },
+    {
+      "url": "https://www.zeit.de/serie/ist-das-eine-blase",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "business"
+        }
+      ]
+    },
+    {
+      "url": "https://www.zeit.de/serie/neustart-podcast",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "tech"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "tech"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "tech"
+        }
+      ]
+    },
+    {
+      "url": "https://www.zeit.de/serie/ok-america",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "government"
+        }
+      ]
+    },
+    {
       "url": "https://www.zeit.de/serie/servus-gruezi-hallo",
       "contexts": [
         {
           "surface_id": "NEW_TAB_DE_AT",
           "topic": "government"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "government"
+        }
+      ]
+    },
+    {
+      "url": "https://www.zeit.de/serie/was-jetzt",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "government"
+        }
+      ]
+    },
+    {
+      "url": "https://www.zeit.de/serie/was-liest-du-gerade",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "arts"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_CH",
+          "topic": "arts"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.zeit.de/serie/wie-war-das-noch-mal",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "education"
         }
       ]
     },
