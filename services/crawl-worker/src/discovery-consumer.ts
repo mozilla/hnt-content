@@ -128,10 +128,7 @@ async function handleMessage(
 // then rethrown so the subscriber nacks the message for redelivery.
 const handleWithSentry = withSentryHandler<CrawlArticleDiscoveryMessage>(
   (message) => ({
-    tags: {
-      worker_role: config.workerRole,
-      domain: getRegistrableDomain(message.url),
-    },
+    tags: { domain: getRegistrableDomain(message.url) },
     context: {
       url: message.url,
       // A page is crawled for one or more (surface, topic) pairs, and
