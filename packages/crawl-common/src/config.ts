@@ -21,7 +21,7 @@ const environment: string = process.env.ENVIRONMENT ?? '';
 const environmentEnabled: { [key: string]: boolean } = {
   dev: true,
   stage: false,
-  prod: false,
+  prod: true,
   // outlier - not set in infra, but in individual vitest.config.ts files
   test: true,
 };
