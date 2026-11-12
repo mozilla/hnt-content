@@ -18,7 +18,11 @@ vi.mock('zyte', async (importOriginal) => {
 });
 
 import { extractArticleList } from 'zyte';
-import { handleArticleDiscovery, selectArticles } from './extract-discovery.js';
+import {
+  handleArticleDiscovery,
+  normalizeArticleUrl,
+  selectArticles,
+} from './extract-discovery.js';
 import { DISCOVERY_MESSAGE, ZYTE_LIST_ITEM } from './test-helpers.js';
 import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
 
@@ -311,48 +315,22 @@ describe('selectArticles', () => {
     ]);
   });
 
-  it.each([
-    [
-      'strips a tracking fragment',
-      'https://example.com/news/a.html#do_w=48&do_uvid=1763124958271',
-      'https://example.com/news/a.html',
-    ],
-    [
-      'strips tracking query parameters',
-      'https://example.com/news/a/?homepagePosition=9.1&referrerPost=3729521',
-      'https://example.com/news/a/',
-    ],
-    [
-      'strips utm parameters but keeps the others',
-      'https://example.com/news/a?utm_source=x&id=1&srnd=homepage#top',
-      'https://example.com/news/a?id=1',
-    ],
-    [
-      'keeps a URL without tracking',
-      'https://example.com/news/a?id=1',
-      'https://example.com/news/a?id=1',
-    ],
-  ])('%s', (_name, url, expected) => {
-    const [article] = selectArticles(
-      [{ ...ZYTE_LIST_ITEM, url }],
-      ['https://example.com/news'],
-    );
-
-    expect(article?.url).toBe(expected);
-  });
-
-  it('deduplicates article URLs that differ only by tracking', () => {
+  it('normalizes article URLs before deduplicating them', () => {
     const res = selectArticles(
       [
-        { ...ZYTE_LIST_ITEM, url: 'https://example.com/news/a#do_uvid=1' },
-        { ...ZYTE_LIST_ITEM, url: 'https://example.com/news/a#do_uvid=2' },
-        { ...ZYTE_LIST_ITEM, url: 'https://example.com/news/a?srnd=homepage' },
+        { ...ZYTE_LIST_ITEM, url: 'https://ex.com/a#do_uvid=1' },
+        { ...ZYTE_LIST_ITEM, url: 'https://ex.com/a#do_uvid=2' },
+        { ...ZYTE_LIST_ITEM, url: 'https://ex.com/a?srnd=homepage' },
+        { ...ZYTE_LIST_ITEM, url: 'https://ex.com/b?utm_source=x&id=1' },
+        { ...ZYTE_LIST_ITEM, url: 'https://ex.com/c?homepagePosition=9.1' },
       ],
-      ['https://example.com/news'],
+      ['https://ex.com/news'],
     );
 
     expect(res.map((a) => [a.url, a.position])).toEqual([
-      ['https://example.com/news/a', 1],
+      ['https://ex.com/a', 1],
+      ['https://ex.com/b?id=1', 4],
+      ['https://ex.com/c', 5],
     ]);
   });
 
@@ -370,5 +348,38 @@ describe('selectArticles', () => {
         position: 2,
       },
     ]);
+  });
+});
+
+describe('normalizeArticleUrl', () => {
+  it.each([
+    [
+      'strips the fragment',
+      'https://example.com/news/a.html#do_w=48&do_uvid=1763124958271',
+      'https://example.com/news/a.html',
+    ],
+    [
+      'strips a tracking parameter',
+      'https://example.com/news/a/?homepagePosition=9.1&referrerPost=3729521',
+      'https://example.com/news/a/',
+    ],
+    [
+      'strips utm parameters',
+      'https://example.com/news/a?utm_source=x&utm_medium=y',
+      'https://example.com/news/a',
+    ],
+    [
+      'keeps other parameters',
+      'https://example.com/news/a?srnd=homepage&id=1',
+      'https://example.com/news/a?id=1',
+    ],
+    [
+      'keeps a URL without tracking unchanged',
+      'https://example.com/news/a?id=1',
+      'https://example.com/news/a?id=1',
+    ],
+    ['returns an unparseable URL unchanged', 'not a url', 'not a url'],
+  ])('%s', (_name, url, expected) => {
+    expect(normalizeArticleUrl(url)).toBe(expected);
   });
 });

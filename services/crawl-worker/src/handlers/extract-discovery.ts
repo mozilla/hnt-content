@@ -164,7 +164,7 @@ const TRACKING_PARAMS = new Set([
  * page load, and others (e.g. ilpost.it) tag a link with its position
  * on the page, so each variant would otherwise be extracted again.
  */
-function normalizeArticleUrl(url: string): string {
+export function normalizeArticleUrl(url: string): string {
   let parsed: URL;
 
   try {
