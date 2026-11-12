@@ -17211,6 +17211,33 @@
       ]
     },
     {
+      "url": "https://www.indiatoday.in/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.indiatoday.in/business/companies",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "business"
+        }
+      ]
+    },
+    {
+      "url": "https://www.indiatoday.in/business/personal-finance",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_EN_INTL",
+          "topic": "finance"
+        }
+      ]
+    },
+    {
       "url": "https://www.indiatoday.in/education-today/parentingandtoddlers",
       "contexts": [
         {
@@ -17243,15 +17270,6 @@
         {
           "surface_id": "NEW_TAB_EN_INTL",
           "topic": "education-science"
-        }
-      ]
-    },
-    {
-      "url": "https://www.indiatoday.in/sports",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_INTL",
-          "topic": "sports"
         }
       ]
     },
@@ -18672,15 +18690,6 @@
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "tech"
-        }
-      ]
-    },
-    {
-      "url": "https://www.lalibre.be/belgique/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_FR_BE",
-          "topic": "headlines"
         }
       ]
     },
