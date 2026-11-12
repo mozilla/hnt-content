@@ -318,12 +318,17 @@ describe('selectArticles', () => {
       'https://example.com/news/a.html',
     ],
     [
-      'keeps a hash-bang route',
-      'https://example.com/#!/news/a',
-      'https://example.com/#!/news/a',
+      'strips tracking query parameters',
+      'https://example.com/news/a/?homepagePosition=9.1&referrerPost=3729521',
+      'https://example.com/news/a/',
     ],
     [
-      'keeps a URL without a fragment',
+      'strips utm parameters but keeps the others',
+      'https://example.com/news/a?utm_source=x&id=1&srnd=homepage#top',
+      'https://example.com/news/a?id=1',
+    ],
+    [
+      'keeps a URL without tracking',
       'https://example.com/news/a?id=1',
       'https://example.com/news/a?id=1',
     ],
@@ -336,11 +341,12 @@ describe('selectArticles', () => {
     expect(article?.url).toBe(expected);
   });
 
-  it('deduplicates article URLs that differ only by fragment', () => {
+  it('deduplicates article URLs that differ only by tracking', () => {
     const res = selectArticles(
       [
         { ...ZYTE_LIST_ITEM, url: 'https://example.com/news/a#do_uvid=1' },
         { ...ZYTE_LIST_ITEM, url: 'https://example.com/news/a#do_uvid=2' },
+        { ...ZYTE_LIST_ITEM, url: 'https://example.com/news/a?srnd=homepage' },
       ],
       ['https://example.com/news'],
     );

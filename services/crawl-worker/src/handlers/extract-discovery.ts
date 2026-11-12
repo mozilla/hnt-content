@@ -109,7 +109,7 @@ export function selectArticles(
       continue;
     }
 
-    const url = stripFragment(rawUrl);
+    const url = normalizeArticleUrl(rawUrl);
 
     if (seenUrls.has(url)) {
       continue;
@@ -149,21 +149,41 @@ export function selectArticles(
   return selected;
 }
 
-/**
- * Drop the #fragment from an article URL. Some publishers (e.g.
- * gazeta.pl) add a tracking fragment that changes on every page load,
- * so each variant would otherwise be extracted again. A fragment is
- * never sent to the server, so dropping it can't change the page.
- */
-function stripFragment(url: string): string {
-  const hashIndex = url.indexOf('#');
+/** Query parameters that only track where a link was clicked. */
+const TRACKING_PARAMS = new Set([
+  'bitPosition', // ilpost.it
+  'homepagePosition', // ilpost.it
+  'intcmp',
+  'referrerPost', // ilpost.it
+  'srnd', // bloomberg.com
+]);
 
-  // Keep hash-bang (#!) routes, which some single-page sites use as paths.
-  if (hashIndex === -1 || url[hashIndex + 1] === '!') {
-    return url;
+/**
+ * Drop the #fragment and tracking query parameters from an article URL.
+ * Some publishers (e.g. gazeta.pl) add a fragment that changes on every
+ * page load, and others (e.g. ilpost.it) tag a link with its position
+ * on the page, so each variant would otherwise be extracted again.
+ */
+function normalizeArticleUrl(url: string): string {
+  const withoutFragment = url.split('#', 1)[0];
+  const queryIndex = withoutFragment.indexOf('?');
+
+  if (queryIndex === -1) {
+    return withoutFragment;
   }
 
-  return url.slice(0, hashIndex);
+  const base = withoutFragment.slice(0, queryIndex);
+  const kept = withoutFragment
+    .slice(queryIndex + 1)
+    .split('&')
+    .filter((pair) => {
+      const name = pair.split('=', 1)[0];
+
+      return !TRACKING_PARAMS.has(name) && !name.startsWith('utm_');
+    })
+    .join('&');
+
+  return kept ? `${base}?${kept}` : base;
 }
 
 /** Map a discovered article and context to the discovery event schema. */
