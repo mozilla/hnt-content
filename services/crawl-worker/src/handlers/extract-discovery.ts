@@ -173,10 +173,10 @@ function normalizeArticleUrl(url: string): string {
     return url;
   }
 
+  // The fragment is never sent to the server, so it can't change the page.
   parsed.hash = '';
 
-  // Deleting rewrites the query string, so URLs without tracking keep
-  // their exact query.
+  // Delete query parameters starting with utm_ or in TRACKING_PARAMS.
   [...parsed.searchParams.keys()]
     .filter((name) => TRACKING_PARAMS.has(name) || name.startsWith('utm_'))
     .forEach((name) => parsed.searchParams.delete(name));
