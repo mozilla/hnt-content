@@ -103,9 +103,15 @@ export function selectArticles(
   const droppedPerDomain = new Map<string, number>();
 
   for (let i = 0; i < items.length; i++) {
-    const url = items[i].url;
+    const rawUrl = items[i].url;
 
-    if (!url || seenUrls.has(url)) {
+    if (!rawUrl) {
+      continue;
+    }
+
+    const url = stripFragment(rawUrl);
+
+    if (seenUrls.has(url)) {
       continue;
     }
 
@@ -141,6 +147,23 @@ export function selectArticles(
   }
 
   return selected;
+}
+
+/**
+ * Drop the #fragment from an article URL. Some publishers (e.g.
+ * gazeta.pl) add a tracking fragment that changes on every page load,
+ * so each variant would otherwise be extracted again. A fragment is
+ * never sent to the server, so dropping it can't change the page.
+ */
+function stripFragment(url: string): string {
+  const hashIndex = url.indexOf('#');
+
+  // Keep hash-bang (#!) routes, which some single-page sites use as paths.
+  if (hashIndex === -1 || url[hashIndex + 1] === '!') {
+    return url;
+  }
+
+  return url.slice(0, hashIndex);
 }
 
 /** Map a discovered article and context to the discovery event schema. */

@@ -311,6 +311,45 @@ describe('selectArticles', () => {
     ]);
   });
 
+  it.each([
+    [
+      'strips a tracking fragment',
+      'https://example.com/news/a.html#do_w=48&do_uvid=1763124958271',
+      'https://example.com/news/a.html',
+    ],
+    [
+      'keeps a hash-bang route',
+      'https://example.com/#!/news/a',
+      'https://example.com/#!/news/a',
+    ],
+    [
+      'keeps a URL without a fragment',
+      'https://example.com/news/a?id=1',
+      'https://example.com/news/a?id=1',
+    ],
+  ])('%s', (_name, url, expected) => {
+    const [article] = selectArticles(
+      [{ ...ZYTE_LIST_ITEM, url }],
+      ['https://example.com/news'],
+    );
+
+    expect(article?.url).toBe(expected);
+  });
+
+  it('deduplicates article URLs that differ only by fragment', () => {
+    const res = selectArticles(
+      [
+        { ...ZYTE_LIST_ITEM, url: 'https://example.com/news/a#do_uvid=1' },
+        { ...ZYTE_LIST_ITEM, url: 'https://example.com/news/a#do_uvid=2' },
+      ],
+      ['https://example.com/news'],
+    );
+
+    expect(res.map((a) => [a.url, a.position])).toEqual([
+      ['https://example.com/news/a', 1],
+    ]);
+  });
+
   it('skips list items without a URL', async () => {
     // note - this will not warn when the item has no url - it just skips
     const res = selectArticles(
