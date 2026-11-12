@@ -165,25 +165,23 @@ const TRACKING_PARAMS = new Set([
  * on the page, so each variant would otherwise be extracted again.
  */
 function normalizeArticleUrl(url: string): string {
-  const withoutFragment = url.split('#', 1)[0];
-  const queryIndex = withoutFragment.indexOf('?');
+  let parsed: URL;
 
-  if (queryIndex === -1) {
-    return withoutFragment;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
   }
 
-  const base = withoutFragment.slice(0, queryIndex);
-  const kept = withoutFragment
-    .slice(queryIndex + 1)
-    .split('&')
-    .filter((pair) => {
-      const name = pair.split('=', 1)[0];
+  parsed.hash = '';
 
-      return !TRACKING_PARAMS.has(name) && !name.startsWith('utm_');
-    })
-    .join('&');
+  // Deleting rewrites the query string, so URLs without tracking keep
+  // their exact query.
+  [...parsed.searchParams.keys()]
+    .filter((name) => TRACKING_PARAMS.has(name) || name.startsWith('utm_'))
+    .forEach((name) => parsed.searchParams.delete(name));
 
-  return kept ? `${base}?${kept}` : base;
+  return parsed.href;
 }
 
 /** Map a discovered article and context to the discovery event schema. */
