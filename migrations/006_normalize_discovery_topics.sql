@@ -11,8 +11,9 @@
 --
 -- Run once in prod, after 004: it inserts display names too, and its NOT
 -- EXISTS guard matches on topic, so rerunning 004 after this would insert
--- its rows again. Retired legacy topics without an id (Career, Life Hacks,
--- Top Stories/News; 34,725 en_US rows from 2025) are left as they are.
+-- its rows again. Three retired en_US topics from 2025 map to their
+-- section's externalId in the curated corpus: Career is career, Life Hacks
+-- is society, and Top Stories/News was the Headlines category's first name.
 -- Rerunning is safe: rows that already hold an id are skipped.
 
 UPDATE `moz-fx-hnt-prod.crawl.article_discoveries` AS d
@@ -40,7 +41,10 @@ FROM UNNEST([
   ('sports', 'Sports'),
   ('tech', 'Technology'),
   ('travel', 'Travel'),
-  ('tv', 'TV')
+  ('tv', 'TV'),
+  ('career', 'Career'),
+  ('society', 'Life Hacks'),
+  ('headlines', 'Top Stories/News')
 ]) AS m
 -- Partition filter; the crawler wrote only ids after this.
 WHERE d.crawled_at < TIMESTAMP '2026-11-11 03:00:00'
