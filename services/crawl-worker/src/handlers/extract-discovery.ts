@@ -8,6 +8,7 @@ import { extractArticleList, ZyteArticleListItem } from 'zyte';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
 import { timeZyteCall } from '../zyte-extraction/timed-call.js';
+import config from '../config.js';
 
 /**
  * Output of the discovery handler: one article-discoveries event
@@ -149,15 +150,6 @@ export function selectArticles(
   return selected;
 }
 
-/** Query parameters that only track where a link was clicked. */
-const TRACKING_PARAMS = new Set([
-  'bitPosition', // ilpost.it
-  'homepagePosition', // ilpost.it
-  'intcmp',
-  'referrerPost', // ilpost.it
-  'srnd', // bloomberg.com
-]);
-
 /**
  * Drop the #fragment and tracking query parameters from an article URL.
  * Some publishers (e.g. gazeta.pl) add a fragment that changes on every
@@ -176,9 +168,8 @@ export function normalizeArticleUrl(url: string): string {
   // The fragment is never sent to the server, so it can't change the page.
   parsed.hash = '';
 
-  // Delete query parameters starting with utm_ or in TRACKING_PARAMS.
   [...parsed.searchParams.keys()]
-    .filter((name) => TRACKING_PARAMS.has(name) || name.startsWith('utm_'))
+    .filter((name) => config.trackingParams.some((re) => re.test(name)))
     .forEach((name) => parsed.searchParams.delete(name));
 
   return parsed.href;

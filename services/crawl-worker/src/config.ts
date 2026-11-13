@@ -64,4 +64,14 @@ export default {
   // long. Without it one failure repeats across redeliveries and across
   // every page that links the article.
   articleAttemptTtlMinutes: 60,
+  // Query parameters that only track where a link was clicked. The
+  // discovery worker strips them so each variant is not extracted again.
+  trackingParams: [
+    /^utm_/, // utm_* has many variants, e.g. utm_source
+    /^bitPosition$/, // ilpost.it
+    /^homepagePosition$/, // ilpost.it
+    /^intcmp$/,
+    /^referrerPost$/, // ilpost.it
+    /^srnd$/, // bloomberg.com
+  ],
 };
