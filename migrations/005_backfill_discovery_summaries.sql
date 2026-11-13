@@ -8,8 +8,9 @@
 -- surface onto those rows.
 --
 -- Run once in prod, while the legacy crawler still writes rss_feed_items.
--- Set fix_deployed_at to when the fix was deployed, and run this some hours
--- after the deploy: rows still in the streaming buffer can't be updated.
+-- Set fix_deployed_at to when the fix was deployed, and run this at least
+-- 30 minutes after the deploy: BigQuery can't update rows streamed in the
+-- last 30 minutes, and fails without changes if you run it too early.
 --
 -- It recovers about three quarters of the summaries a fixed crawler would
 -- have written: on 2026-11-12, legacy had a summary for 74,503 of 312,634
