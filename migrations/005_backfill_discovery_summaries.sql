@@ -2,8 +2,8 @@
 -- legacy rss_feed_items table (prod).
 --
 -- Until HNT-4107 the new crawler mapped summary from the articleList item's
--- description, which Zyte never returns, so every row it wrote has a NULL
--- summary. The legacy crawler stored that item's articleBody, as the fixed
+-- description, a field Zyte's articleList items don't have, so every row it
+-- wrote has a NULL summary. The legacy crawler stored that item's articleBody, as the fixed
 -- crawler now does. This copies the legacy summary for the same URL and
 -- surface onto those rows.
 --
@@ -12,9 +12,10 @@
 -- after the deploy: rows still in the streaming buffer can't be updated.
 --
 -- It recovers about three quarters of the summaries a fixed crawler would
--- have written: legacy has a summary for 74,503 of 312,634 distinct
--- new-crawler URLs, while about 33% of articleList items carry an
--- articleBody. The rest stay NULL. Rerunning only refills the same rows.
+-- have written: on 2026-11-12, legacy had a summary for 74,503 of 312,634
+-- distinct new-crawler URLs, and about 33% of articleList items carry an
+-- articleBody. The rest stay NULL. Rerunning is safe: rows that already
+-- have a summary are skipped.
 
 -- first new-crawler row (12:16:10 PT)
 DECLARE cutover TIMESTAMP DEFAULT TIMESTAMP '2026-11-10 20:16:10.754';
