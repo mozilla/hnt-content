@@ -62,7 +62,7 @@ export const ZYTE_LIST_ITEM: ZyteArticleListItem = {
   headline: 'First Article',
   authors: [{ name: 'Jane Doe' }],
   datePublished: '2025-06-01T10:00:00Z',
-  description: 'Summary of the first article.',
+  articleBody: 'Summary of the first article.',
   inLanguage: 'en',
   metadata: { probability: 0.95, url: TEST_SOURCE_URL },
 };

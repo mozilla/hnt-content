@@ -160,10 +160,9 @@ function mapToDiscoveryEvent(
     page_position: article.position,
     published_at: toEventTimestamp(item.datePublished),
     source_url: sourceUrl,
-    // The list-page description (dek), not articleBody: Zyte's articleList
-    // product reliably returns description but rarely a full body, so it
-    // is the better summary source for discovery rows.
-    summary: item.description ?? undefined,
+    // Zyte's articleList has no description field; its articleBody is the
+    // short list-page teaser, which the legacy crawler also stored as summary.
+    summary: item.articleBody ?? undefined,
     surface_id: context.surface_id,
     topic: context.topic,
     url: article.url,

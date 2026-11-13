@@ -136,7 +136,6 @@ export interface ZyteArticleListItem {
   authors?: ZyteAuthor[];
   datePublished?: string;
   datePublishedRaw?: string;
-  description?: string;
   mainImage?: ZyteImage;
   images?: ZyteImage[];
   articleBody?: string;
