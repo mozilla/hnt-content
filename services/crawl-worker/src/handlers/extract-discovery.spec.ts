@@ -96,7 +96,7 @@ describe('handleArticleDiscovery', () => {
       url: ZYTE_LIST_ITEM.url,
       source_url: DISCOVERY_MESSAGE.url,
       headline: ZYTE_LIST_ITEM.headline,
-      summary: ZYTE_LIST_ITEM.description,
+      summary: ZYTE_LIST_ITEM.articleBody,
       authors: ZYTE_LIST_ITEM.authors,
       published_at: ZYTE_LIST_ITEM.datePublished,
       language: ZYTE_LIST_ITEM.inLanguage,
