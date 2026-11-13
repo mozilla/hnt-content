@@ -7,14 +7,15 @@
 -- This maps each name to its id with the reverse of CRAWL_TOPIC_TO_LEGACY in
 -- content-ml-services. That map is one-to-one except Education, which is
 -- also history's name; no page in publishers.json uses history, so
--- Education becomes education.
+-- Education becomes education. Three retired en_US topics from 2025 map to
+-- their section's externalId in the curated corpus: Career is career, Life
+-- Hacks is society, and Top Stories/News was the Headlines category's first
+-- name.
 --
 -- Run once in prod, after 004: it inserts display names too, and its NOT
 -- EXISTS guard matches on topic, so rerunning 004 after this would insert
--- its rows again. Three retired en_US topics from 2025 map to their
--- section's externalId in the curated corpus: Career is career, Life Hacks
--- is society, and Top Stories/News was the Headlines category's first name.
--- Rerunning is safe: rows that already hold an id are skipped.
+-- its rows again. Rerunning this is safe: rows that already hold an id are
+-- skipped.
 
 UPDATE `moz-fx-hnt-prod.crawl.article_discoveries` AS d
 SET topic = m.id
