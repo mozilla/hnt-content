@@ -8,6 +8,7 @@ import { extractArticleList, ZyteArticleListItem } from 'zyte';
 import { toEventAuthors, toEventTimestamp } from './event-fields.js';
 import { resolveExtractFrom } from '../zyte-extraction/extraction-mode.js';
 import { timeZyteCall } from '../zyte-extraction/timed-call.js';
+import config from '../config.js';
 
 /**
  * Output of the discovery handler: one article-discoveries event
@@ -103,9 +104,15 @@ export function selectArticles(
   const droppedPerDomain = new Map<string, number>();
 
   for (let i = 0; i < items.length; i++) {
-    const url = items[i].url;
+    const rawUrl = items[i].url;
 
-    if (!url || seenUrls.has(url)) {
+    if (!rawUrl) {
+      continue;
+    }
+
+    const url = normalizeArticleUrl(rawUrl);
+
+    if (seenUrls.has(url)) {
       continue;
     }
 
@@ -141,6 +148,31 @@ export function selectArticles(
   }
 
   return selected;
+}
+
+/**
+ * Drop the #fragment and tracking query parameters from an article URL.
+ * Some publishers (e.g. gazeta.pl) add a fragment that changes on every
+ * page load, and others (e.g. ilpost.it) tag a link with its position
+ * on the page, so each variant would otherwise be extracted again.
+ */
+export function normalizeArticleUrl(url: string): string {
+  let parsed: URL;
+
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+
+  // The fragment is never sent to the server, so it can't change the page.
+  parsed.hash = '';
+
+  [...parsed.searchParams.keys()]
+    .filter((name) => config.trackingParams.some((re) => re.test(name)))
+    .forEach((name) => parsed.searchParams.delete(name));
+
+  return parsed.href;
 }
 
 /** Map a discovered article and context to the discovery event schema. */
