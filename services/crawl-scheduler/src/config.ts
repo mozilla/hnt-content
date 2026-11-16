@@ -29,8 +29,7 @@ if (crawlConfig.environmentEnabled) {
 
       break;
     case 'prod':
-      // TODO: uncomment for release phase 2
-      // maxLiveArticlesPerTick = null;
+      maxLiveArticlesPerTick = null;
       maxPagesPerTick = null;
 
       break;
