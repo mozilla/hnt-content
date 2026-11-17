@@ -53,7 +53,8 @@ export async function handleArticleExtraction(
     );
   }
 
-  if (message.corpus_item) {
+  // A challenge page ("JavaScript is disabled") must not rewrite titles.
+  if (event && message.corpus_item) {
     await detectAndSyncChanges(article, message.corpus_item);
   }
 

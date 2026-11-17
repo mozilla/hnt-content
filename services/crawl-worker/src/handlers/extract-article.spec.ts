@@ -142,6 +142,33 @@ describe('handleArticleExtraction', () => {
       expect(updateCorpusMock).not.toHaveBeenCalled();
     });
 
+    it.each([
+      {
+        name: 'a non-200 status',
+        statusCode: 202,
+        canonicalUrl: 'https://example.com/article',
+      },
+      {
+        name: 'no canonical URL',
+        statusCode: 200,
+        canonicalUrl: undefined,
+      },
+    ])('does not update from a page with $name', async (page) => {
+      extractArticleMock.mockResolvedValue({
+        ...ZYTE_RESPONSE,
+        statusCode: page.statusCode,
+        data: {
+          ...ZYTE_ARTICLE,
+          headline: 'JavaScript is disabled',
+          canonicalUrl: page.canonicalUrl,
+        },
+      });
+
+      await handleArticleExtraction(liveMessage);
+
+      expect(updateCorpusMock).not.toHaveBeenCalled();
+    });
+
     it('updates when title changed and passes through corpus fields', async () => {
       extractArticleMock.mockResolvedValueOnce({
         ...ZYTE_RESPONSE,
