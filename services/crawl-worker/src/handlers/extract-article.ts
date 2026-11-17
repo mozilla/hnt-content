@@ -41,24 +41,22 @@ export async function handleArticleExtraction(
     message.url,
     resolvedUrl,
   );
-  const event =
-    statusCode === 200 && canonicalUrl
-      ? mapToArticleEvent(article, message.url, canonicalUrl)
-      : undefined;
-  if (!event) {
+  // Filter out some error pages, e.g. "JavaScript is disabled", so they are
+  // neither published nor allowed to rewrite the corpus title or excerpt.
+  if (statusCode !== 200 || !canonicalUrl) {
     console.warn(
       `article: not publishing ineligible ${message.url} ` +
         `(status ${statusCode}, final url ${resolvedUrl}, ` +
         `canonical ${article.canonicalUrl ?? 'none'})`,
     );
+    return undefined;
   }
 
-  // Only an eligible article may rewrite the corpus title or excerpt.
-  if (event && message.corpus_item) {
+  if (message.corpus_item) {
     await detectAndSyncChanges(article, message.corpus_item);
   }
 
-  return event;
+  return mapToArticleEvent(article, message.url, canonicalUrl);
 }
 
 /**
