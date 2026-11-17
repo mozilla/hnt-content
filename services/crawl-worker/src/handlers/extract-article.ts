@@ -53,7 +53,7 @@ export async function handleArticleExtraction(
     );
   }
 
-  // A challenge page ("JavaScript is disabled") must not rewrite titles.
+  // Only an eligible article may rewrite the corpus title or excerpt.
   if (event && message.corpus_item) {
     await detectAndSyncChanges(article, message.corpus_item);
   }
