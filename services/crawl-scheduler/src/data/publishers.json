@@ -4672,15 +4672,6 @@
       ]
     },
     {
-      "url": "https://calgaryherald.com/category/entertainment/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_CA",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://calgaryherald.com/category/life/food/",
       "contexts": [
         {
@@ -10464,6 +10455,33 @@
     },
     {
       "url": "https://es.ign.com/article/review?keyword__type=game",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "hobbies"
+        }
+      ]
+    },
+    {
+      "url": "https://es.ign.com/nintendo-switch",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "hobbies"
+        }
+      ]
+    },
+    {
+      "url": "https://es.ign.com/ps5",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "hobbies"
+        }
+      ]
+    },
+    {
+      "url": "https://es.ign.com/xbox-series-x",
       "contexts": [
         {
           "surface_id": "NEW_TAB_ES_ES",
@@ -17461,6 +17479,15 @@
       ]
     },
     {
+      "url": "https://information.tv5monde.com/international",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
       "url": "https://information.tv5monde.com/science",
       "contexts": [
         {
@@ -17639,10 +17666,6 @@
         },
         {
           "surface_id": "NEW_TAB_EN_GB",
-          "topic": "hobbies"
-        },
-        {
-          "surface_id": "NEW_TAB_EN_INTL",
           "topic": "hobbies"
         },
         {
@@ -20032,6 +20055,15 @@
         {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "society-parenting"
+        }
+      ]
+    },
+    {
+      "url": "https://www.levelup.com/noticias/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "hobbies"
         }
       ]
     },
@@ -25969,15 +26001,6 @@
       ]
     },
     {
-      "url": "https://www.polygon.com/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_INTL",
-          "topic": "hobbies"
-        }
-      ]
-    },
-    {
       "url": "https://www.polygon.com/gaming",
       "contexts": [
         {
@@ -27253,7 +27276,25 @@
       ]
     },
     {
-      "url": "https://www.reisereporter.de/",
+      "url": "https://www.reisereporter.de/reiseinspiration/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "travel"
+        }
+      ]
+    },
+    {
+      "url": "https://www.reisereporter.de/reiseziele/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "travel"
+        }
+      ]
+    },
+    {
+      "url": "https://www.reisereporter.de/tipps-und-tricks/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_DE_DE",
@@ -27736,6 +27777,15 @@
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "education-science"
+        }
+      ]
+    },
+    {
+      "url": "https://www.rfi.fr/fr/france/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "headlines"
         }
       ]
     },
