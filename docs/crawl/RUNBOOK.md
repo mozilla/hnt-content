@@ -147,8 +147,6 @@ To mitigate:
 - **If the worker is stuck or crashing:** [restart](#restart-a-deployment)
   `crawl-article-worker`.
 - **If Zyte errors spike across domains:** [contact Zyte](#contact-zyte).
-- **If only live articles fail with `CorpusApiError`:** follow the
-  [Curated Corpus API runbook](https://mozilla-hub.atlassian.net/wiki/spaces/FPS/pages/390684792/Curated+Corpus+API+Availability+Runbook).
 
 ### Workers Falling Behind
 
@@ -184,15 +182,12 @@ To mitigate:
 - **If jobs fail:** do not add workers, because more workers only fail faster
   and add Zyte throttling. [Roll back](#roll-back-a-deploy) if a deploy caused
   it, or [contact Zyte](#contact-zyte) if Zyte errors spike across domains.
-- **If pods restart:** follow
-  [Container Memory Near Limit](#container-memory-near-limit).
 - **If jobs succeed, but workers stay below 125m CPU:** pods are mostly waiting
   on Zyte, so autoscaling does not add more. Raise `replicas.min` in
   [values-prod.yaml](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values-prod.yaml),
   or raise `maxMessages`, the number of jobs each pod handles at once, in
   [config.ts](../../services/crawl-worker/src/config.ts). A higher `maxMessages`
-  holds more responses in memory; see [Container Memory Near
-  Limit](#container-memory-near-limit).
+  holds more responses in memory.
 - **If jobs succeed, and workers are above 125m CPU at `replicas.max`:** raise
   `replicas.max` in
   [values-prod.yaml](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values-prod.yaml).
@@ -241,12 +236,7 @@ Narrow down the cause:
    was recently emptied or is full. Workers then re-extract articles they
    already have.
 
-To mitigate:
-
-- **If Redis is full:** follow
-  [Redis Memory Near Limit](#redis-memory-near-limit).
-- **If the cause is unclear and spend keeps rising:**
-  [pause the crawler](#pause-the-crawler).
+To mitigate, [pause the crawler](#pause-the-crawler) if spend keeps rising.
 
 ### Container Memory Near Limit
 
