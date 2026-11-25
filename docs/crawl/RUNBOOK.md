@@ -7,6 +7,26 @@ Use this page when a crawler alert fires. For how the crawler works, see
 When the crawler fails, New Tab keeps serving the stories it has, which grow
 stale.
 
+## First five minutes
+
+1. Open the
+   [crawler dashboard](https://yardstick.mozilla.org/d/mm29b84/hnt-crawler?from=now-6h&to=now&timezone=browser&var-env=prod&var-metrics_scope=adpvtjmrxoc1sb)
+   to see which alerts fire, which metrics spike, and since when.
+2. Message `@hnt-editors` in
+   [#hnt-editorial](https://mozilla.enterprise.slack.com/archives/C05MVUFF4CW)
+   to get support from the HNT editorial team.
+3. Look for spikes in
+   [Sentry errors](https://mozilla.sentry.io/issues/?environment=prod&groupStatsPeriod=auto&project=4511425365344256&query=is%3Aunresolved%20environment%3Aprod&referrer=issue-list&sort=freq&statsPeriod=7d).
+   In a spiking error, open **View all tags and feature flags**: tags such as
+   `server_name` and `domain` help narrow down the cause.
+4. Check the [recent merges](https://github.com/mozilla/hnt-content/commits/main).
+   Merging to `main` deploys to prod automatically. If the outage started right
+   after a deploy, consider [rolling back](#roll-back-a-deploy).
+5. Open the
+   [prod Argo CD app](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-prod-us-west1-hnt)
+   and check for any signs of unhealthy pods.
+6. Follow the steps for the firing alert under [Alerts](#alerts).
+
 ## Quick reference
 
 **Code**
@@ -35,11 +55,19 @@ stale.
 
 **Queues and topics**
 
-- The job queues are `prod-crawl-article-discovery` and `prod-crawl-article`.
-  A job that fails 5 times moves to `<queue>-dead-letter`, and every queue
-  keeps messages for 7 days.
-- The event topics `prod-article-discoveries` and `prod-articles` write to
-  BigQuery through `prod-article-discoveries-to-bq` and `prod-articles-to-bq`.
+Every subscription keeps messages for 7 days.
+
+- Job queues: [prod-crawl-article-discovery](https://console.cloud.google.com/cloudpubsub/subscription/detail/prod-crawl-article-discovery?project=moz-fx-hnt-prod) and
+  [prod-crawl-article](https://console.cloud.google.com/cloudpubsub/subscription/detail/prod-crawl-article?project=moz-fx-hnt-prod).
+- Dead-letter queues, for jobs that fail 5 times:
+  [prod-crawl-article-discovery-dead-letter](https://console.cloud.google.com/cloudpubsub/subscription/detail/prod-crawl-article-discovery-dead-letter?project=moz-fx-hnt-prod)
+  and
+  [prod-crawl-article-dead-letter](https://console.cloud.google.com/cloudpubsub/subscription/detail/prod-crawl-article-dead-letter?project=moz-fx-hnt-prod).
+- Event topics: [prod-article-discoveries](https://console.cloud.google.com/cloudpubsub/topic/detail/prod-article-discoveries?project=moz-fx-hnt-prod) and
+  [prod-articles](https://console.cloud.google.com/cloudpubsub/topic/detail/prod-articles?project=moz-fx-hnt-prod).
+- BigQuery subscriptions: [prod-article-discoveries-to-bq](https://console.cloud.google.com/cloudpubsub/subscription/detail/prod-article-discoveries-to-bq?project=moz-fx-hnt-prod)
+  and
+  [prod-articles-to-bq](https://console.cloud.google.com/cloudpubsub/subscription/detail/prod-articles-to-bq?project=moz-fx-hnt-prod).
 
 **Dev and stage**
 
@@ -50,26 +78,6 @@ stale.
   [dev](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-dev-us-west1-hnt)
   and
   [stage](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-stage-us-west1-hnt).
-
-## First five minutes
-
-1. Open the
-   [crawler dashboard](https://yardstick.mozilla.org/d/mm29b84/hnt-crawler?from=now-6h&to=now&timezone=browser&var-env=prod&var-metrics_scope=adpvtjmrxoc1sb)
-   to see which alerts fire, which metrics spike, and since when.
-2. Message `@hnt-editors` in
-   [#hnt-editorial](https://mozilla.enterprise.slack.com/archives/C05MVUFF4CW)
-   to get support from the HNT editorial team.
-3. Look for spikes in
-   [Sentry errors](https://mozilla.sentry.io/issues/?environment=prod&groupStatsPeriod=auto&project=4511425365344256&query=is%3Aunresolved%20environment%3Aprod&referrer=issue-list&sort=freq&statsPeriod=7d).
-   In a spiking error, open **View all tags and feature flags**: tags such as
-   `server_name` and `domain` help narrow down the cause.
-4. Check the [recent merges](https://github.com/mozilla/hnt-content/commits/main).
-   Merging to `main` deploys to prod automatically. If the outage started right
-   after a deploy, consider [rolling back](#roll-back-a-deploy).
-5. Open the
-   [prod Argo CD app](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-prod-us-west1-hnt)
-   and check for any signs of unhealthy pods.
-6. Follow the steps for the alert below.
 
 ## Alerts
 
