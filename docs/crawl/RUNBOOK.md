@@ -7,6 +7,50 @@ Use this page when a crawler alert fires. For how the crawler works, see
 When the crawler fails, New Tab keeps serving the stories it has, which grow
 stale.
 
+## Quick reference
+
+**Code**
+
+- [hnt-content](https://github.com/mozilla/hnt-content), the crawler
+  application.
+- [webservices-infra](https://github.com/mozilla/webservices-infra/tree/main/hnt),
+  the Kubernetes values and Terraform for Pub/Sub, Redis, BigQuery and secrets.
+- The `hnt`
+  [tenant](https://github.com/mozilla/global-platform-admin/blob/main/tenants/hnt.yaml)
+  and
+  [workgroup](https://github.com/mozilla/global-platform-admin/blob/main/google-workspace-management/tf/workgroups/hnt.yaml)
+  in global-platform-admin.
+
+**Prod**
+
+- Workloads run in namespace `hnt-prod` on cluster `webservices-high-prod`
+  (project `moz-fx-webservices-high-prod`). Pub/Sub, Redis and BigQuery live in
+  project `moz-fx-hnt-prod`.
+- [Argo CD app](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-prod-us-west1-hnt)
+- [Crawler dashboard](https://yardstick.mozilla.org/d/mm29b84/hnt-crawler?from=now-6h&to=now&timezone=browser&var-env=prod&var-metrics_scope=adpvtjmrxoc1sb)
+- [Sentry](https://mozilla.sentry.io/issues/?environment=prod&groupStatsPeriod=auto&project=4511425365344256&query=is%3Aunresolved%20environment%3Aprod&referrer=issue-list&sort=freq&statsPeriod=7d)
+- [Pub/Sub subscriptions](https://console.cloud.google.com/cloudpubsub/subscription/list?project=moz-fx-hnt-prod)
+- [Redis](https://console.cloud.google.com/memorystore/redis/locations/us-west1/instances/hnt-prod-prod/details/monitoring?project=moz-fx-hnt-prod)
+- [BigQuery](https://console.cloud.google.com/bigquery?project=moz-fx-hnt-prod)
+
+**Queues and topics**
+
+- The job queues are `prod-crawl-article-discovery` and `prod-crawl-article`.
+  A job that fails 5 times moves to `<queue>-dead-letter`, and every queue
+  keeps messages for 7 days.
+- The event topics `prod-article-discoveries` and `prod-articles` write to
+  BigQuery through `prod-article-discoveries-to-bq` and `prod-articles-to-bq`.
+
+**Dev and stage**
+
+- Workloads run in namespaces `hnt-dev` and `hnt-stage` on cluster
+  `webservices-high-nonprod` (project `moz-fx-webservices-high-nonpro`).
+  Their resources live in project `moz-fx-hnt-nonprod`.
+- Argo CD apps for
+  [dev](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-dev-us-west1-hnt)
+  and
+  [stage](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-stage-us-west1-hnt).
+
 ## First five minutes
 
 1. Open the
