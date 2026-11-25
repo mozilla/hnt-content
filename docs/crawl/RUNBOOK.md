@@ -53,6 +53,8 @@ stale.
 - [Pub/Sub subscriptions](https://console.cloud.google.com/cloudpubsub/subscription/list?project=moz-fx-hnt-prod)
 - [Redis](https://console.cloud.google.com/memorystore/redis/locations/us-west1/instances/hnt-prod-prod/details/monitoring?project=moz-fx-hnt-prod)
 - [BigQuery](https://console.cloud.google.com/bigquery?project=moz-fx-hnt-prod)
+- [Privileged Access Manager](https://console.cloud.google.com/iam-admin/pam/entitlements/my?project=moz-fx-hnt-prod),
+  for temporary grants such as Pub/Sub access
 
 **Queues and topics**
 
