@@ -95,7 +95,7 @@ minutes, so no publisher page is being crawled.
 Is [No New Extractions](#no-new-extractions) also firing?
 
 - **Yes:** the whole pipeline has stopped. Narrow down the cause:
-  1. Check in Argo CD or with [kubectl](#get-access-and-inspect-pods) that
+  1. Check in Argo CD or with [kubectl](#inspect-pods-with-kubectl) that
      `crawl-scheduler` is running and logs `tick … pages=N` every minute.
   2. Check
      [Redis](https://console.cloud.google.com/memorystore/redis/locations/us-west1/instances/hnt-prod-prod/details/monitoring?project=moz-fx-hnt-prod).
@@ -106,7 +106,7 @@ Is [No New Extractions](#no-new-extractions) also firing?
   so only page crawls have stopped. Narrow down the cause:
   1. Check whether a spiking Sentry error has a `server_name` tag starting
      with `crawl-discovery-worker`.
-  2. Check in Argo CD or with [kubectl](#get-access-and-inspect-pods) that
+  2. Check in Argo CD or with [kubectl](#inspect-pods-with-kubectl) that
      `crawl-scheduler` logs `pages=N` with N above zero.
 
 To mitigate:
@@ -137,7 +137,7 @@ Is [No New Discoveries](#no-new-discoveries) also firing?
      for article extractions.
   4. Sentry provides the best error observability, but it could be worth
      reading the `crawl-article-worker` logs directly with
-     [kubectl](#get-access-and-inspect-pods).
+     [kubectl](#inspect-pods-with-kubectl).
 
 To mitigate:
 
@@ -168,7 +168,7 @@ Narrow down the cause:
    [Redis](https://console.cloud.google.com/memorystore/redis/locations/us-west1/instances/hnt-prod-prod/details/monitoring?project=moz-fx-hnt-prod) and [Sentry](https://mozilla.sentry.io/issues/?environment=prod&groupStatsPeriod=auto&project=4511425365344256&query=is%3Aunresolved%20environment%3Aprod&referrer=issue-list&sort=freq&statsPeriod=7d).
 3. Check for restarts or pods that started minutes ago, in
    [Argo CD](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-prod-us-west1-hnt?view=pods)
-   or with [kubectl](#get-access-and-inspect-pods). A restarting pod's jobs
+   or with [kubectl](#inspect-pods-with-kubectl). A restarting pod's jobs
    wait until Pub/Sub redelivers them.
 4. Check whether jobs fail: look for a spiking error in
    [Sentry](https://mozilla.sentry.io/issues/?environment=prod&groupStatsPeriod=auto&project=4511425365344256&query=is%3Aunresolved%20environment%3Aprod&referrer=issue-list&sort=freq&statsPeriod=7d)
@@ -250,7 +250,7 @@ To mitigate:
 
 This alert triggers if a crawl container reached 90% of its 256 MiB limit in
 the last 60 minutes. The container is killed at 100%, and
-[kubectl](#get-access-and-inspect-pods) then shows `OOMKilled` for its pod.
+[kubectl](#inspect-pods-with-kubectl) then shows `OOMKilled` for its pod.
 
 Narrow down the cause: check on the
 [crawler dashboard](https://yardstick.mozilla.org/d/mm29b84/hnt-crawler?from=now-6h&to=now&timezone=browser&var-env=prod&var-metrics_scope=adpvtjmrxoc1sb)
@@ -350,7 +350,9 @@ next interval. Missing a few hours of articles usually does not justify a
 replay either, but ask the editorial team. We have no replay tool, so a replay
 means writing a script that reads `prod-crawl-article-dead-letter` with
 `gcloud pubsub subscriptions pull` and republishes each message's data to
-`prod-crawl-article` with `gcloud pubsub topics publish`.
+`prod-crawl-article` with `gcloud pubsub topics publish`. Like skipping, this
+needs a grant in
+[PAM](https://console.cloud.google.com/iam-admin/pam/entitlements/my?project=moz-fx-hnt-prod).
 
 ## Inspect the latest rows in BigQuery
 
@@ -378,9 +380,7 @@ ORDER BY extracted_at DESC
 LIMIT 10
 ```
 
-## Get access and inspect pods
-
-### Inspect pods with kubectl
+## Inspect pods with kubectl
 
 Prod runs in namespace `hnt-prod` on the `webservices-high-prod` cluster. Add
 the cluster to your `kubectl` config once:
@@ -406,15 +406,3 @@ See why the pods last restarted, such as `OOMKilled`, under Last State:
 ```sh
 kubectl -n hnt-prod describe pods
 ```
-
-### Prod access
-
-The `hnt` developers group can use `kubectl` and read logs in prod without a
-JIT grant, and can restart deployments in the
-[prod Argo CD app](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-prod-us-west1-hnt).
-Skipping or replaying jobs needs Pub/Sub roles, which only a JIT grant gives.
-
-For more access, request a temporary grant in
-[PAM](https://console.cloud.google.com/iam-admin/pam/entitlements/my?project=moz-fx-hnt-prod),
-or run `mzcld jit elevate "<reason>"`. A grant lasts up to 4 hours. See the
-[JIT user guide](https://mozilla-hub.atlassian.net/wiki/spaces/SRE/pages/1373143084/Just-In-Time+Access+User+Guide).
