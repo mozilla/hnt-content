@@ -43,9 +43,10 @@ stale.
 
 **Prod**
 
-- Workloads run in namespace `hnt-prod` on cluster `webservices-high-prod`
-  (project `moz-fx-webservices-high-prod`). Pub/Sub, Redis and BigQuery live in
-  project `moz-fx-hnt-prod`.
+- Workloads run in namespace `hnt-prod` on cluster
+  [webservices-high-prod](https://console.cloud.google.com/kubernetes/clusters/details/us-west1/webservices-high-prod/details?project=moz-fx-webservices-high-prod).
+  Pub/Sub, Redis and BigQuery live in project
+  [moz-fx-hnt-prod](https://console.cloud.google.com/home/dashboard?project=moz-fx-hnt-prod).
 - [Argo CD app](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-prod-us-west1-hnt)
 - [Crawler dashboard](https://yardstick.mozilla.org/d/mm29b84/hnt-crawler?from=now-6h&to=now&timezone=browser&var-env=prod&var-metrics_scope=adpvtjmrxoc1sb)
 - [Sentry](https://mozilla.sentry.io/issues/?environment=prod&groupStatsPeriod=auto&project=4511425365344256&query=is%3Aunresolved%20environment%3Aprod&referrer=issue-list&sort=freq&statsPeriod=7d)
@@ -72,8 +73,9 @@ Every subscription keeps messages for 7 days.
 **Dev and stage**
 
 - Workloads run in namespaces `hnt-dev` and `hnt-stage` on cluster
-  `webservices-high-nonprod` (project `moz-fx-webservices-high-nonpro`).
-  Their resources live in project `moz-fx-hnt-nonprod`.
+  [webservices-high-nonprod](https://console.cloud.google.com/kubernetes/clusters/details/us-west1/webservices-high-nonprod/details?project=moz-fx-webservices-high-nonpro).
+  Their resources live in project
+  [moz-fx-hnt-nonprod](https://console.cloud.google.com/home/dashboard?project=moz-fx-hnt-nonprod).
 - Argo CD apps for
   [dev](https://webservices.argocd.global.mozgcp.net/applications/argocd-webservices/hnt-dev-us-west1-hnt)
   and
