@@ -183,14 +183,13 @@ To mitigate:
   and add Zyte throttling. [Roll back](#roll-back-a-deploy) if a deploy caused
   it, or [contact Zyte](#contact-zyte) if Zyte errors spike across domains.
 - **If jobs succeed, but workers stay below 125m CPU:** pods are mostly waiting
-  on Zyte, so autoscaling does not add more. Raise `replicas.min` in
-  [values-prod.yaml](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values-prod.yaml),
-  or raise `maxMessages`, the number of jobs each pod handles at once, in
-  [config.ts](../../services/crawl-worker/src/config.ts). A higher `maxMessages`
-  holds more responses in memory.
+  on Zyte, so autoscaling does not add more. Raise
+  [`replicas.min`](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values-prod.yaml#L29-L39),
+  or raise [`maxMessages`](../../services/crawl-worker/src/config.ts#L51), the
+  number of jobs each pod handles at once. A higher `maxMessages` holds more
+  responses in memory.
 - **If jobs succeed, and workers are above 125m CPU at `replicas.max`:** raise
-  `replicas.max` in
-  [values-prod.yaml](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values-prod.yaml).
+  [`replicas.max`](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values-prod.yaml#L29-L39).
 
 ### BigQuery Writes Failing
 
@@ -252,8 +251,10 @@ To mitigate:
 
 - **If memory climbs steadily:** this is a leak.
   [Restart](#restart-a-deployment) the deployment to buy time, and fix the leak.
-- **If memory rises with load:** raise the limit in
-  [values.yaml](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values.yaml).
+- **If memory rises with load:** raise `memory` for the
+  [scheduler](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values.yaml#L56),
+  [discovery worker](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values.yaml#L95) or
+  [article worker](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values.yaml#L134).
 
 ### Redis Memory Near Limit
 
@@ -262,8 +263,8 @@ This alert triggers if
 is more than 80% full. A full Redis evicts deduplication keys, so workers
 re-extract articles and Zyte cost rises.
 
-To mitigate, raise `memory_size_gb` in the
-[Redis module](https://github.com/mozilla/webservices-infra/tree/main/hnt/tf/modules/redis).
+To mitigate, raise
+[`memory_size_gb`](https://github.com/mozilla/webservices-infra/blob/main/hnt/tf/modules/redis/main.tf#L12).
 Scaling keeps the data, but connections reset briefly while Redis fails over
 to its replica; see
 [scaling instances](https://docs.cloud.google.com/memorystore/docs/redis/about-scaling-instances).
@@ -300,8 +301,8 @@ until it is synced and healthy.
 
 ### Pause the crawler
 
-Set `replicas: 0` under `crawl-scheduler` in
-[values-prod.yaml](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values-prod.yaml)
+Set `replicas: 0` under
+[`crawl-scheduler`](https://github.com/mozilla/webservices-infra/blob/main/hnt/k8s/hnt/values-prod.yaml#L24)
 and merge. The workers then finish the queued jobs.
 
 ### Contact Zyte
