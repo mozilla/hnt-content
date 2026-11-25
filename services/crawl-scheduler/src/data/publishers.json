@@ -13,6 +13,10 @@
       "url": "https://www.11freunde.de/fussballkultur/",
       "contexts": [
         {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "sports"
+        },
+        {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "sports"
         }
@@ -5264,15 +5268,6 @@
       ]
     },
     {
-      "url": "https://cgm.pl",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_PL_PL",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://chatelaine.com/environment/",
       "contexts": [
         {
@@ -5549,7 +5544,7 @@
       ]
     },
     {
-      "url": "https://www.clarin.com/politica",
+      "url": "https://www.clarin.com/mundo",
       "contexts": [
         {
           "surface_id": "NEW_TAB_ES_ROW",
@@ -5761,6 +5756,15 @@
         {
           "surface_id": "NEW_TAB_ES_ROW",
           "topic": "business"
+        }
+      ]
+    },
+    {
+      "url": "https://cnnespanol.cnn.com/entretenimiento",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
         }
       ]
     },
@@ -7950,6 +7954,10 @@
         {
           "surface_id": "NEW_TAB_DE_AT",
           "topic": "society-parenting"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "society-parenting"
         }
       ]
     },
@@ -8726,10 +8734,6 @@
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "business"
-        },
-        {
-          "surface_id": "NEW_TAB_ES_ROW",
-          "topic": "business"
         }
       ]
     },
@@ -8800,6 +8804,42 @@
         {
           "surface_id": "NEW_TAB_ES_ROW",
           "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://elcomercio.pe/economia/mundo/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "business"
+        }
+      ]
+    },
+    {
+      "url": "https://elcomercio.pe/mundo/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://elcomercio.pe/mundo/latinoamerica/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://elcomercio.pe/tecnologia/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "tech"
         }
       ]
     },
@@ -9945,10 +9985,6 @@
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "headlines"
-        },
-        {
-          "surface_id": "NEW_TAB_ES_ROW",
-          "topic": "headlines"
         }
       ]
     },
@@ -10021,6 +10057,24 @@
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "finance"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elmundo.es/internacional.html",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.elmundo.es/internacional/america.html",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
         }
       ]
     },
@@ -10196,6 +10250,60 @@
       ]
     },
     {
+      "url": "https://www.eltiempo.com/deportes/futbol-internacional",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://www.eltiempo.com/mundo",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.eltiempo.com/mundo/eeuu-y-canada",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.eltiempo.com/mundo/latinoamerica",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.eltiempo.com/tecnosfera",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "tech"
+        }
+      ]
+    },
+    {
+      "url": "https://www.eltiempo.com/vida/medio-ambiente",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "education-science"
+        }
+      ]
+    },
+    {
       "url": "https://www.eluniversal.com.mx/",
       "contexts": [
         {
@@ -10228,6 +10336,15 @@
         {
           "surface_id": "NEW_TAB_ES_ROW",
           "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://www.eluniversal.com.mx/mundo/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
         }
       ]
     },
@@ -11252,7 +11369,7 @@
       ]
     },
     {
-      "url": "https://www.expansion.com/latinoamerica.html?intcmp=MENUHOM24101&s_kw=latam",
+      "url": "https://www.expansion.com/latinoamerica.html",
       "contexts": [
         {
           "surface_id": "NEW_TAB_ES_ROW",
@@ -13039,6 +13156,33 @@
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "arts"
+        }
+      ]
+    },
+    {
+      "url": "https://www.franceinfo.fr/grands-formats/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.franceinfo.fr/politique/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.franceinfo.fr/societe/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "headlines"
         }
       ]
     },
@@ -16203,6 +16347,10 @@
         {
           "surface_id": "NEW_TAB_FR_FR",
           "topic": "government"
+        },
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "headlines"
         }
       ]
     },
@@ -17867,7 +18015,7 @@
       "url": "https://www.irishnews.com/life/health/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_EN_IE",
+          "surface_id": "NEW_TAB_EN_GB",
           "topic": "health"
         }
       ]
@@ -18397,19 +18545,6 @@
       ]
     },
     {
-      "url": "https://kotaku.com/culture/news",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_EN_GB",
-          "topic": "hobbies"
-        },
-        {
-          "surface_id": "NEW_TAB_EN_US",
-          "topic": "hobbies"
-        }
-      ]
-    },
-    {
       "url": "https://www.koty.pl/porady/zycie-z-kotem",
       "contexts": [
         {
@@ -18540,6 +18675,15 @@
         {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "health"
+        }
+      ]
+    },
+    {
+      "url": "https://kurier.at/sport",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "sports"
         }
       ]
     },
@@ -18762,15 +18906,6 @@
       ]
     },
     {
-      "url": "https://www.lanacion.com.ar/politica/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_ES_ROW",
-          "topic": "headlines"
-        }
-      ]
-    },
-    {
       "url": "https://www.lanacion.com.ar/salud/",
       "contexts": [
         {
@@ -18915,15 +19050,6 @@
       ]
     },
     {
-      "url": "https://www.lastampa.it/spettacoli/",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.lastampa.it/sport/",
       "contexts": [
         {
@@ -18961,6 +19087,24 @@
     },
     {
       "url": "https://www.latercera.com/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
+      "url": "https://www.latercera.com/canal/el-deportivo/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ROW",
+          "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://www.latercera.com/canal/mundo/",
       "contexts": [
         {
           "surface_id": "NEW_TAB_ES_ROW",
@@ -19418,6 +19562,15 @@
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "sports"
+        }
+      ]
+    },
+    {
+      "url": "https://www.lemonde.fr/actualite-en-continu/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "headlines"
         }
       ]
     },
@@ -20743,6 +20896,15 @@
       ]
     },
     {
+      "url": "https://madreshoy.com/category/aprendizaje/",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_ES_ES",
+          "topic": "society-parenting"
+        }
+      ]
+    },
+    {
       "url": "https://magazine.utoronto.ca/category/research-ideas/health/",
       "contexts": [
         {
@@ -21545,6 +21707,10 @@
         {
           "surface_id": "NEW_TAB_DE_AT",
           "topic": "society-parenting"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "society-parenting"
         }
       ]
     },
@@ -21553,6 +21719,10 @@
       "contexts": [
         {
           "surface_id": "NEW_TAB_DE_AT",
+          "topic": "society-parenting"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
           "topic": "society-parenting"
         }
       ]
@@ -21571,6 +21741,10 @@
       "contexts": [
         {
           "surface_id": "NEW_TAB_DE_AT",
+          "topic": "society-parenting"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
           "topic": "society-parenting"
         }
       ]
@@ -22566,6 +22740,10 @@
         },
         {
           "surface_id": "NEW_TAB_DE_CH",
+          "topic": "society-parenting"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
           "topic": "society-parenting"
         }
       ]
@@ -26988,6 +27166,15 @@
       ]
     },
     {
+      "url": "https://www.radiofrance.fr/info",
+      "contexts": [
+        {
+          "surface_id": "NEW_TAB_FR_FR",
+          "topic": "headlines"
+        }
+      ]
+    },
+    {
       "url": "https://www.radiofrance.fr/politique",
       "contexts": [
         {
@@ -28941,10 +29128,6 @@
         {
           "surface_id": "NEW_TAB_ES_ES",
           "topic": "headlines"
-        },
-        {
-          "surface_id": "NEW_TAB_ES_ROW",
-          "topic": "headlines"
         }
       ]
     },
@@ -29018,14 +29201,9 @@
       "url": "https://www.runnersworld.de/tipps-news/",
       "contexts": [
         {
-          "surface_id": "NEW_TAB_DE_DE",
+          "surface_id": "NEW_TAB_DE_AT",
           "topic": "sports"
-        }
-      ]
-    },
-    {
-      "url": "https://www.runnersworld.de/training/",
-      "contexts": [
+        },
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "sports"
@@ -30142,6 +30320,10 @@
         {
           "surface_id": "NEW_TAB_DE_CH",
           "topic": "society-parenting"
+        },
+        {
+          "surface_id": "NEW_TAB_DE_DE",
+          "topic": "society-parenting"
         }
       ]
     },
@@ -31162,6 +31344,10 @@
     {
       "url": "https://www.sportschau.de/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "sports"
+        },
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "sports"
@@ -38243,24 +38429,6 @@
       ]
     },
     {
-      "url": "https://www.vogue.it/tags/film",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
-      "url": "https://www.vogue.it/tags/serie-tv",
-      "contexts": [
-        {
-          "surface_id": "NEW_TAB_IT_IT",
-          "topic": "arts"
-        }
-      ]
-    },
-    {
       "url": "https://www.vogue.it/tags/viaggi",
       "contexts": [
         {
@@ -39336,6 +39504,10 @@
     {
       "url": "https://www.womenshealth.de/fitness/",
       "contexts": [
+        {
+          "surface_id": "NEW_TAB_DE_AT",
+          "topic": "sports"
+        },
         {
           "surface_id": "NEW_TAB_DE_DE",
           "topic": "sports"
